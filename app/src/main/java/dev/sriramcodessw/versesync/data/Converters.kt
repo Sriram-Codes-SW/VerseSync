@@ -10,6 +10,8 @@ class Converters {
 
     @TypeConverter
     fun toFloatList(value: String?): List<Float>? {
-        return value?.split(',')?.map { it.toFloat() }
+        if (value.isNullOrBlank()) return null
+        return value.split(',')
+            .mapNotNull { it.trim().toFloatOrNull() }
     }
 }

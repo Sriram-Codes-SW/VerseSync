@@ -8,9 +8,10 @@ import androidx.lifecycle.ViewModelProvider
 import com.android.billingclient.api.ProductDetails
 import kotlinx.coroutines.flow.StateFlow
 
-class BillingViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val billingClientWrapper = BillingClientWrapper(application)
+class BillingViewModel(
+    application: Application,
+    private val billingClientWrapper: BillingClientWrapper = BillingClientWrapper(application)
+) : AndroidViewModel(application) {
 
     val productDetails: StateFlow<List<ProductDetails>> = billingClientWrapper.productDetails
     val isPro: StateFlow<Boolean> = billingClientWrapper.isPro

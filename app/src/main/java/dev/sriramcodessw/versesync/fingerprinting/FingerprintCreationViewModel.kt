@@ -36,13 +36,12 @@ class FingerprintCreationViewModel(application: Application) : AndroidViewModel(
     val error = _error.asStateFlow()
 
     private fun initializeAudioComponents() {
-        stopRecording()
-        
         try {
-            val newDispatcher = AudioDispatcherFactory.fromDefaultMicrophone(22050, 1024, 0)
-            val newFingerprinter = AudioFingerprinter(newDispatcher)
-            
-            dispatcher = newDispatcher
+            if (dispatcher == null) {
+                dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(16000, 1024, 0)
+            }
+            val currentDispatcher = dispatcher ?: return
+            val newFingerprinter = AudioFingerprinter(currentDispatcher)
             fingerprinter = newFingerprinter
 
             collectionJob?.cancel()
@@ -80,7 +79,7 @@ class FingerprintCreationViewModel(application: Application) : AndroidViewModel(
         
         if (currentFingerprinter != null && currentDispatcher != null) {
             try {
-                currentFingerprinter.attachPitchProcessor()
+                currentFingerprinter.attachPitchProcessor(sampleRate = 16000f, bufferSize = 1024)
                 recognitionThread = Thread(currentDispatcher, "Audio Dispatcher")
                 recognitionThread?.start()
             } catch (e: Exception) {

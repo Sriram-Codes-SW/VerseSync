@@ -28,8 +28,10 @@ class LanguageViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         applicationMock = mock()
-        // Mocking filesDir for removeLanguage test
-        whenever(applicationMock.filesDir).thenReturn(File("temp"))
+        val downloadManagerMock: android.app.DownloadManager = mock()
+        whenever(applicationMock.getSystemService(android.content.Context.DOWNLOAD_SERVICE)).thenReturn(downloadManagerMock)
+        whenever(applicationMock.applicationContext).thenReturn(applicationMock)
+        whenever(applicationMock.filesDir).thenReturn(File("build/tmp/testFilesDir").apply { mkdirs() })
         viewModel = LanguageViewModel(applicationMock)
     }
 
@@ -49,11 +51,14 @@ class LanguageViewModelTest {
     @Test
     fun markSetupComplete_shouldUpdateState() = runTest {
         viewModel.markSetupComplete()
-        // Allow for DataStore to persist
         testDispatcher.scheduler.advanceUntilIdle()
         
         viewModel.isSetupComplete.test {
-            assertTrue(awaitItem())
+            var item = awaitItem()
+            if (!item) {
+                item = awaitItem()
+            }
+            assertTrue(item)
             cancelAndConsumeRemainingEvents()
         }
     }

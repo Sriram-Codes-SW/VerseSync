@@ -54,6 +54,7 @@ class ShareViewModelTest {
         viewModel.incomingSongs.add(song)
 
         viewModel.acceptSong(song)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         verify(verseViewModelMock).addSongWithConflictResolution(song)
         assertFalse(viewModel.incomingSongs.contains(song), "Accepted song should be removed from incoming list")
@@ -77,6 +78,7 @@ class ShareViewModelTest {
         viewModel.selectedSongs.addAll(listOf(song1, song2))
 
         viewModel.acceptSelectedSongs()
+        testDispatcher.scheduler.advanceUntilIdle()
 
         verify(verseViewModelMock).addSongWithConflictResolution(song1)
         verify(verseViewModelMock).addSongWithConflictResolution(song2)

@@ -174,34 +174,37 @@ fun RecognitionScreen(
                     }
 
                     if (!isModelReady) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Loading ${selectedLanguage.name} Model...")
-                    } else {
-                        Button(
-                            onClick = { 
-                                if (!isRecognizing) {
-                                    if (isPro || remainingTrials > 0) {
-                                        if (!isPro) trialViewModel.useTrial()
-                                        isRecognizing = true
-                                        hybridViewModel.startRecognition(true)
-                                    }
-                                } else {
-                                    isRecognizing = false
-                                    hybridViewModel.stopRecognition()
+                        Text(
+                            text = "Offline speech model for ${selectedLanguage.name} not downloaded. Pitch matching is active.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+
+                    Button(
+                        onClick = { 
+                            if (!isRecognizing) {
+                                if (isPro || remainingTrials > 0) {
+                                    if (!isPro) trialViewModel.useTrial()
+                                    isRecognizing = true
+                                    hybridViewModel.startRecognition(true)
                                 }
-                            },
-                            modifier = Modifier
-                                .onGloballyPositioned {
-                                    startBtnAnchor = it.positionInRoot()
-                                    startBtnSize = it.size
-                                }
-                                .semantics { 
-                                    contentDescription = if (isRecognizing) "Stop recognition" else "Start recognition"
-                                }
-                        ) {
-                            Text(text = if (isRecognizing) "Stop Recognizing" else "Start Recognizing")
-                        }
+                            } else {
+                                isRecognizing = false
+                                hybridViewModel.stopRecognition()
+                            }
+                        },
+                        modifier = Modifier
+                            .onGloballyPositioned {
+                                startBtnAnchor = it.positionInRoot()
+                                startBtnSize = it.size
+                            }
+                            .semantics { 
+                                contentDescription = if (isRecognizing) "Stop recognition" else "Start recognition"
+                            }
+                    ) {
+                        Text(text = if (isRecognizing) "Stop Recognizing" else "Start Recognizing")
                     }
                 }
 

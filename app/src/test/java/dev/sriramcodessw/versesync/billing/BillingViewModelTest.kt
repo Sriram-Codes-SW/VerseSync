@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
-import java.lang.reflect.Field
 
 @ExperimentalCoroutinesApi
 class BillingViewModelTest {
@@ -29,12 +28,7 @@ class BillingViewModelTest {
         Dispatchers.setMain(testDispatcher)
         applicationMock = mock()
         billingClientWrapperMock = mock()
-        viewModel = BillingViewModel(applicationMock)
-
-        // Use reflection to inject the mock wrapper
-        val wrapperField: Field = viewModel.javaClass.getDeclaredField("billingClientWrapper")
-        wrapperField.isAccessible = true
-        wrapperField.set(viewModel, billingClientWrapperMock)
+        viewModel = BillingViewModel(applicationMock, billingClientWrapperMock)
     }
 
     @AfterEach
@@ -44,14 +38,11 @@ class BillingViewModelTest {
 
     @Test
     fun launchPurchaseFlow_shouldCallBillingClientWrapper() {
-        // Given
         val activity: Activity = mock()
         val productDetails: ProductDetails = mock()
 
-        // When
         viewModel.launchPurchaseFlow(activity, productDetails)
 
-        // Then
         verify(billingClientWrapperMock).launchPurchaseFlow(activity, productDetails)
     }
 }

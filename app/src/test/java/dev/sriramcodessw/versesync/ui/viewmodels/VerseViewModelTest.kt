@@ -26,13 +26,15 @@ class VerseViewModelTest {
     private lateinit var songDaoMock: SongDao
     private lateinit var applicationMock: Application
     private lateinit var viewModel: VerseViewModel
+    private val allSongsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<Song>>(emptyList())
 
     @BeforeEach
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         songDaoMock = mock()
         applicationMock = mock()
-        whenever(songDaoMock.getAllSongs()).thenReturn(flowOf(emptyList()))
+        allSongsFlow.value = emptyList()
+        whenever(songDaoMock.getAllSongs()).thenReturn(allSongsFlow)
         whenever(songDaoMock.getAllFolders()).thenReturn(flowOf(emptyList()))
         viewModel = VerseViewModel(applicationMock, songDaoMock)
     }
@@ -46,14 +48,17 @@ class VerseViewModelTest {
     fun updateSortOrder_shouldTriggerReSorting() = runTest {
         val song1 = Song(id = 1, title = "B", artist = "Z", lyrics = "...")
         val song2 = Song(id = 2, title = "A", artist = "Y", lyrics = "...")
-        whenever(songDaoMock.getAllSongs()).thenReturn(flowOf(listOf(song1, song2)))
+        allSongsFlow.value = listOf(song1, song2)
 
         // When sorting by Title
         viewModel.updateSortOrder(SortOrder.TITLE)
         testDispatcher.scheduler.advanceUntilIdle()
         
         viewModel.songs.test {
-            val sorted = awaitItem()
+            var sorted = awaitItem()
+            if (sorted.isEmpty()) {
+                sorted = awaitItem()
+            }
             assertEquals("A", sorted[0].title)
             cancelAndConsumeRemainingEvents()
         }

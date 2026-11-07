@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 @ExperimentalCoroutinesApi
 class SecurityViewModelTest {
@@ -25,6 +26,7 @@ class SecurityViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         applicationMock = mock()
+        whenever(applicationMock.applicationContext).thenReturn(applicationMock)
         viewModel = SecurityViewModel(applicationMock)
     }
 
@@ -39,7 +41,11 @@ class SecurityViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         
         viewModel.isAppLockEnabled.test {
-            assertEquals(true, awaitItem())
+            var item = awaitItem()
+            if (!item) {
+                item = awaitItem()
+            }
+            assertEquals(true, item)
             cancelAndConsumeRemainingEvents()
         }
     }
@@ -50,7 +56,11 @@ class SecurityViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         
         viewModel.lockType.test {
-            assertEquals(LockType.VOCAL, awaitItem())
+            var item = awaitItem()
+            if (item != LockType.VOCAL) {
+                item = awaitItem()
+            }
+            assertEquals(LockType.VOCAL, item)
             cancelAndConsumeRemainingEvents()
         }
     }

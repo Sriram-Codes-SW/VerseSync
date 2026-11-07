@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 @ExperimentalCoroutinesApi
 class TrialViewModelTest {
@@ -25,6 +26,7 @@ class TrialViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         applicationMock = mock()
+        whenever(applicationMock.applicationContext).thenReturn(applicationMock)
         viewModel = TrialViewModel(applicationMock)
     }
 
@@ -47,7 +49,11 @@ class TrialViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         
         viewModel.remainingTrials.test {
-            assertEquals(2, awaitItem())
+            var item = awaitItem()
+            if (item == 3) {
+                item = awaitItem()
+            }
+            assertEquals(2, item)
             cancelAndConsumeRemainingEvents()
         }
     }

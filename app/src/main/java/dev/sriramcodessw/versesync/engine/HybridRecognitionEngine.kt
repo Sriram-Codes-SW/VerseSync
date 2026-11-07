@@ -36,25 +36,29 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
     private val _instantPitch = MutableStateFlow(0f)
     val instantPitch = _instantPitch.asStateFlow()
 
+    // Persistent candidate accumulator to prevent state flickering
+    private val accumulatedSttCandidates = mutableListOf<Song>()
+
     // Separate Heartbeats for different resolutions
     private val sttHeartbeat = flow {
         while (currentCoroutineContext().isActive) {
             emit(Unit)
-            delay(10000) // STT every 10 seconds
+            delay(5000) // STT every 5 seconds
         }
     }
 
     private val fingerprintHeartbeat = flow {
         while (currentCoroutineContext().isActive) {
             emit(Unit)
-            delay(7000) // Fingerprint every 7 seconds
+            delay(5000) // Fingerprint every 5 seconds
         }
     }
 
     private fun initializeAudioComponents(): Boolean {
         return try {
             if (dispatcher == null) {
-                dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(22050, 1024, 0)
+                // ADR-01: Use 16,000 Hz to align with Vosk STT and hardware HAL standards
+                dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(16000, 1024, 0)
                 val newFingerprinter = AudioFingerprinter(dispatcher!!)
                 fingerprinter = newFingerprinter
                 
@@ -71,7 +75,7 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
     }
 
     /**
-     * Unified Multi-Resolution Recognition Flow
+     * Unified Multi-Resolution Recognition Flow with Candidate Retention (ADR-05)
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val recognitionResult: Flow<RecognitionResult> = merge(
@@ -82,29 +86,56 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
     }.flowOn(Dispatchers.Default)
 
     private suspend fun searchHybrid(triggerType: String): Flow<RecognitionResult> = flow {
-        val sttQuery = normalizeForSanskrit(vosk.recognitionResult.value)
-        val sttCandidates = if (sttQuery.isNotBlank() && triggerType == "stt") {
-            songDao.searchSongsByLyrics(sttQuery).first()
-        } else emptyList()
+        val allSongs = songDao.getAllSongs().first()
 
+        // ADR-03: Tokenized & Fuzzy Lyric Matching
+        val sttQuery = normalizeForSanskrit(vosk.recognitionResult.value)
+        if (sttQuery.isNotBlank() && triggerType == "stt") {
+            val newlyFound = allSongs.filter { song ->
+                matchLyricsScore(sttQuery, song.lyrics) >= 0.35f
+            }
+            synchronized(accumulatedSttCandidates) {
+                newlyFound.forEach { candidate ->
+                    if (accumulatedSttCandidates.none { it.id == candidate.id }) {
+                        accumulatedSttCandidates.add(candidate)
+                    }
+                }
+            }
+        }
+
+        // ADR-04: Musical Semitone Pitch Matching
         val currentLiveFingerprint = fingerprinter?.fingerprint?.value ?: emptyList()
-        val scoredCandidates = if (currentLiveFingerprint.isNotEmpty()) {
-            val allSongs = songDao.getAllSongs().first()
+        val scoredCandidates = if (currentLiveFingerprint.size >= 10) {
             allSongs.mapNotNull { song ->
                 val score = calculateMatchScore(song.fingerprint, currentLiveFingerprint)
-                // Increase tolerance slightly for Sanskrit verses when using Hindi model
-                val threshold = if (currentLanguage == "sa") 600f else 500f
+                // Threshold in relative musical semitones
+                val threshold = if (currentLanguage == "sa") 3.5f else 3.0f
                 if (score < threshold) song to score else null
             }.sortedBy { it.second }.map { it.first }.take(3)
         } else emptyList()
 
-        val combined = (sttCandidates + scoredCandidates).distinctBy { it.id }
+        val combined = (accumulatedSttCandidates + scoredCandidates).distinctBy { it.id }
         emit(RecognitionResult(combined))
     }
 
     /**
-     * Precision Hack: Normalizes Devanagari text to improve 
-     * Sanskrit matching accuracy when using the Hindi model.
+     * Tokenized fuzzy lyric matching that is resilient to punctuation, capitalization, and formatting.
+     */
+    fun matchLyricsScore(spokenQuery: String, lyrics: String): Float {
+        val cleanSpoken = spokenQuery.lowercase().replace(Regex("[^\\p{L}\\p{Nd}\\s]"), " ")
+        val spokenWords = cleanSpoken.split("\\s+".toRegex()).filter { it.length >= 3 }
+        if (spokenWords.isEmpty()) return 0f
+
+        val cleanLyrics = lyrics.lowercase().replace(Regex("[^\\p{L}\\p{Nd}\\s]"), " ")
+        val lyricWords = cleanLyrics.split("\\s+".toRegex()).filter { it.isNotBlank() }.toSet()
+        if (lyricWords.isEmpty()) return 0f
+
+        val matchingWords = spokenWords.count { lyricWords.contains(it) }
+        return matchingWords.toFloat() / spokenWords.size
+    }
+
+    /**
+     * Normalizes Devanagari text to improve Sanskrit matching accuracy when using Hindi model.
      */
     private fun normalizeForSanskrit(text: String): String {
         if (currentLanguage != "sa") return text
@@ -114,15 +145,21 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
             .trim()
     }
 
-    private fun calculateMatchScore(reference: List<Float>?, live: List<Float>): Float {
+    fun calculateMatchScore(reference: List<Float>?, live: List<Float>): Float {
         if (reference == null || reference.isEmpty() || live.isEmpty()) return Float.MAX_VALUE
-        var minDistance = Float.MAX_VALUE
-        val windowSize = live.size.coerceAtMost(reference.size)
-        if (windowSize == 0) return Float.MAX_VALUE
-        val liveSegment = live.takeLast(windowSize)
 
-        for (i in 0..(reference.size - windowSize) step 10) {
-            val subRef = reference.subList(i, i + windowSize)
+        val refContour = AudioFingerprinter.toRelativeSemitoneContour(reference)
+        val liveContour = AudioFingerprinter.toRelativeSemitoneContour(live)
+        if (refContour.isEmpty() || liveContour.isEmpty()) return Float.MAX_VALUE
+
+        var minDistance = Float.MAX_VALUE
+        val windowSize = liveContour.size.coerceAtMost(refContour.size)
+        if (windowSize < 8) return Float.MAX_VALUE
+        val liveSegment = liveContour.takeLast(windowSize)
+
+        val step = 5.coerceAtMost((refContour.size - windowSize).coerceAtLeast(1))
+        for (i in 0..(refContour.size - windowSize) step step) {
+            val subRef = refContour.subList(i, i + windowSize)
             val dist = calculateDistance(subRef, liveSegment)
             if (dist < minDistance) minDistance = dist
         }
@@ -130,7 +167,17 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
     }
 
     private fun calculateDistance(list1: List<Float>, list2: List<Float>): Float {
-        return list1.zip(list2).sumOf { (a, b) -> abs(a - b).toDouble() }.toFloat() / list1.size
+        var count = 0
+        var sum = 0.0
+        for (i in list1.indices) {
+            val a = list1[i]
+            val b = list2[i]
+            if (a != 0f || b != 0f) {
+                sum += abs(a - b)
+                count++
+            }
+        }
+        return if (count > 0) (sum / count).toFloat() else Float.MAX_VALUE
     }
 
     fun loadLanguageModel(languageCode: String) {
@@ -138,14 +185,31 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
         vosk.loadModel(languageCode)
     }
 
+    /**
+     * Starts recognition. Pitch detection functions immediately; STT activates when model is ready (ADR-02).
+     */
     fun startRecognition(isPro: Boolean) {
-        if (!vosk.isModelReady.value || !initializeAudioComponents()) return
+        _error.value = null
+        if (!initializeAudioComponents()) {
+            _error.value = "Microphone initialization failed."
+            return
+        }
+
         try {
-            vosk.startListening()
-            if (isPro) fingerprinter?.attachPitchProcessor()
+            // Start STT if speech model is available
+            if (vosk.isModelReady.value) {
+                vosk.startListening()
+            }
+
+            // Start pitch processor
+            if (isPro) {
+                fingerprinter?.attachPitchProcessor(sampleRate = 16000f, bufferSize = 1024)
+            }
+
             recognitionThread = Thread(dispatcher, "Audio Dispatcher")
             recognitionThread?.start()
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to start recognition", e)
             _error.value = "Failed to start recognition."
         }
     }
@@ -153,6 +217,9 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
     fun stopRecognition() {
         vosk.stopListening()
         _instantPitch.value = 0f
+        synchronized(accumulatedSttCandidates) {
+            accumulatedSttCandidates.clear()
+        }
         dispatcher?.stop()
         recognitionThread?.interrupt()
         dispatcher = null
