@@ -14,6 +14,9 @@ import kotlin.math.abs
 
 private const val TAG = "HybridRecognitionEngine"
 
+/** Minimum frames voiced in both contours before a pitch distance is trusted. */
+private const val MIN_VOICED_OVERLAP = 8
+
 data class RecognitionResult(val candidates: List<Song>)
 
 @SuppressLint("MissingPermission")
@@ -166,18 +169,23 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
         return minDistance
     }
 
+    /**
+     * Mean absolute semitone difference over frames that are voiced in BOTH contours (ADR-04).
+     * A frame that is silent in only one contour is skipped rather than compared against 0,
+     * and too little shared voiced material is treated as no match.
+     */
     private fun calculateDistance(list1: List<Float>, list2: List<Float>): Float {
         var count = 0
         var sum = 0.0
         for (i in list1.indices) {
             val a = list1[i]
             val b = list2[i]
-            if (a != 0f || b != 0f) {
+            if (!a.isNaN() && !b.isNaN()) {
                 sum += abs(a - b)
                 count++
             }
         }
-        return if (count > 0) (sum / count).toFloat() else Float.MAX_VALUE
+        return if (count >= MIN_VOICED_OVERLAP) (sum / count).toFloat() else Float.MAX_VALUE
     }
 
     fun loadLanguageModel(languageCode: String) {
