@@ -53,7 +53,10 @@ class BluetoothService(
     private val transferPrefs = TransferPreferences(context)
     private val serverThreads = mutableListOf<Thread>()
     private var clientSocket: BluetoothSocket? = null
-    private var serverSocket: BluetoothServerSocket? = null
+    // One listening socket per supported UUID. All of them must be tracked and closed,
+    // otherwise the sockets and their accept() threads leak after a connection or a stop.
+    private val serverSockets = mutableListOf<BluetoothServerSocket>()
+    private var serverActive = false
     private var dataTransferService: DataTransferService? = null
 
     private val foundDeviceReceiver = object : BroadcastReceiver() {
@@ -95,7 +98,22 @@ class BluetoothService(
         _state.value = BluetoothState.Idle
     }
 
+    private fun closeServerSockets() {
+        synchronized(serverSockets) {
+            serverActive = false
+            serverSockets.forEach {
+                try {
+                    it.close()
+                } catch (e: IOException) {
+                    Log.w(TAG, "Server socket close error", e)
+                }
+            }
+            serverSockets.clear()
+        }
+    }
+
     fun startServer() {
+        synchronized(serverSockets) { serverActive = true }
         _state.value = BluetoothState.ListeningForConnection
         for (uuid in BluetoothConstants.SUPPORTED_UUIDS) {
             val thread = Thread {
@@ -104,8 +122,19 @@ class BluetoothService(
                         "${BluetoothConstants.SERVICE_NAME}-$uuid",
                         uuid
                     )
-                    serverSocket = localServerSocket
+                    val stillActive = synchronized(serverSockets) {
+                        if (serverActive) serverSockets.add(localServerSocket)
+                        serverActive
+                    }
+                    if (!stillActive) {
+                        // Stopped, or another UUID already accepted, while this socket was opening.
+                        localServerSocket.close()
+                        return@Thread
+                    }
                     val socket = localServerSocket.accept()
+                    // One peer per session: stop listening on every UUID, which also ends the
+                    // other accept() calls instead of leaving them blocked forever.
+                    closeServerSockets()
                     clientSocket = socket
                     mainDispatcher.launch { 
                         _state.value = BluetoothState.Connected(
@@ -189,7 +218,7 @@ class BluetoothService(
 
     fun stopServer() {
         try {
-            serverSocket?.close()
+            closeServerSockets()
             clientSocket?.close()
             serverThreads.forEach { it.interrupt() }
             serverThreads.clear()
