@@ -2,22 +2,34 @@ package dev.sriramcodessw.versesync.billing
 
 import android.app.Activity
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import com.android.billingclient.api.*
+import dev.sriramcodessw.versesync.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class BillingClientWrapper(private val context: Context) {
 
+    companion object {
+        const val PRO_PRODUCT_ID = "pro_subscription"
+        val TIP_PRODUCT_IDS = setOf("small_tip", "big_tip")
+        private const val RECONNECT_DELAY_MS = 5_000L
+    }
+
     private val _productDetails = MutableStateFlow<List<ProductDetails>>(emptyList())
     val productDetails = _productDetails.asStateFlow()
 
-    // TEMPORARY: Forced to true for testing purposes
-    private val _isPro = MutableStateFlow(true)
+    // Debug builds unlock Pro so features can be exercised without a Play purchase.
+    // Release builds derive Pro only from a verified, purchased subscription.
+    private val _isPro = MutableStateFlow(BuildConfig.DEBUG)
     val isPro = _isPro.asStateFlow()
+
+    private val handler = Handler(Looper.getMainLooper())
 
     private val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
         if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            // Subscription logic remains but is overridden by the forced 'true' above
+            if (processPurchases(purchases)) _isPro.value = true
         }
     }
 
@@ -44,9 +56,15 @@ class BillingClientWrapper(private val context: Context) {
             }
 
             override fun onBillingServiceDisconnected() {
-                startConnection()
+                // Retry with a delay instead of reconnecting in a tight loop.
+                handler.postDelayed({ startConnection() }, RECONNECT_DELAY_MS)
             }
         })
+    }
+
+    fun endConnection() {
+        handler.removeCallbacksAndMessages(null)
+        billingClient.endConnection()
     }
 
     private fun queryProducts() {
@@ -60,7 +78,7 @@ class BillingClientWrapper(private val context: Context) {
                 .setProductType(BillingClient.ProductType.INAPP)
                 .build(),
             QueryProductDetailsParams.Product.newBuilder()
-                .setProductId("pro_subscription")
+                .setProductId(PRO_PRODUCT_ID)
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
         )
@@ -75,24 +93,57 @@ class BillingClientWrapper(private val context: Context) {
     }
 
     private fun queryPurchases() {
-        val params = QueryPurchasesParams.newBuilder()
-            .setProductType(BillingClient.ProductType.SUBS)
-            .build()
-            
-        billingClient.queryPurchasesAsync(params) { _, _ ->
-            // Logic handled by forced 'true'
+        // Subscriptions decide Pro status; this also acknowledges any not yet acknowledged.
+        billingClient.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()
+        ) { result, purchases ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                _isPro.value = BuildConfig.DEBUG || processPurchases(purchases)
+            }
+        }
+        // Consume tips left over from an interrupted purchase so they are not refunded.
+        billingClient.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
+        ) { result, purchases ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) processPurchases(purchases)
         }
     }
 
+    /**
+     * Acknowledges subscriptions and consumes tips. Google refunds purchases that are not
+     * acknowledged within three days. Returns true when an active Pro subscription is present.
+     */
+    private fun processPurchases(purchases: List<Purchase>): Boolean {
+        var hasPro = false
+        for (purchase in purchases) {
+            if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
+            if (purchase.products.any { it in TIP_PRODUCT_IDS }) {
+                billingClient.consumeAsync(
+                    ConsumeParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
+                ) { _, _ -> }
+            } else if (purchase.products.contains(PRO_PRODUCT_ID)) {
+                hasPro = true
+                if (!purchase.isAcknowledged) {
+                    billingClient.acknowledgePurchase(
+                        AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
+                    ) { }
+                }
+            }
+        }
+        return hasPro
+    }
+
     fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails) {
-        val productDetailsParamsList = listOf(
-            BillingFlowParams.ProductDetailsParams.newBuilder()
-                .setProductDetails(productDetails)
-                .build()
-        )
+        val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(productDetails)
+        if (productDetails.productType == BillingClient.ProductType.SUBS) {
+            // Subscriptions require an offer token or the flow fails with a developer error.
+            val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+            productParams.setOfferToken(offerToken)
+        }
 
         val billingFlowParams = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(productDetailsParamsList)
+            .setProductDetailsParamsList(listOf(productParams.build()))
             .build()
 
         billingClient.launchBillingFlow(activity, billingFlowParams)

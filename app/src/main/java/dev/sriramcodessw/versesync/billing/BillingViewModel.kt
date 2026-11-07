@@ -20,6 +20,11 @@ class BillingViewModel(
         billingClientWrapper.startConnection()
     }
 
+    override fun onCleared() {
+        billingClientWrapper.endConnection()
+        super.onCleared()
+    }
+
     fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails) {
         billingClientWrapper.launchPurchaseFlow(activity, productDetails)
     }
