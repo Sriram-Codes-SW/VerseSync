@@ -68,12 +68,11 @@ fun LanguageSelectionScreen(viewModel: LanguageViewModel, onComplete: () -> Unit
                 viewModel.markSetupComplete()
                 onComplete()
             },
-            enabled = installedLanguages.isNotEmpty(),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 16.dp)
         ) {
-            Text("Continue to App")
+            Text(if (installedLanguages.isNotEmpty()) "Continue to App" else "Skip for Now / Continue")
         }
     }
 }
