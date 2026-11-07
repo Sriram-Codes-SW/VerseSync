@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.1 |
+| Version | 0.2 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -130,3 +130,109 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   Safely handle null or blank strings in `Converters.kt`: return `emptyList()` or `null` if the string contains no parseable numbers.
 * **Consequences:**
   * Songs with empty or uninitialized fingerprints load without exception.
+
+---
+
+### ADR-07: R8 Keep Rules for JNA/Vosk and Gson-Serialized Models
+
+* **Status:** Accepted
+* **Context:**
+  Release builds enable R8 (`isMinifyEnabled = true`) but `proguard-rules.pro` only covered Jetpack Compose. Two failures followed, both invisible in debug builds:
+  1. R8 renamed `com.sun.jna.Structure`. JNA's native dispatcher looks classes up by name through JNI, so the first Vosk `Model(...)` call threw `UnsatisfiedLinkError` and killed the app.
+  2. R8 renamed every field of `Song` (`title` became `b`, and so on). `Song` and `Folder` are written as JSON by Gson for Bluetooth transfer and library export, so the wire format depended on a per-build mapping.
+* **Decision Drivers:**
+  * Release builds must behave like debug builds.
+  * Serialized formats must not depend on obfuscation output.
+* **Considered Options:**
+  1. *Disable minification:* Larger APK, no code protection (conflicts with the README R8 policy).
+  2. *Keep rules for JNA, Vosk and the serialized models:* Chosen.
+  3. *Replace reflection-based Gson with explicit field annotations:* Larger change; keep rules suffice for now.
+* **Decision:**
+  Keep `com.sun.jna.**`, `org.vosk.**`, `Song`, `Folder` and Gson `TypeToken`, and enable `isShrinkResources` as the README states. `VoskVoiceRecognition` also catches `UnsatisfiedLinkError` so a missing native library degrades to pitch-only recognition (ADR-02).
+* **Consequences:**
+  * Release builds load Vosk models and produce stable JSON.
+  * New Gson-serialized classes must be added to the keep rules.
+
+---
+
+### ADR-08: Pro Entitlement Derived from Play Billing
+
+* **Status:** Accepted
+* **Context:**
+  `BillingClientWrapper.isPro` was hard-coded to `true` ("TEMPORARY"), so every user had Pro. Purchases were never acknowledged or consumed, and Google refunds unacknowledged purchases after three days. The subscription flow passed no offer token, which makes `launchBillingFlow` fail.
+* **Decision:**
+  1. `isPro` starts as `BuildConfig.DEBUG` and, in release builds, becomes true only for a purchased `pro_subscription`.
+  2. Subscriptions are acknowledged and tips are consumed. Both are also processed from `queryPurchasesAsync` to recover interrupted purchases.
+  3. Subscription purchases pass the first offer token.
+  4. Reconnection after a service disconnect is delayed instead of immediate, and the connection is closed when the ViewModel is cleared.
+* **Consequences:**
+  * Free-tier limits and Pro gates apply in release builds.
+  * Debug builds keep unlocked Pro for development.
+  * The README describes a one-time Pro purchase, but the code only defines a subscription product. That product decision is still open.
+
+---
+
+### ADR-09: Inbound Songs Never Keep Foreign Primary Keys
+
+* **Status:** Accepted
+* **Context:**
+  Songs received over Bluetooth or imported from a library file were inserted with the id they had on the sending database. `SongDao.insert` uses `REPLACE`, so a received song with id 1 silently overwrote the local song with id 1. A `folderId` pointing to a folder that does not exist locally would also violate the foreign key.
+* **Decision:**
+  `addSongWithConflictResolution` always inserts with `id = 0` (auto-generate) and a caller-supplied local `folderId` (null by default). Library import inserts folders first with new ids and remaps each song to the new id of its folder.
+* **Consequences:**
+  * Receiving or importing can no longer replace local data.
+  * Folder structure survives an import.
+
+---
+
+### ADR-10: App Lock Fails Closed During Startup
+
+* **Status:** Accepted
+* **Context:**
+  `SecurityViewModel.isAppLockEnabled` defaulted to `false` until DataStore loaded. `AuthWrapper` treated that default as "lock disabled" and set `isUnlocked = true`, which was never reset, so a saved lock could be skipped on cold start. A vocal lock with no fingerprinted song also unlocked automatically, and a dismissed system prompt left only a spinner.
+* **Decision:**
+  1. `SecurityViewModel.lockConfig` is `null` until both saved settings are read, and `AuthWrapper` shows a loading state while it is null.
+  2. The app never unlocks automatically when a lock is enabled. If vocal lock has no song to sing, or the prompt is dismissed, the user sees a locked screen with an Unlock button that opens the device credential prompt.
+  3. An unrecognized stored lock type falls back to the device credential instead of crashing.
+* **Consequences:**
+  * A saved lock cannot be bypassed by a slow settings read.
+  * Vocal lock remains a convenience factor and not a security boundary, because a recording of the song can satisfy it.
+
+---
+
+### ADR-11: Untrusted Input at Download and Bluetooth Boundaries
+
+* **Status:** Accepted
+* **Context:**
+  1. Model archives were extracted with `File(targetDir, entry.name)`, so an entry such as `../../x` could write outside the model directory.
+  2. Unpacking ran on the main thread inside a `BroadcastReceiver`.
+  3. `receiveSongs` allocated `ByteArray(totalSize)` from a size sent by the remote device, so a single message could exhaust memory.
+  4. The receiver reported a stored resume offset but did not keep the partial data, so a resumed transfer would decode a zero-filled prefix.
+* **Decision:**
+  1. Every archive entry is resolved through `resolveInside`, which rejects paths outside the target directory. A rejected entry aborts the unpack and removes the partial model.
+  2. Unpacking runs on a worker thread using `goAsync`.
+  3. Transfers above 8 MiB or with a negative size are refused, and the receiver replies `-1` so the sender stops.
+  4. The receiver always restarts at offset 0.
+* **Consequences:**
+  * A malicious archive or peer cannot write files or exhaust memory through these paths.
+  * Resumable transfer is not supported until partial data is persisted.
+  * The download receiver stays exported and the handler validates the id against the app's own `DownloadManager`. Making it non-exported is untested on the Bluetooth and download paths and was not adopted.
+
+---
+
+### ADR-12: Data Durability, Backup Scope and Bluetooth Permissions
+
+* **Status:** Accepted
+* **Context:**
+  1. `fallbackToDestructiveMigration()` would delete the whole library on any schema version bump, and the schema was not exported.
+  2. Auto Backup rules were empty, so trial counters and app-lock settings were restored onto other installs.
+  3. Bluetooth permissions were declared but never requested at runtime. On Android 12 and later, scanning or listening throws `SecurityException`.
+  4. Legacy Bluetooth and fine-location permissions applied to all Android versions.
+* **Decision:**
+  1. Room exports its schema, and destructive fallback applies only to downgrades. Version bumps require a `Migration`.
+  2. Backup and device-transfer rules exclude the DataStore files and downloaded models.
+  3. `ShareScreen` requests `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` and `BLUETOOTH_ADVERTISE` (Android 12 and later) or fine location (earlier) before scanning or listening.
+  4. Legacy Bluetooth and fine-location permissions are limited to API 30 and below, and `BLUETOOTH_SCAN` is marked `neverForLocation`.
+* **Consequences:**
+  * Upgrades preserve user data once migrations are written.
+  * The first Share action shows a permission prompt.

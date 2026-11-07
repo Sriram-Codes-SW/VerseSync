@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.1 |
+| Version | 0.2 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -26,3 +26,10 @@ This document establishes the verification strategy for audio capture, pitch fin
 | **TC-U-08** | Engine / State | Consecutive recognition triggers retain previously found candidates | Candidates do not get cleared when alternate heartbeat fires | ADR-05 |
 | **TC-U-09** | Engine / Capture | Stop recognition cleans up dispatcher and recording threads | Audio resources released, threads terminated cleanly | ADR-01 |
 | **TC-U-10** | Bluetooth / Transfer | Data transfer service chunk verification | All bytes transferred with valid checksum and progress updates | N/A |
+| **TC-U-11** | Model Download / Extraction | Archive entries with `..` segments, or resolving to a sibling directory with the same name prefix, are rejected; nested and redundant `.` paths inside the target are allowed | `resolveInside` returns null for escaping paths and a canonical path otherwise | ADR-11 |
+| **TC-U-12** | Bluetooth / Transfer | Oversized or negative announced size; stored resume offset; sender receives a refusal | Receiver returns null and replies `-1` without allocating; always restarts at offset 0; sender returns false | ADR-11 |
+| **TC-U-13** | Library / Inbound Songs | Incoming song carries a foreign id and folder id that collide with local data | Inserted with a new id and the supplied local folder id; the local song is untouched; duplicate titles are renamed | ADR-09 |
+| **TC-U-14** | Security / Startup | Lock configuration before saved settings have loaded | `lockConfig` is null, so the UI cannot treat the default as "lock disabled" | ADR-10 |
+| **TC-M-01** | Release Build / Vosk | Install a minified release build with a model present and open the recognition screen | App does not crash and the model loads | ADR-07 |
+| **TC-M-02** | Release Build / Serialization | Inspect the R8 mapping for `Song`, `Folder` and `com.sun.jna.Structure` | Class and field names are unchanged | ADR-07 |
+| **TC-M-03** | Models / Download | Download a language model on a device or emulator | Archive unpacks off the main thread to `files/models/model-<code>` | ADR-11 |
