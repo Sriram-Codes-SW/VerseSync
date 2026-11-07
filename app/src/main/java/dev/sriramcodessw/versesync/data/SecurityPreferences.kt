@@ -19,7 +19,8 @@ class SecurityPreferences(private val context: Context) {
 
     val isAppLockEnabled: Flow<Boolean> = context.dataStore.data.map { it[APP_LOCK_ENABLED] ?: false }
     val lockType: Flow<LockType> = context.dataStore.data.map { 
-        LockType.valueOf(it[SELECTED_LOCK_TYPE] ?: LockType.DEVICE.name) 
+        runCatching { LockType.valueOf(it[SELECTED_LOCK_TYPE] ?: LockType.DEVICE.name) }
+            .getOrDefault(LockType.DEVICE) 
     }
 
     suspend fun setAppLockEnabled(enabled: Boolean) {

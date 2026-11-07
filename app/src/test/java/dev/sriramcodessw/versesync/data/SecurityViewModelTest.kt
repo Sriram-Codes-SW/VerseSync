@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlin.test.assertNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
@@ -33,6 +34,12 @@ class SecurityViewModelTest {
     @AfterEach
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun lockConfig_isNullUntilSavedSettingsAreLoaded() {
+        // A non-null default here would let the app unlock before the real setting is known.
+        assertNull(viewModel.lockConfig.value)
     }
 
     @Test
