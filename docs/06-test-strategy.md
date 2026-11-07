@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.4 |
+| Version | 0.5 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -34,3 +34,7 @@ This document establishes the verification strategy for audio capture, pitch fin
 | **TC-M-02** | Release Build / Serialization | Inspect the R8 mapping for `Song`, `Folder` and `com.sun.jna.Structure` | Class and field names are unchanged | ADR-07 |
 | **TC-M-03** | Models / Download | Download a language model on a device or emulator | Archive unpacks off the main thread to `files/models/model-<code>` | ADR-11 |
 | **TC-U-15** | Engine / Matching | Live take with too little voiced material shared with the reference, or entirely silent | Match score is no match (`Float.MAX_VALUE`) | ADR-04 |
+| **TC-M-04** | Security / Cold start | Enable the app lock, force-stop the app and start it five times on an emulator | The library is never shown; the locked screen with an Unlock button appears each time | ADR-10 |
+| **TC-M-05** | Security / Settings | On a device with no screen lock, tap Enable App Lock | The switch stays off and a message explains that a screen lock is needed | ADR-10 |
+| **TC-M-06** | Trials / Live update | In a non-Pro build, use a trial from the Folders tab | The trial badge and the dialog count decrease immediately (3, 2, 1) | ADR-08 |
+| **TC-M-07** | Settings / Live update | Enable the lock and change the lock type in Settings | The switch and the lock type label change immediately | ADR-10 |
