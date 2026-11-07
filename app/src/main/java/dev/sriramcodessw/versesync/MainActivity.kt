@@ -5,6 +5,7 @@ import android.app.DownloadManager
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -219,10 +220,6 @@ fun VerseSyncNavHost(
         }
     }
 
-    LaunchedEffect(Unit) {
-        locationPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-    }
-
     val startDestination = if (isSetupComplete) AppRoutes.MAIN_SCREEN else AppRoutes.LANGUAGE_SELECTION
 
     NavHost(
@@ -234,6 +231,18 @@ fun VerseSyncNavHost(
         popExitTransition = { fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { 300 }, animationSpec = tween(300)) }
     ) {
         composable(AppRoutes.LANGUAGE_SELECTION) {
+            // Approximate location only suggests languages during first-run setup, so ask here
+            // rather than on every app start. Skip the prompt if it was already granted.
+            LaunchedEffect(Unit) {
+                val granted = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+                if (granted) {
+                    languageViewModel.detectRegion()
+                } else {
+                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                }
+            }
             LanguageSelectionScreen(
                 viewModel = languageViewModel,
                 onComplete = { navController.navigate(AppRoutes.MAIN_SCREEN) { popUpTo(AppRoutes.LANGUAGE_SELECTION) { inclusive = true } } }
