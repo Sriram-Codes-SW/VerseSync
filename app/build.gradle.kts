@@ -13,7 +13,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.sriramkaushal.versesync"
+        applicationId = "dev.sriramcodessw.versesync"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
