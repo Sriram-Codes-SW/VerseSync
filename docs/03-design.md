@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.5 |
+| Version | 0.6 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -239,6 +239,30 @@ VerseSync is an offline-first Android application designed for musicians, worshi
 
 ---
 
+### ADR-13: License the Project under GPL-3.0
+
+* **Status:** Accepted
+* **Context:**
+  The repository is public and had no license file, so by default nobody had permission to use it. The README said the repository would be private to protect intellectual property. The app also bundles TarsosDSP, which is licensed under GPL-3.0 (`app/libs`, version 2.4, built 2016-12-08), and links it directly. Distributing the app without offering its source under a compatible license would break that license.
+* **Decision Drivers:**
+  * The repository is already public.
+  * The bundled GPL-3.0 library cannot be shipped in a closed-source app.
+  * Every other dependency must stay compatible.
+* **Considered Options:**
+  1. *Replace TarsosDSP and keep the app closed:* Needs a new pitch detector (YIN is a published algorithm) and re-validation of matching. Largest effort.
+  2. *Obtain a commercial license for TarsosDSP:* Depends on the author, and the bundled jar has no recorded source.
+  3. *License the app under GPL-3.0:* Chosen. It matches the current state and the bundled library.
+* **Decision:**
+  License the project under GPL-3.0-only. Add `LICENSE` with the full text and `THIRD_PARTY_NOTICES.md` listing each dependency's license. Correct the README, which no longer claims the repository is private.
+* **Consequences:**
+  * Anyone may use, modify and redistribute the app under GPL-3.0, including the source of the Pro gate, so a fork can remove it. Revenue then relies on Google Play distribution, convenience and support, not on keeping the code secret.
+  * Distributing an APK, including on Google Play, requires offering the matching source.
+  * Contributions are accepted under the same license.
+  * Replacing TarsosDSP later would allow relicensing, but code already published stays available under GPL-3.0.
+  * The Apache-2.0 dependencies and the dual-licensed JNA are compatible with GPL-3.0.
+
+---
+
 ## 3. Amendments to Accepted ADRs
 
 These corrections bring the records in line with the code as built.
@@ -255,8 +279,7 @@ These corrections bring the records in line with the code as built.
 ## 4. Known Open Items
 
 * **Transfer integrity (TC-U-10):** The transfer protocol has no checksum. Integrity relies on the announced length and JSON parsing. Adding a checksum needs a new protocol version.
-* **Licensing:** TarsosDSP is licensed GPL-3.0 and the bundled jar (`app/libs`, version 2.4, built 2016-12-08) has no recorded source. Shipping it in a closed commercial app conflicts with that license. The options are to replace it, relicense the app, or obtain a commercial license.
-* **Pro product:** The README describes a one-time Pro purchase, but only the `pro_subscription` product is defined (ADR-08).
-* **Repository:** The repository is public and has no license file, while the README states it will be private.
+* **Licensing:** Resolved by ADR-13, which licenses the project under GPL-3.0 because the bundled TarsosDSP jar is GPL-3.0. Revisit if TarsosDSP is replaced.
+* **Pro product:** Only the `pro_subscription` product is implemented (ADR-08). The README now says so, but the one-time purchase it describes is still a product decision.
 * **Resumable transfer:** Not supported until partial data is persisted (ADR-11).
 * **State flow after a live write:** In unit tests, a view model state flow occasionally did not show a value written just after the view model started, even though the DataStore held the correct value. It happened about 1 in 10 times under test dispatchers and was not seen in 100 runs with a real Main thread. DataStore 1.3.0 reduced it but did not remove it. The cause is not identified. An emulator run (TC-M-06, TC-M-07) showed the trial counter, the lock switch and the lock type label updating immediately, so this has not been seen in the app.
