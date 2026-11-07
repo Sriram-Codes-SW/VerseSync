@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.2 |
+| Version | 0.3 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -236,3 +236,25 @@ VerseSync is an offline-first Android application designed for musicians, worshi
 * **Consequences:**
   * Upgrades preserve user data once migrations are written.
   * The first Share action shows a permission prompt.
+
+---
+
+## 3. Amendments to Accepted ADRs
+
+These corrections bring the records in line with the code as built.
+
+* **ADR-01 (implementation status):** Only the shared 16 kHz sample rate is implemented. TarsosDSP (`AudioDispatcherFactory.fromDefaultMicrophone`) and Vosk (`SpeechService`) still open their own `AudioRecord`, so the "single shared stream" option was not built. Concurrent capture by one app is permitted on Android 10 and later, but it has not been verified on every device.
+* **ADR-03 (implementation):** Tokenized matching exists only in `HybridRecognitionEngine`, which loads all songs and ranks them in memory. No multi-token query was added to `SongDao`. The unused exact-substring query `searchSongsByLyrics` has been removed so the code no longer contradicts this record.
+* **ADR-04 (distance rule):** Unvoiced frames are `NaN` in the relative contour and are skipped when either contour is unvoiced at that frame. Previously a frame silent in only one contour was compared against 0 and inflated the distance. A match also needs at least 8 frames voiced in both contours. Mean-centering still uses the whole live buffer and not only the compared window.
+* **ADR-11 and ADR-12 (lifecycle):** The Bluetooth server tracks every listening socket and closes all of them after the first connection or on stop. Before, only the last socket was closed and the other accept thread blocked forever. The location permission is requested on the first-run language screen only, not on every app start.
+
+---
+
+## 4. Known Open Items
+
+* **Transfer integrity (TC-U-10):** The transfer protocol has no checksum. Integrity relies on the announced length and JSON parsing. Adding a checksum needs a new protocol version.
+* **Licensing:** TarsosDSP is licensed GPL-3.0 and the bundled jar (`app/libs`, version 2.4, built 2016-12-08) has no recorded source. Shipping it in a closed commercial app conflicts with that license. The options are to replace it, relicense the app, or obtain a commercial license.
+* **Pro product:** The README describes a one-time Pro purchase, but only the `pro_subscription` product is defined (ADR-08).
+* **Repository:** The repository is public and has no license file, while the README states it will be private.
+* **Test isolation:** `SecurityViewModelTest`, `LanguageViewModelTest` and `TrialViewModelTest` share one on-disk DataStore through a mock context, so they fail intermittently. Preferences classes need an injectable DataStore to fix this.
+* **Resumable transfer:** Not supported until partial data is persisted (ADR-11).
