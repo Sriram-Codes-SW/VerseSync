@@ -28,8 +28,10 @@ data class LanguageModelInfo(
     val regions: List<String> = emptyList()
 )
 
-class LanguageViewModel(application: Application) : AndroidViewModel(application) {
-    private val prefs = LanguagePreferences(application)
+class LanguageViewModel(
+    application: Application,
+    private val prefs: LanguagePreferences = LanguagePreferences(application)
+) : AndroidViewModel(application) {
     val downloader = ModelDownloader(application)
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     private var locationCancellationTokenSource = CancellationTokenSource()

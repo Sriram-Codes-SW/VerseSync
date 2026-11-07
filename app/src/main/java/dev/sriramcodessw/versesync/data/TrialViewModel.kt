@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class TrialViewModel(application: Application) : AndroidViewModel(application) {
-    private val prefs = TrialPreferences(application)
+class TrialViewModel(
+    application: Application,
+    private val prefs: TrialPreferences = TrialPreferences(application)
+) : AndroidViewModel(application) {
 
     val remainingTrials: StateFlow<Int> = prefs.remainingTrials
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)

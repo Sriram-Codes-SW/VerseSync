@@ -12,28 +12,30 @@ import kotlinx.coroutines.flow.map
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
-class LanguagePreferences(private val context: Context) {
+class LanguagePreferences(private val dataStore: DataStore<Preferences>) {
+    constructor(context: Context) : this(context.dataStore)
+
     companion object {
         val SETUP_COMPLETE = booleanPreferencesKey("setup_complete")
         val INSTALLED_LANGUAGES = stringSetPreferencesKey("installed_languages")
     }
 
-    val isSetupComplete: Flow<Boolean> = context.dataStore.data.map { it[SETUP_COMPLETE] ?: false }
-    val installedLanguages: Flow<Set<String>> = context.dataStore.data.map { it[INSTALLED_LANGUAGES] ?: emptySet() }
+    val isSetupComplete: Flow<Boolean> = dataStore.data.map { it[SETUP_COMPLETE] ?: false }
+    val installedLanguages: Flow<Set<String>> = dataStore.data.map { it[INSTALLED_LANGUAGES] ?: emptySet() }
 
     suspend fun setSetupComplete(complete: Boolean) {
-        context.dataStore.edit { it[SETUP_COMPLETE] = complete }
+        dataStore.edit { it[SETUP_COMPLETE] = complete }
     }
 
     suspend fun addLanguage(languageCode: String) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             val current = prefs[INSTALLED_LANGUAGES] ?: emptySet()
             prefs[INSTALLED_LANGUAGES] = current + languageCode
         }
     }
 
     suspend fun removeLanguage(languageCode: String) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             val current = prefs[INSTALLED_LANGUAGES] ?: emptySet()
             prefs[INSTALLED_LANGUAGES] = current - languageCode
         }

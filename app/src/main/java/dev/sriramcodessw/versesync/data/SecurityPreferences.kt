@@ -1,6 +1,8 @@
 package dev.sriramcodessw.versesync.data
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -11,23 +13,25 @@ enum class LockType {
     NONE, DEVICE, BIOMETRIC, VOCAL
 }
 
-class SecurityPreferences(private val context: Context) {
+class SecurityPreferences(private val dataStore: DataStore<Preferences>) {
+    constructor(context: Context) : this(context.dataStore)
+
     companion object {
         private val APP_LOCK_ENABLED = booleanPreferencesKey("app_lock_enabled")
         private val SELECTED_LOCK_TYPE = stringPreferencesKey("selected_lock_type")
     }
 
-    val isAppLockEnabled: Flow<Boolean> = context.dataStore.data.map { it[APP_LOCK_ENABLED] ?: false }
-    val lockType: Flow<LockType> = context.dataStore.data.map { 
+    val isAppLockEnabled: Flow<Boolean> = dataStore.data.map { it[APP_LOCK_ENABLED] ?: false }
+    val lockType: Flow<LockType> = dataStore.data.map { 
         runCatching { LockType.valueOf(it[SELECTED_LOCK_TYPE] ?: LockType.DEVICE.name) }
             .getOrDefault(LockType.DEVICE) 
     }
 
     suspend fun setAppLockEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[APP_LOCK_ENABLED] = enabled }
+        dataStore.edit { it[APP_LOCK_ENABLED] = enabled }
     }
 
     suspend fun setLockType(type: LockType) {
-        context.dataStore.edit { it[SELECTED_LOCK_TYPE] = type.name }
+        dataStore.edit { it[SELECTED_LOCK_TYPE] = type.name }
     }
 }

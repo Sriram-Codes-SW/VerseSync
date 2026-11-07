@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class GeneralViewModel(application: Application) : AndroidViewModel(application) {
-    private val prefs = GeneralPreferences(application)
+class GeneralViewModel(
+    application: Application,
+    private val prefs: GeneralPreferences = GeneralPreferences(application)
+) : AndroidViewModel(application) {
 
     val showPitchTrail: StateFlow<Boolean> = prefs.showPitchTrail
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)

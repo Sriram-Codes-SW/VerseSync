@@ -14,8 +14,10 @@ import kotlinx.coroutines.launch
 /** Saved lock settings read together so the UI never sees a half-loaded pair. */
 data class LockConfig(val enabled: Boolean, val type: LockType)
 
-class SecurityViewModel(application: Application) : AndroidViewModel(application) {
-    private val prefs = SecurityPreferences(application)
+class SecurityViewModel(
+    application: Application,
+    private val prefs: SecurityPreferences = SecurityPreferences(application)
+) : AndroidViewModel(application) {
 
     val isAppLockEnabled: StateFlow<Boolean> = prefs.isAppLockEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
