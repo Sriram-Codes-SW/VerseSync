@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.3 |
+| Version | 0.4 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -247,6 +247,7 @@ These corrections bring the records in line with the code as built.
 * **ADR-03 (implementation):** Tokenized matching exists only in `HybridRecognitionEngine`, which loads all songs and ranks them in memory. No multi-token query was added to `SongDao`. The unused exact-substring query `searchSongsByLyrics` has been removed so the code no longer contradicts this record.
 * **ADR-04 (distance rule):** Unvoiced frames are `NaN` in the relative contour and are skipped when either contour is unvoiced at that frame. Previously a frame silent in only one contour was compared against 0 and inflated the distance. A match also needs at least 8 frames voiced in both contours. Mean-centering still uses the whole live buffer and not only the compared window.
 * **ADR-11 and ADR-12 (lifecycle):** The Bluetooth server tracks every listening socket and closes all of them after the first connection or on stop. Before, only the last socket was closed and the other accept thread blocked forever. The location permission is requested on the first-run language screen only, not on every app start.
+* **Preferences storage (ADR-10, ADR-12):** The preferences classes take an injectable `DataStore<Preferences>`, and each view model accepts its preferences object. The default is unchanged, so the app still uses one process-wide DataStore. Tests use a private DataStore per test. The three DataStore-backed test classes previously shared one on-disk file through a mock context, so results depended on test order. They also reset the Main dispatcher before cancelling coroutines that still needed it. Tests run on a real single-thread Main dispatcher. Write paths are asserted on the preferences object, and view model state is asserted by creating the view model after the data is saved, as on a cold start.
 
 ---
 
@@ -256,5 +257,5 @@ These corrections bring the records in line with the code as built.
 * **Licensing:** TarsosDSP is licensed GPL-3.0 and the bundled jar (`app/libs`, version 2.4, built 2016-12-08) has no recorded source. Shipping it in a closed commercial app conflicts with that license. The options are to replace it, relicense the app, or obtain a commercial license.
 * **Pro product:** The README describes a one-time Pro purchase, but only the `pro_subscription` product is defined (ADR-08).
 * **Repository:** The repository is public and has no license file, while the README states it will be private.
-* **Test isolation:** `SecurityViewModelTest`, `LanguageViewModelTest` and `TrialViewModelTest` share one on-disk DataStore through a mock context, so they fail intermittently. Preferences classes need an injectable DataStore to fix this.
 * **Resumable transfer:** Not supported until partial data is persisted (ADR-11).
+* **State flow after a live write:** In unit tests, a view model state flow occasionally did not show a value written just after the view model started, even though the DataStore held the correct value. It happened about 1 in 10 times under test dispatchers and was not seen in 100 runs with a real Main thread. DataStore 1.3.0 reduced it but did not remove it. The cause is not identified. Confirm on a device that the lock type, app lock and trial counter update in the UI immediately after being changed.
