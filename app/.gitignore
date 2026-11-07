@@ -1,1 +1,3 @@
 /build
+# Created by unit tests that use a real DataStore with a mock context
+/datastore/

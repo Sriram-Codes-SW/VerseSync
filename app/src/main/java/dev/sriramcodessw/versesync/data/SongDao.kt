@@ -42,7 +42,7 @@ interface SongDao {
     fun getSongsInFolder(folderId: Int): Flow<List<Song>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertFolder(folder: Folder)
+    suspend fun insertFolder(folder: Folder): Long
 
     @Update
     suspend fun updateFolder(folder: Folder)

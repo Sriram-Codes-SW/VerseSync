@@ -70,7 +70,13 @@ class VerseViewModel(application: Application, private val songDao: SongDao) : A
         }
     }
 
-    suspend fun addSongWithConflictResolution(song: Song) {
+    /**
+     * Adds a song that came from outside this database (Bluetooth or an import).
+     * The incoming id belongs to another database, so it is discarded and a new one is
+     * generated. Keeping it would overwrite a local song that happens to share the id.
+     * [folderId] must already be a folder that exists locally, or null.
+     */
+    suspend fun addSongWithConflictResolution(song: Song, folderId: Int? = null) {
         val existingSongs = songDao.getAllSongs().first()
         var newTitle = song.title
         var count = 2
@@ -78,7 +84,7 @@ class VerseViewModel(application: Application, private val songDao: SongDao) : A
             newTitle = "${song.title} ($count)"
             count++
         }
-        songDao.insert(song.copy(title = newTitle))
+        songDao.insert(song.copy(id = 0, title = newTitle, folderId = folderId))
     }
 
     fun deleteSong(song: Song) {
@@ -128,8 +134,9 @@ class VerseViewModel(application: Application, private val songDao: SongDao) : A
             val result = portabilityManager.importLibrary(encodedData)
             if (result != null) {
                 val (songs, folders) = result
-                folders.forEach { songDao.insertFolder(it) }
-                songs.forEach { addSongWithConflictResolution(it) }
+                // Folders get new ids too, so remap each song to its folder's new id.
+                val folderIdMap = folders.associate { it.id to songDao.insertFolder(it.copy(id = 0)).toInt() }
+                songs.forEach { addSongWithConflictResolution(it, folderIdMap[it.folderId]) }
                 onComplete(true)
             } else {
                 onComplete(false)

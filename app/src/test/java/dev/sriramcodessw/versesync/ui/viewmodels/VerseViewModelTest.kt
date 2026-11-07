@@ -93,3 +93,45 @@ class VerseViewModelTest {
         verify(songDaoMock).update(songsToMove[1].copy(folderId = targetFolderId))
     }
 }
+
+@ExperimentalCoroutinesApi
+class VerseViewModelIncomingSongTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+    private lateinit var songDaoMock: SongDao
+    private lateinit var viewModel: VerseViewModel
+
+    @BeforeEach
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+        songDaoMock = mock()
+        val existing = Song(id = 1, title = "Local Song", artist = "Me", lyrics = "mine")
+        whenever(songDaoMock.getAllSongs()).thenReturn(flowOf(listOf(existing)))
+        whenever(songDaoMock.getAllFolders()).thenReturn(flowOf(emptyList()))
+        viewModel = VerseViewModel(mock<Application>(), songDaoMock)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun addSongWithConflictResolution_discardsForeignIdSoLocalSongIsNotReplaced() = runTest {
+        // The remote device also numbered its song 1 and put it in its own folder 99.
+        val incoming = Song(id = 1, title = "Remote Song", artist = "Them", lyrics = "theirs", folderId = 99)
+
+        viewModel.addSongWithConflictResolution(incoming)
+
+        verify(songDaoMock).insert(incoming.copy(id = 0, folderId = null))
+    }
+
+    @Test
+    fun addSongWithConflictResolution_usesProvidedLocalFolderAndRenamesDuplicateTitle() = runTest {
+        val incoming = Song(id = 7, title = "Local Song", artist = "Them", lyrics = "x", folderId = 99)
+
+        viewModel.addSongWithConflictResolution(incoming, folderId = 5)
+
+        verify(songDaoMock).insert(incoming.copy(id = 0, title = "Local Song (2)", folderId = 5))
+    }
+}

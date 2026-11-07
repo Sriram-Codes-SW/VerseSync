@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Song::class, Folder::class], version = 3, exportSchema = false)
+@Database(entities = [Song::class, Folder::class], version = 3, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class VerseDatabase : RoomDatabase() {
 
@@ -22,7 +22,10 @@ abstract class VerseDatabase : RoomDatabase() {
                     context.applicationContext,
                     VerseDatabase::class.java,
                     "verse_database"
-                ).fallbackToDestructiveMigration().build()
+                )
+                    // Never wipe user songs on upgrade. Add a Migration when bumping the version.
+                    .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
+                    .build()
                 INSTANCE = instance
                 instance
             }
