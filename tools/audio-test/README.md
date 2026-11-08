@@ -22,7 +22,7 @@ It is Windows only, because it plays audio through a virtual audio cable.
    ./gradlew assembleDebug assembleDebugAndroidTest
    adb install -r app/build/outputs/apk/debug/app-debug.apk
    adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-   adb shell pm grant dev.sriramkaushal.versesync android.permission.RECORD_AUDIO
+   adb shell pm grant dev.sriramcodessw.versesync android.permission.RECORD_AUDIO
    ```
 4. Run the scripts from Git Bash, with `adb` on the path or in the `ADB` variable.
 

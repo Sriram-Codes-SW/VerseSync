@@ -40,9 +40,8 @@ class DataTransferService(private val socket: BluetoothSocket) {
      * There is no resume: the receiver does not keep partial data, so it always starts at 0.
      */
 
-    fun sendSongs(songs: List<Song>, transferId: String, onProgress: (Int) -> Unit): Boolean {
+    fun sendSongs(data: ByteArray, transferId: String, onProgress: (Int) -> Unit): Boolean {
         return try {
-            val data = encode(songs)
             val totalSize = data.size
 
             // Step 1: Send Header

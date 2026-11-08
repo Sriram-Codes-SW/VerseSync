@@ -69,7 +69,7 @@ class DataTransferServiceLimitsTest {
         val refusal = ByteArrayOutputStream().apply { DataOutputStream(this).writeInt(-1) }.toByteArray()
         val service = DataTransferService(socketWith(refusal, ByteArrayOutputStream()))
 
-        val ok = service.sendSongs(listOf(Song(1, "t", "a", "l")), "id") { }
+        val ok = service.sendSongs(DataTransferService.encode(listOf(Song(1, "t", "a", "l"))), "id") { }
 
         assertFalse(ok)
     }
