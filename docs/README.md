@@ -16,6 +16,7 @@ This directory contains the system architecture, security, design records (ADRs)
 |---|---|---|---|
 | [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.9 | Active |
 | [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.9 | Active |
+| [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 
 ## Revision History
 
