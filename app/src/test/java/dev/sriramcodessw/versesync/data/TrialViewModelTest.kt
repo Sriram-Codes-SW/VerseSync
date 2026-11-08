@@ -10,7 +10,6 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -48,11 +47,8 @@ class TrialViewModelTest {
     @AfterEach
     fun tearDown() {
         // Stop view models collecting before the DataStore scope is cancelled, and reset Main
-        // last, or cancellation surfaces as an uncaught exception in the next test.
-        viewModels.forEach { it.viewModelScope.cancel() }
-        dataStoreScope.cancel()
-        Dispatchers.resetMain()
-        mainExecutor.shutdownNow()
+        // last (see resetTestMain), or cancellation surfaces as an uncaught exception.
+        resetTestMain(mainExecutor, *viewModels.map { it.viewModelScope }.toTypedArray(), dataStoreScope)
     }
 
     @Test
