@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.9 |
+| Version | 0.10 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -69,3 +69,4 @@ Notes:
 | **TC-U-25** | Bluetooth / Size check | A small selection, a selection over 8 MiB, and the limit itself | Only a selection over the limit is reported as too large | ADR-11 |
 | **TC-U-26** | Engine / Matching | Speech of one language against the lyrics of every other language that shares its script | No pair reaches the match threshold | ADR-14 |
 | **TC-M-10** | Database / Migration | Run `VerseDatabaseMigrationTest` on a device or emulator, and again after raising the version without a migration | Passes at version 3; fails with a missing-migration error when the version is raised alone | ADR-12 |
+| **TC-M-11** | Build / Application id | Install a build with the old id and a build with the new id on one device, and look at their data | Both install side by side and keep separate data; nothing from the old app appears in the new one | ADR-16 |

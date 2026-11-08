@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.9 |
+| Version | 0.10 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -278,6 +278,24 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   * The recognition screen still lists only languages with an installed model, so a user whose songs are all in those languages cannot start recognition yet. This is an open item.
   * Greek can be added if a small model is published.
   * The Swedish model is much larger than the others.
+
+---
+
+### ADR-16: Application Id Matches the Code Namespace
+
+* **Status:** Accepted
+* **Context:**
+  `applicationId` was `dev.sriramkaushal.versesync`, while the Kotlin namespace and every package is `dev.sriramcodessw.versesync`. The two ids appear in different places, such as Play Console, adb and permissions, and the mismatch served no purpose. The old id also contained a personal name. Android and Google Play identify an app by its application id, and the id cannot be changed after the first release on Google Play.
+* **Decision:**
+  Use `dev.sriramcodessw.versesync` as the application id. Do it before the first public release, while no user has the app under the old id.
+* **Consequences, and migration note:**
+  * To Android this is a different app. It installs next to builds that use the old id, and nothing carries over. Songs, folders, settings, downloaded speech models and the keystore key used for library export all stay with the old app.
+  * Purchases and subscriptions belong to the Play Console entry for the old id and are not carried over. The new id needs its own Play Console app, with the `pro_subscription`, `small_tip` and `big_tip` products created again under the same product ids.
+  * Anything registered against the package name, such as API keys tied to a signing certificate, must be registered again for the new id.
+  * Bluetooth sharing uses fixed service UUIDs and not the application id, so builds with the two ids can still exchange songs. Library exports are encrypted with a device-bound key, so they could not be moved between installs anyway.
+  * This is safe only if the old id has no users and no Play listing. If it does, do not merge this change and keep the old id.
+  * The scripts in `tools/audio-test` name the id for adb, and they use the new one.
+  * Checked on an emulator: a build with each id installs next to the other, and a file written in the old app's data folder does not exist in the new app.
 
 ---
 

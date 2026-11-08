@@ -5,7 +5,7 @@
 export MSYS_NO_PATHCONV=1
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ADB=${ADB:-adb}
-APP=dev.sriramkaushal.versesync
+APP=dev.sriramcodessw.versesync
 TEST=$APP.test
 CODE=$1
 DECOY=${2:-"completely unrelated words about something else entirely"}
