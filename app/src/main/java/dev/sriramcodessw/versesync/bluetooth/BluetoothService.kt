@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.IOException
+import java.util.Locale
 
 private const val TAG = "BluetoothService"
 
@@ -177,9 +178,9 @@ class BluetoothService(
     fun sendSongs(songs: List<Song>, transferId: String) {
         serviceScope.launch {
             // Tell the user why, instead of a generic failure after the receiver refuses.
-            val payloadBytes = DataTransferService.encode(songs).size
-            if (DataTransferService.isTooLarge(payloadBytes)) {
-                val megabytes = payloadBytes / (1024 * 1024)
+            val payload = DataTransferService.encode(songs)
+            if (DataTransferService.isTooLarge(payload.size)) {
+                val megabytes = String.format(Locale.US, "%.1f", Math.ceil(payload.size / (1024.0 * 1024.0) * 10) / 10)
                 val limit = MAX_TRANSFER_BYTES / (1024 * 1024)
                 mainDispatcher.launch {
                     _state.value = BluetoothState.Error(
@@ -190,7 +191,7 @@ class BluetoothService(
                 return@launch
             }
             mainDispatcher.launch { _state.value = BluetoothState.Transferring(0) }
-            val success = dataTransferService?.sendSongs(songs, transferId) { progress ->
+            val success = dataTransferService?.sendSongs(songs, transferId, payload) { progress ->
                 mainDispatcher.launch { _state.value = BluetoothState.Transferring(progress) }
             } ?: false
             mainDispatcher.launch {
