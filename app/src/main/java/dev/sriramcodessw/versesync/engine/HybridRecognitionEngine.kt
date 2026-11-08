@@ -122,19 +122,11 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
     }
 
     /**
-     * Tokenized fuzzy lyric matching that is resilient to punctuation, capitalization, and formatting.
+     * Tokenized fuzzy lyric matching that is resilient to punctuation, capitalization, formatting,
+     * Unicode composition form, and the way each script marks word boundaries (see [tokenizeLyrics]).
      */
     fun matchLyricsScore(spokenQuery: String, lyrics: String): Float {
-        val cleanSpoken = spokenQuery.lowercase().replace(Regex("[^\\p{L}\\p{Nd}\\s]"), " ")
-        val spokenWords = cleanSpoken.split("\\s+".toRegex()).filter { it.length >= 3 }
-        if (spokenWords.isEmpty()) return 0f
-
-        val cleanLyrics = lyrics.lowercase().replace(Regex("[^\\p{L}\\p{Nd}\\s]"), " ")
-        val lyricWords = cleanLyrics.split("\\s+".toRegex()).filter { it.isNotBlank() }.toSet()
-        if (lyricWords.isEmpty()) return 0f
-
-        val matchingWords = spokenWords.count { lyricWords.contains(it) }
-        return matchingWords.toFloat() / spokenWords.size
+        return lyricMatchScore(spokenQuery, lyrics)
     }
 
     /**

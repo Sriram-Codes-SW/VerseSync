@@ -1,6 +1,7 @@
 package dev.sriramcodessw.versesync.data
 
 import android.app.Application
+import dev.sriramcodessw.versesync.engine.languageSamples
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,19 @@ class LanguageViewModelTest {
         viewModel.markSetupComplete()
 
         assertTrue(awaitReal { prefs.isSetupComplete.first { it } })
+    }
+
+    @Test
+    fun availableLanguages_areAllCoveredByMatchingSamples() {
+        // Adding a language without a sample phrase in LanguageSamples.kt should fail here.
+        assertEquals(languageSamples.keys, viewModel.availableLanguages.map { it.code }.toSet())
+    }
+
+    @Test
+    fun availableLanguages_haveUniqueCodesAndHttpsModelUrls() {
+        val languages = viewModel.availableLanguages
+        assertEquals(languages.size, languages.map { it.code }.toSet().size)
+        assertTrue(languages.all { it.url.startsWith("https://") })
     }
 
     @Test
