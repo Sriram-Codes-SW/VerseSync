@@ -24,7 +24,7 @@ We believe in providing core value for free while offering powerful enhancements
 3.  **Advanced Feature Subscription (VerseSync Pro+):**
     *   An optional yearly subscription that grants access to our most advanced, cutting-edge features, including the **Hybrid Recognition Engine** for concert-level identification. This subscription supports our ongoing R&D.
 
-> **Current implementation:** the app defines one Google Play product, the `pro_subscription` subscription, which unlocks all Pro features. The one-time Pro purchase and the separate Pro+ tier described above are not implemented yet.
+> **Current implementation:** the app defines one Google Play product, the `pro_subscription` subscription, which unlocks all Pro features. This is deliberate for now, so that Pro behavior can be tested on its own before the final products are set up. The one-time Pro purchase and the separate Pro+ tier described above are planned and not implemented yet. Today the basic split is: free users get 10 songs and 3 trials of the Pro features, and Pro unlocks unlimited songs, folders and pitch-based recognition.
 
 ## Technology Stack
 

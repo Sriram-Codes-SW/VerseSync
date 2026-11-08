@@ -168,7 +168,7 @@ VerseSync is an offline-first Android application designed for musicians, worshi
 * **Consequences:**
   * Free-tier limits and Pro gates apply in release builds.
   * Debug builds keep unlocked Pro for development.
-  * The README describes a one-time Pro purchase, but the code only defines a subscription product. That product decision is still open.
+  * A single subscription product is used on purpose for now, so Pro behavior can be tested separately before the final products are set up. The one-time purchase and the Pro+ tier in the README are planned.
 
 ---
 
@@ -307,7 +307,7 @@ These corrections bring the records in line with the code as built.
 
 * **Transfer integrity (TC-U-10):** The transfer protocol has no checksum. Integrity relies on the announced length and JSON parsing. Adding a checksum needs a new protocol version.
 * **Licensing:** TarsosDSP is licensed GPL-3.0 and the bundled jar (`app/libs`, version 2.4, built 2016-12-08) has no recorded source. Shipping it in a closed commercial app conflicts with that license. The options are to replace it, relicense the app, or obtain a commercial license.
-* **Pro product:** Only the `pro_subscription` product is implemented (ADR-08). The README now says so, but the one-time purchase it describes is still a product decision.
+* **Final Pro products:** Only the `pro_subscription` product exists, as a deliberate stand-in (ADR-08). The one-time Pro purchase and the Pro+ tier described in the README are planned, and the free and Pro split above is the basic differentiation until they are set up.
 * **Repository:** The repository is public and has no license file, while the README states it will be private.
 * **Resumable transfer:** Not supported until partial data is persisted (ADR-11).
 * **State flow after a live write:** In unit tests, a view model state flow occasionally did not show a value written just after the view model started, even though the DataStore held the correct value. It happened about 1 in 10 times under test dispatchers and was not seen in 100 runs with a real Main thread. DataStore 1.3.0 reduced it but did not remove it. The cause is not identified. An emulator run (TC-M-06, TC-M-07) showed the trial counter, the lock switch and the lock type label updating immediately, so this has not been seen in the app.
