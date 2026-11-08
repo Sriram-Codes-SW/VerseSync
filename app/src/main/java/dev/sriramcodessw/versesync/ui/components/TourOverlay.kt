@@ -24,7 +24,7 @@ data class TourStep(
     val title: String,
     val description: String,
     val anchor: Offset = Offset.Zero,
-    val size: IntSize = IntSize.Zero
+    val size: IntSize = IntSize.Zero,
 )
 
 @Composable
@@ -32,31 +32,34 @@ fun TourOverlay(
     steps: List<TourStep>,
     currentStepIndex: Int,
     onNext: () -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
 ) {
     if (currentStepIndex >= steps.size) return
 
     val step = steps[currentStepIndex]
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent)
-            .clickable(enabled = true, onClick = {}) // Intercept clicks
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+                .clickable(enabled = true, onClick = {}), // Intercept clicks
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val spotlightPath = Path().apply {
-                addRoundRect(
-                    RoundRect(
-                        rect = Rect(
-                            offset = step.anchor,
-                            size = Size(step.size.width.toFloat(), step.size.height.toFloat())
+            val spotlightPath =
+                Path().apply {
+                    addRoundRect(
+                        RoundRect(
+                            rect =
+                                Rect(
+                                    offset = step.anchor,
+                                    size = Size(step.size.width.toFloat(), step.size.height.toFloat()),
+                                ),
+                            cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
                         ),
-                        cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx())
                     )
-                )
-            }
-            
+                }
+
             // Draw overlay with a hole
             clipPath(spotlightPath, clipOp = ClipOp.Difference) {
                 drawRect(Color.Black.copy(alpha = 0.7f))
@@ -65,19 +68,20 @@ fun TourOverlay(
 
         // Tooltip logic
         Box(
-            modifier = Modifier
-                .padding(16.dp)
-                .align(Alignment.Center) 
+            modifier =
+                Modifier
+                    .padding(16.dp)
+                    .align(Alignment.Center),
         ) {
             Card(
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             ) {
                 Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(step.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(step.description, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
-                    
+
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         TextButton(onClick = onSkip) { Text("Skip Tour") }
                         Button(onClick = onNext) {

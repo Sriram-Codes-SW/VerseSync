@@ -11,7 +11,6 @@ import org.mockito.kotlin.whenever
 import java.lang.reflect.Field
 
 class HybridRecognitionViewModelTest {
-
     private lateinit var appMock: VerseSyncApp
     private lateinit var databaseMock: VerseDatabase
     private lateinit var songDaoMock: SongDao

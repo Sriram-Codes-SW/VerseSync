@@ -21,7 +21,6 @@ import org.mockito.kotlin.whenever
 
 @ExperimentalCoroutinesApi
 class VerseViewModelTest {
-
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var songDaoMock: SongDao
     private lateinit var applicationMock: Application
@@ -45,58 +44,62 @@ class VerseViewModelTest {
     }
 
     @Test
-    fun updateSortOrder_shouldTriggerReSorting() = runTest {
-        val song1 = Song(id = 1, title = "B", artist = "Z", lyrics = "...")
-        val song2 = Song(id = 2, title = "A", artist = "Y", lyrics = "...")
-        allSongsFlow.value = listOf(song1, song2)
+    fun updateSortOrder_shouldTriggerReSorting() =
+        runTest {
+            val song1 = Song(id = 1, title = "B", artist = "Z", lyrics = "...")
+            val song2 = Song(id = 2, title = "A", artist = "Y", lyrics = "...")
+            allSongsFlow.value = listOf(song1, song2)
 
-        // When sorting by Title
-        viewModel.updateSortOrder(SortOrder.TITLE)
-        testDispatcher.scheduler.advanceUntilIdle()
-        
-        viewModel.songs.test {
-            var sorted = awaitItem()
-            if (sorted.isEmpty()) {
-                sorted = awaitItem()
+            // When sorting by Title
+            viewModel.updateSortOrder(SortOrder.TITLE)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.songs.test {
+                var sorted = awaitItem()
+                if (sorted.isEmpty()) {
+                    sorted = awaitItem()
+                }
+                assertEquals("A", sorted[0].title)
+                cancelAndConsumeRemainingEvents()
             }
-            assertEquals("A", sorted[0].title)
-            cancelAndConsumeRemainingEvents()
         }
-    }
 
     @Test
-    fun deleteSongs_shouldCallDeleteForEachSongInList() = runTest {
-        val songsToDelete = listOf(
-            Song(id = 1, title = "S1", artist = "A1", lyrics = "..."),
-            Song(id = 2, title = "S2", artist = "A2", lyrics = "...")
-        )
-        
-        viewModel.deleteSongs(songsToDelete)
-        testDispatcher.scheduler.advanceUntilIdle()
+    fun deleteSongs_shouldCallDeleteForEachSongInList() =
+        runTest {
+            val songsToDelete =
+                listOf(
+                    Song(id = 1, title = "S1", artist = "A1", lyrics = "..."),
+                    Song(id = 2, title = "S2", artist = "A2", lyrics = "..."),
+                )
 
-        verify(songDaoMock).delete(songsToDelete[0])
-        verify(songDaoMock).delete(songsToDelete[1])
-    }
+            viewModel.deleteSongs(songsToDelete)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            verify(songDaoMock).delete(songsToDelete[0])
+            verify(songDaoMock).delete(songsToDelete[1])
+        }
 
     @Test
-    fun moveSongsToFolder_shouldUpdateEachSongWithNewFolderId() = runTest {
-        val songsToMove = listOf(
-            Song(id = 1, title = "S1", artist = "A1", lyrics = "..."),
-            Song(id = 2, title = "S2", artist = "A2", lyrics = "...")
-        )
-        val targetFolderId = 100
-        
-        viewModel.moveSongsToFolder(songsToMove, targetFolderId)
-        testDispatcher.scheduler.advanceUntilIdle()
+    fun moveSongsToFolder_shouldUpdateEachSongWithNewFolderId() =
+        runTest {
+            val songsToMove =
+                listOf(
+                    Song(id = 1, title = "S1", artist = "A1", lyrics = "..."),
+                    Song(id = 2, title = "S2", artist = "A2", lyrics = "..."),
+                )
+            val targetFolderId = 100
 
-        verify(songDaoMock).update(songsToMove[0].copy(folderId = targetFolderId))
-        verify(songDaoMock).update(songsToMove[1].copy(folderId = targetFolderId))
-    }
+            viewModel.moveSongsToFolder(songsToMove, targetFolderId)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            verify(songDaoMock).update(songsToMove[0].copy(folderId = targetFolderId))
+            verify(songDaoMock).update(songsToMove[1].copy(folderId = targetFolderId))
+        }
 }
 
 @ExperimentalCoroutinesApi
 class VerseViewModelIncomingSongTest {
-
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var songDaoMock: SongDao
     private lateinit var viewModel: VerseViewModel
@@ -117,21 +120,23 @@ class VerseViewModelIncomingSongTest {
     }
 
     @Test
-    fun addSongWithConflictResolution_discardsForeignIdSoLocalSongIsNotReplaced() = runTest {
-        // The remote device also numbered its song 1 and put it in its own folder 99.
-        val incoming = Song(id = 1, title = "Remote Song", artist = "Them", lyrics = "theirs", folderId = 99)
+    fun addSongWithConflictResolution_discardsForeignIdSoLocalSongIsNotReplaced() =
+        runTest {
+            // The remote device also numbered its song 1 and put it in its own folder 99.
+            val incoming = Song(id = 1, title = "Remote Song", artist = "Them", lyrics = "theirs", folderId = 99)
 
-        viewModel.addSongWithConflictResolution(incoming)
+            viewModel.addSongWithConflictResolution(incoming)
 
-        verify(songDaoMock).insert(incoming.copy(id = 0, folderId = null))
-    }
+            verify(songDaoMock).insert(incoming.copy(id = 0, folderId = null))
+        }
 
     @Test
-    fun addSongWithConflictResolution_usesProvidedLocalFolderAndRenamesDuplicateTitle() = runTest {
-        val incoming = Song(id = 7, title = "Local Song", artist = "Them", lyrics = "x", folderId = 99)
+    fun addSongWithConflictResolution_usesProvidedLocalFolderAndRenamesDuplicateTitle() =
+        runTest {
+            val incoming = Song(id = 7, title = "Local Song", artist = "Them", lyrics = "x", folderId = 99)
 
-        viewModel.addSongWithConflictResolution(incoming, folderId = 5)
+            viewModel.addSongWithConflictResolution(incoming, folderId = 5)
 
-        verify(songDaoMock).insert(incoming.copy(id = 0, title = "Local Song (2)", folderId = 5))
-    }
+            verify(songDaoMock).insert(incoming.copy(id = 0, title = "Local Song (2)", folderId = 5))
+        }
 }

@@ -5,21 +5,26 @@ import android.media.AudioAttributes
 import android.media.SoundPool
 import dev.sriramcodessw.versesync.R
 
-class SoundManager(context: Context) {
-
+class SoundManager(
+    context: Context,
+) {
     private val soundPool: SoundPool
     private var tapSoundId: Int = 0
 
     init {
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
+        val audioAttributes =
+            AudioAttributes
+                .Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
 
-        soundPool = SoundPool.Builder()
-            .setMaxStreams(1)
-            .setAudioAttributes(audioAttributes)
-            .build()
+        soundPool =
+            SoundPool
+                .Builder()
+                .setMaxStreams(1)
+                .setAudioAttributes(audioAttributes)
+                .build()
 
         tapSoundId = soundPool.load(context, R.raw.tap_sound, 1)
     }

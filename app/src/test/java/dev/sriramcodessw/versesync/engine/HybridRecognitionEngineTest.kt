@@ -17,7 +17,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class HybridRecognitionEngineTest {
-
     private lateinit var voskMock: VoskVoiceRecognition
     private lateinit var fingerprinterMock: AudioFingerprinter
     private lateinit var dispatcherMock: be.tarsos.dsp.AudioDispatcher
@@ -31,9 +30,9 @@ class HybridRecognitionEngineTest {
         dispatcherMock = mock()
         songDaoMock = mock()
         val contextMock: Context = mock()
-        
+
         whenever(voskMock.isModelReady).thenReturn(MutableStateFlow(true))
-        
+
         hybridEngine = HybridRecognitionEngine(contextMock, songDaoMock)
 
         val voskField: Field = hybridEngine.javaClass.getDeclaredField("vosk")

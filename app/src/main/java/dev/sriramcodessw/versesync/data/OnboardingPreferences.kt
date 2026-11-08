@@ -8,7 +8,9 @@ import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class OnboardingPreferences(private val dataStore: DataStore<Preferences>) {
+class OnboardingPreferences(
+    private val dataStore: DataStore<Preferences>,
+) {
     constructor(context: Context) : this(context.dataStore)
 
     companion object {

@@ -11,36 +11,43 @@ import kotlin.math.sin
 class PitchPlayer {
     private var audioTrack: AudioTrack? = null
     private val sampleRate = 22050
-    // Buffer size from engine: 1024. Sample rate: 22050. 
-    // Duration per block = (1024 / 22050) * 1000 ~= 46.4ms
-    private val durationPerPitch = 46L 
-    
-    private val bufferSize = AudioTrack.getMinBufferSize(
-        sampleRate,
-        AudioFormat.CHANNEL_OUT_MONO,
-        AudioFormat.ENCODING_PCM_16BIT
-    )
 
-    suspend fun playFingerprint(pitches: List<Float>, onProgress: (Int) -> Unit) = withContext(Dispatchers.IO) {
+    // Buffer size from engine: 1024. Sample rate: 22050.
+    // Duration per block = (1024 / 22050) * 1000 ~= 46.4ms
+    private val durationPerPitch = 46L
+
+    private val bufferSize =
+        AudioTrack.getMinBufferSize(
+            sampleRate,
+            AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+        )
+
+    suspend fun playFingerprint(
+        pitches: List<Float>,
+        onProgress: (Int) -> Unit,
+    ) = withContext(Dispatchers.IO) {
         if (pitches.isEmpty()) return@withContext
 
-        audioTrack = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setSampleRate(sampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(bufferSize)
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
+        audioTrack =
+            AudioTrack
+                .Builder()
+                .setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build(),
+                ).setAudioFormat(
+                    AudioFormat
+                        .Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(sampleRate)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build(),
+                ).setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
 
         audioTrack?.play()
 
@@ -54,7 +61,7 @@ class PitchPlayer {
                 val silence = ShortArray((sampleRate * durationPerPitch / 1000).toInt())
                 audioTrack?.write(silence, 0, silence.size)
             }
-            
+
             if (i % 5 == 0) {
                 onProgress(i)
             }
@@ -63,7 +70,10 @@ class PitchPlayer {
         stop()
     }
 
-    private fun generateSineWave(frequency: Float, durationMs: Long): ShortArray {
+    private fun generateSineWave(
+        frequency: Float,
+        durationMs: Long,
+    ): ShortArray {
         val numSamples = (sampleRate * durationMs / 1000).toInt()
         val samples = ShortArray(numSamples)
         for (i in 0 until numSamples) {

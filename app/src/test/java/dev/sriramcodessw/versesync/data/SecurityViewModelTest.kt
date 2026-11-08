@@ -25,10 +25,10 @@ import kotlin.test.assertNull
 
 @ExperimentalCoroutinesApi
 class SecurityViewModelTest {
-
     @TempDir
     lateinit var tempDir: File
     private lateinit var dataStoreScope: CoroutineScope
+
     // A real single thread stands in for Android's main thread.
     private val mainExecutor = Executors.newSingleThreadExecutor()
     private lateinit var applicationMock: Application
@@ -63,34 +63,38 @@ class SecurityViewModelTest {
     }
 
     @Test
-    fun lockConfig_loadsDefaultsFromEmptyStorage() = runBlocking {
-        val config = awaitReal { newViewModel().lockConfig.first { it != null } }
+    fun lockConfig_loadsDefaultsFromEmptyStorage() =
+        runBlocking {
+            val config = awaitReal { newViewModel().lockConfig.first { it != null } }
 
-        assertEquals(LockConfig(enabled = false, type = LockType.DEVICE), config)
-    }
-
-    @Test
-    fun lockConfig_reflectsSettingsSavedBeforeStartup() = runBlocking {
-        // Saved first, then a fresh view model, as on a cold start.
-        prefs.setAppLockEnabled(true)
-        prefs.setLockType(LockType.VOCAL)
-
-        val config = awaitReal { newViewModel().lockConfig.first { it != null } }
-
-        assertEquals(LockConfig(enabled = true, type = LockType.VOCAL), config)
-    }
+            assertEquals(LockConfig(enabled = false, type = LockType.DEVICE), config)
+        }
 
     @Test
-    fun setAppLockEnabled_persistsTheSetting() = runBlocking {
-        newViewModel().setAppLockEnabled(true)
+    fun lockConfig_reflectsSettingsSavedBeforeStartup() =
+        runBlocking {
+            // Saved first, then a fresh view model, as on a cold start.
+            prefs.setAppLockEnabled(true)
+            prefs.setLockType(LockType.VOCAL)
 
-        assertEquals(true, awaitReal { prefs.isAppLockEnabled.first { it } })
-    }
+            val config = awaitReal { newViewModel().lockConfig.first { it != null } }
+
+            assertEquals(LockConfig(enabled = true, type = LockType.VOCAL), config)
+        }
 
     @Test
-    fun setLockType_persistsTheSetting() = runBlocking {
-        newViewModel().setLockType(LockType.VOCAL)
+    fun setAppLockEnabled_persistsTheSetting() =
+        runBlocking {
+            newViewModel().setAppLockEnabled(true)
 
-        assertEquals(LockType.VOCAL, awaitReal { prefs.lockType.first { it == LockType.VOCAL } })
-    }
+            assertEquals(true, awaitReal { prefs.isAppLockEnabled.first { it } })
+        }
+
+    @Test
+    fun setLockType_persistsTheSetting() =
+        runBlocking {
+            newViewModel().setLockType(LockType.VOCAL)
+
+            assertEquals(LockType.VOCAL, awaitReal { prefs.lockType.first { it == LockType.VOCAL } })
+        }
 }

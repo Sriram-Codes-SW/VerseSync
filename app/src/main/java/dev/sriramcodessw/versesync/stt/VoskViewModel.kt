@@ -6,8 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import kotlinx.coroutines.flow.StateFlow
 
-class VoskViewModel(application: Application) : AndroidViewModel(application) {
-
+class VoskViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private val voskVoiceRecognition = VoskVoiceRecognition(application)
 
     val recognitionResult: StateFlow<String> = voskVoiceRecognition.recognitionResult
@@ -21,7 +22,9 @@ class VoskViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
-class VoskViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+class VoskViewModelFactory(
+    private val application: Application,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(VoskViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

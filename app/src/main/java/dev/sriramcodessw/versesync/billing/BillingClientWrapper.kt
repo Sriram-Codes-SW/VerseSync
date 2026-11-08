@@ -9,8 +9,9 @@ import dev.sriramcodessw.versesync.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class BillingClientWrapper(private val context: Context) {
-
+class BillingClientWrapper(
+    private val context: Context,
+) {
     companion object {
         const val PRO_PRODUCT_ID = "pro_subscription"
         val TIP_PRODUCT_IDS = setOf("small_tip", "big_tip")
@@ -27,39 +28,46 @@ class BillingClientWrapper(private val context: Context) {
 
     private val handler = Handler(Looper.getMainLooper())
 
-    private val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
-        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            if (processPurchases(purchases)) _isPro.value = true
+    private val purchasesUpdatedListener =
+        PurchasesUpdatedListener { billingResult, purchases ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
+                if (processPurchases(purchases)) _isPro.value = true
+            }
         }
-    }
 
     private val billingClient: BillingClient
 
     init {
-        val pendingPurchasesParams = PendingPurchasesParams.newBuilder()
-            .enableOneTimeProducts()
-            .build()
+        val pendingPurchasesParams =
+            PendingPurchasesParams
+                .newBuilder()
+                .enableOneTimeProducts()
+                .build()
 
-        billingClient = BillingClient.newBuilder(context)
-            .setListener(purchasesUpdatedListener)
-            .enablePendingPurchases(pendingPurchasesParams)
-            .build()
+        billingClient =
+            BillingClient
+                .newBuilder(context)
+                .setListener(purchasesUpdatedListener)
+                .enablePendingPurchases(pendingPurchasesParams)
+                .build()
     }
 
     fun startConnection() {
-        billingClient.startConnection(object : BillingClientStateListener {
-            override fun onBillingSetupFinished(billingResult: BillingResult) {
-                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                    queryProducts()
-                    queryPurchases()
+        billingClient.startConnection(
+            object : BillingClientStateListener {
+                override fun onBillingSetupFinished(billingResult: BillingResult) {
+                    if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                        queryProducts()
+                        queryPurchases()
+                    }
                 }
-            }
 
-            override fun onBillingServiceDisconnected() {
-                // Retry with a delay instead of reconnecting in a tight loop.
-                handler.postDelayed({ startConnection() }, RECONNECT_DELAY_MS)
-            }
-        })
+                override fun onBillingServiceDisconnected() {
+                    // Retry with a delay instead of reconnecting in a tight loop.
+                    handler.postDelayed({ startConnection() }, RECONNECT_DELAY_MS)
+                }
+            },
+        )
     }
 
     fun endConnection() {
@@ -68,24 +76,30 @@ class BillingClientWrapper(private val context: Context) {
     }
 
     private fun queryProducts() {
-        val productList = listOf(
-            QueryProductDetailsParams.Product.newBuilder()
-                .setProductId("small_tip")
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build(),
-            QueryProductDetailsParams.Product.newBuilder()
-                .setProductId("big_tip")
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build(),
-            QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(PRO_PRODUCT_ID)
-                .setProductType(BillingClient.ProductType.SUBS)
-                .build()
-        )
+        val productList =
+            listOf(
+                QueryProductDetailsParams.Product
+                    .newBuilder()
+                    .setProductId("small_tip")
+                    .setProductType(BillingClient.ProductType.INAPP)
+                    .build(),
+                QueryProductDetailsParams.Product
+                    .newBuilder()
+                    .setProductId("big_tip")
+                    .setProductType(BillingClient.ProductType.INAPP)
+                    .build(),
+                QueryProductDetailsParams.Product
+                    .newBuilder()
+                    .setProductId(PRO_PRODUCT_ID)
+                    .setProductType(BillingClient.ProductType.SUBS)
+                    .build(),
+            )
 
-        val params = QueryProductDetailsParams.newBuilder()
-            .setProductList(productList)
-            .build()
+        val params =
+            QueryProductDetailsParams
+                .newBuilder()
+                .setProductList(productList)
+                .build()
 
         billingClient.queryProductDetailsAsync(params) { _, queryProductDetailsResult ->
             _productDetails.value = queryProductDetailsResult.productDetailsList ?: emptyList()
@@ -95,7 +109,7 @@ class BillingClientWrapper(private val context: Context) {
     private fun queryPurchases() {
         // Subscriptions decide Pro status; this also acknowledges any not yet acknowledged.
         billingClient.queryPurchasesAsync(
-            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()
+            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
         ) { result, purchases ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 _isPro.value = BuildConfig.DEBUG || processPurchases(purchases)
@@ -103,7 +117,7 @@ class BillingClientWrapper(private val context: Context) {
         }
         // Consume tips left over from an interrupted purchase so they are not refunded.
         billingClient.queryPurchasesAsync(
-            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
+            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build(),
         ) { result, purchases ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) processPurchases(purchases)
         }
@@ -119,13 +133,13 @@ class BillingClientWrapper(private val context: Context) {
             if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
             if (purchase.products.any { it in TIP_PRODUCT_IDS }) {
                 billingClient.consumeAsync(
-                    ConsumeParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
+                    ConsumeParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build(),
                 ) { _, _ -> }
             } else if (purchase.products.contains(PRO_PRODUCT_ID)) {
                 hasPro = true
                 if (!purchase.isAcknowledged) {
                     billingClient.acknowledgePurchase(
-                        AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
+                        AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build(),
                     ) { }
                 }
             }
@@ -143,19 +157,26 @@ class BillingClientWrapper(private val context: Context) {
     }
 
     /** Returns false when the purchase screen could not be opened, so the caller can say so. */
-    fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails): Boolean {
+    fun launchPurchaseFlow(
+        activity: Activity,
+        productDetails: ProductDetails,
+    ): Boolean {
         if (!billingClient.isReady) return false
-        val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
-            .setProductDetails(productDetails)
+        val productParams =
+            BillingFlowParams.ProductDetailsParams
+                .newBuilder()
+                .setProductDetails(productDetails)
         if (productDetails.productType == BillingClient.ProductType.SUBS) {
             // Subscriptions require an offer token or the flow fails with a developer error.
             val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return false
             productParams.setOfferToken(offerToken)
         }
 
-        val billingFlowParams = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(listOf(productParams.build()))
-            .build()
+        val billingFlowParams =
+            BillingFlowParams
+                .newBuilder()
+                .setProductDetailsParamsList(listOf(productParams.build()))
+                .build()
 
         return billingClient.launchBillingFlow(activity, billingFlowParams).responseCode ==
             BillingClient.BillingResponseCode.OK

@@ -32,7 +32,6 @@ private const val TAG = "RECOG"
  */
 @RunWith(AndroidJUnit4::class)
 class LanguageRecognitionInstrumentedTest {
-
     @Test
     fun spokenSentence_isRecognizedAsItsSong() {
         val args = InstrumentationRegistry.getArguments()
@@ -71,9 +70,10 @@ class LanguageRecognitionInstrumentedTest {
                 engine.startRecognition(isPro = false)
                 Log.i(TAG, "READY code=$code")
 
-                val titles = withTimeoutOrNull(90_000) {
-                    engine.recognitionResult.first { result -> result.candidates.any { it.title == "Target" } }
-                }?.candidates?.map { it.title }
+                val titles =
+                    withTimeoutOrNull(90_000) {
+                        engine.recognitionResult.first { result -> result.candidates.any { it.title == "Target" } }
+                    }?.candidates?.map { it.title }
                 Log.i(TAG, "RESULT code=$code matched=${titles != null} candidates=$titles heard=$lastHeard")
                 assertTrue("Song for $code was not recognized. Heard: $lastHeard", titles != null)
                 assertTrue("Decoy must not be recognized for $code", titles?.contains("Decoy") != true)

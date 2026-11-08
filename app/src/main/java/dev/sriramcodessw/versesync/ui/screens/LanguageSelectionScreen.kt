@@ -13,25 +13,29 @@ import androidx.compose.ui.unit.dp
 import dev.sriramcodessw.versesync.data.LanguageViewModel
 
 @Composable
-fun LanguageSelectionScreen(viewModel: LanguageViewModel, onComplete: () -> Unit) {
+fun LanguageSelectionScreen(
+    viewModel: LanguageViewModel,
+    onComplete: () -> Unit,
+) {
     val installedLanguages by viewModel.installedLanguages.collectAsState()
     val downloadStatus by viewModel.downloadStatus.collectAsState()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = "Welcome to VerseSync",
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp),
         )
         Text(
             text = "Select the languages you intend to use for song recognition. Models will be downloaded for offline use.",
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.padding(bottom = 24.dp),
         )
 
         LazyColumn(modifier = Modifier.weight(1f)) {
@@ -46,7 +50,7 @@ fun LanguageSelectionScreen(viewModel: LanguageViewModel, onComplete: () -> Unit
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Installed",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                         } else if (!lang.hasSpeechModel) {
                             // No Vosk model exists for this language, so a download could only fail.
@@ -54,14 +58,14 @@ fun LanguageSelectionScreen(viewModel: LanguageViewModel, onComplete: () -> Unit
                         } else if (status != null && status >= 0) {
                             CircularProgressIndicator(
                                 progress = { status / 100f },
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(24.dp),
                             )
                         } else {
                             Button(onClick = { viewModel.downloadLanguage(lang) }) {
                                 Text("Download")
                             }
                         }
-                    }
+                    },
                 )
             }
         }
@@ -71,9 +75,10 @@ fun LanguageSelectionScreen(viewModel: LanguageViewModel, onComplete: () -> Unit
                 viewModel.markSetupComplete()
                 onComplete()
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
         ) {
             Text(if (installedLanguages.isNotEmpty()) "Continue to App" else "Skip for Now / Continue")
         }

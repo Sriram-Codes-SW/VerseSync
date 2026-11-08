@@ -12,14 +12,15 @@ import kotlinx.coroutines.launch
 
 class GeneralViewModel(
     application: Application,
-    private val prefs: GeneralPreferences = GeneralPreferences(application)
+    private val prefs: GeneralPreferences = GeneralPreferences(application),
 ) : AndroidViewModel(application) {
+    val showPitchTrail: StateFlow<Boolean> =
+        prefs.showPitchTrail
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
-    val showPitchTrail: StateFlow<Boolean> = prefs.showPitchTrail
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-
-    val metronomeDefaultOn: StateFlow<Boolean> = prefs.metronomeDefaultOn
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val metronomeDefaultOn: StateFlow<Boolean> =
+        prefs.metronomeDefaultOn
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun setShowPitchTrail(show: Boolean) {
         viewModelScope.launch {
@@ -34,7 +35,9 @@ class GeneralViewModel(
     }
 }
 
-class GeneralViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+class GeneralViewModelFactory(
+    private val application: Application,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(GeneralViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

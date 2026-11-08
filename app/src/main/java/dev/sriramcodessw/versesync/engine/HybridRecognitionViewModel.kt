@@ -6,8 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import dev.sriramcodessw.versesync.VerseSyncApp
 
-class HybridRecognitionViewModel(application: Application) : AndroidViewModel(application) {
-
+class HybridRecognitionViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private val hybridRecognitionEngine = HybridRecognitionEngine(application, (application as VerseSyncApp).database.songDao())
 
     val recognitionResult = hybridRecognitionEngine.recognitionResult
@@ -29,7 +30,9 @@ class HybridRecognitionViewModel(application: Application) : AndroidViewModel(ap
     }
 }
 
-class HybridRecognitionViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+class HybridRecognitionViewModelFactory(
+    private val application: Application,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HybridRecognitionViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

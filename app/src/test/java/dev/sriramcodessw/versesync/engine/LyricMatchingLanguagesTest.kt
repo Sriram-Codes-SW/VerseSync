@@ -14,7 +14,6 @@ import kotlin.test.assertTrue
 private const val MATCH_THRESHOLD = 0.35f
 
 class LyricMatchingLanguagesTest {
-
     private lateinit var engine: HybridRecognitionEngine
 
     @BeforeEach
@@ -29,7 +28,7 @@ class LyricMatchingLanguagesTest {
                 val score = engine.matchLyricsScore(sample.spoken, sample.lyrics)
                 assertTrue(
                     score >= MATCH_THRESHOLD,
-                    "${sample.name}: expected a match at or above $MATCH_THRESHOLD but got $score"
+                    "${sample.name}: expected a match at or above $MATCH_THRESHOLD but got $score",
                 )
             }
         }

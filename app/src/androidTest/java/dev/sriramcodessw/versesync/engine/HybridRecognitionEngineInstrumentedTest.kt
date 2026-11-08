@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class HybridRecognitionEngineInstrumentedTest {
-
     @Test
     fun startRecognition_doesNotCrashOnARealDevice() {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext

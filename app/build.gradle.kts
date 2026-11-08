@@ -28,7 +28,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -62,12 +62,12 @@ ksp {
 }
 
 dependencies {
-    val room_version = "2.7.0-alpha11"
+    val roomVersion = "2.7.0-alpha11"
 
-    implementation("androidx.room:room-runtime:$room_version")
-    implementation("androidx.room:room-ktx:$room_version")
-    ksp("androidx.room:room-compiler:$room_version")
-    androidTestImplementation("androidx.room:room-testing:$room_version")
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+    androidTestImplementation("androidx.room:room-testing:$roomVersion")
     implementation(libs.androidx.glance.appwidget)
 
     implementation(libs.androidx.core.ktx)
@@ -88,19 +88,19 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.appcompat)
-    
+
     // JUnit 5 Dependencies
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.mockito.jupiter)
-    
+
     // Other Test Dependencies
     testImplementation(libs.mockito.kotlin)
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockito.core)
     testImplementation(libs.turbine)
-    
+
     // AndroidX Test Dependencies
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -24,7 +24,6 @@ import androidx.room.migration.Migration
 @Database(entities = [Song::class, Folder::class], version = 3, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class VerseDatabase : RoomDatabase() {
-
     abstract fun songDao(): SongDao
 
     companion object {
@@ -34,23 +33,24 @@ abstract class VerseDatabase : RoomDatabase() {
         val MIGRATIONS: Array<Migration> = emptyArray()
 
         @Volatile
+        @Suppress("ktlint:standard:property-naming") // conventional name for the singleton holder
         private var INSTANCE: VerseDatabase? = null
 
-        fun getInstance(context: Context): VerseDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    VerseDatabase::class.java,
-                    NAME
-                )
-                    .addMigrations(*MIGRATIONS)
-                    // Never wipe user songs on upgrade. Only a downgrade, which Room cannot
-                    // migrate, may start empty.
-                    .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
-                    .build()
+        fun getInstance(context: Context): VerseDatabase =
+            INSTANCE ?: synchronized(this) {
+                val instance =
+                    Room
+                        .databaseBuilder(
+                            context.applicationContext,
+                            VerseDatabase::class.java,
+                            NAME,
+                        ).addMigrations(*MIGRATIONS)
+                        // Never wipe user songs on upgrade. Only a downgrade, which Room cannot
+                        // migrate, may start empty.
+                        .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
+                        .build()
                 INSTANCE = instance
                 instance
             }
-        }
     }
 }

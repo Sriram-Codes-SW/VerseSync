@@ -7,7 +7,6 @@ import org.mockito.kotlin.whenever
 import kotlin.test.assertEquals
 
 class TipJarPriceTest {
-
     @Test
     fun oneTimeProduct_showsItsPrice() {
         val oneTime: ProductDetails.OneTimePurchaseOfferDetails = mock()

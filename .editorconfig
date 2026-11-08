@@ -1,0 +1,19 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = off
+# Composable functions are named like types.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Existing code uses wildcard imports and long parameter lists; these are not formatting problems.
+ktlint_standard_no-wildcard-imports = disabled
+ktlint_standard_filename = disabled
+
+[*.{md,yml,yaml}]
+indent_size = 2

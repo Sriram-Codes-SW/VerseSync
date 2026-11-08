@@ -9,8 +9,10 @@ import dev.sriramcodessw.versesync.data.Song
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
-class BluetoothViewModel(application: Application, bluetoothAdapter: BluetoothAdapter) : AndroidViewModel(application) {
-
+class BluetoothViewModel(
+    application: Application,
+    bluetoothAdapter: BluetoothAdapter,
+) : AndroidViewModel(application) {
     private val bluetoothService = BluetoothService(application, bluetoothAdapter)
 
     val state: StateFlow<BluetoothService.BluetoothState> = bluetoothService.state
@@ -43,7 +45,10 @@ class BluetoothViewModel(application: Application, bluetoothAdapter: BluetoothAd
     }
 }
 
-class BluetoothViewModelFactory(private val application: Application, private val bluetoothAdapter: BluetoothAdapter) : ViewModelProvider.Factory {
+class BluetoothViewModelFactory(
+    private val application: Application,
+    private val bluetoothAdapter: BluetoothAdapter,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(BluetoothViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

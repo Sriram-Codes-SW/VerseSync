@@ -9,7 +9,6 @@ import org.mockito.kotlin.verify
 import java.lang.reflect.Field
 
 class FingerprintCreationViewModelTest {
-
     private lateinit var applicationMock: Application
     private lateinit var dispatcherMock: AudioDispatcher
     private lateinit var viewModel: FingerprintCreationViewModel

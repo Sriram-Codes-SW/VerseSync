@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -91,9 +91,10 @@ fun AuthWrapper(activity: AppCompatActivity) {
     var failedAttempts by remember { mutableIntStateOf(0) }
     val securityManager = remember { SecurityManager(activity) }
 
-    val syncReadySongs = remember(songs) {
-        songs.filter { !it.fingerprint.isNullOrEmpty() }
-    }
+    val syncReadySongs =
+        remember(songs) {
+            songs.filter { !it.fingerprint.isNullOrEmpty() }
+        }
     val targetSong = remember(syncReadySongs) { syncReadySongs.randomOrNull() }
 
     fun promptDeviceCredential(subtitle: String) {
@@ -101,7 +102,7 @@ fun AuthWrapper(activity: AppCompatActivity) {
             title = "Unlock VerseSync",
             subtitle = subtitle,
             onSuccess = { isUnlocked = true },
-            onError = { }
+            onError = { },
         )
     }
 
@@ -122,9 +123,11 @@ fun AuthWrapper(activity: AppCompatActivity) {
                     CircularProgressIndicator()
                 }
             }
+
             isUnlocked || !config.enabled -> {
                 VerseSyncNavHost(application, securityViewModel, verseViewModel, hybridViewModel)
             }
+
             config.type == LockType.VOCAL && targetSong != null -> {
                 VocalLockScreen(
                     targetSong = targetSong,
@@ -136,16 +139,17 @@ fun AuthWrapper(activity: AppCompatActivity) {
                         if (failedAttempts >= 2) {
                             promptDeviceCredential("Vocal auth failed. Use device lock.")
                         }
-                    }
+                    },
                 )
             }
+
             else -> {
                 // Locked, and either the system prompt was dismissed or vocal lock has no
                 // synced song to sing. Never unlock automatically; offer the device credential.
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    verticalArrangement = Arrangement.Center,
                 ) {
                     Text("VerseSync is locked")
                     Spacer(Modifier.height(16.dp))
@@ -163,7 +167,7 @@ fun VerseSyncNavHost(
     application: VerseSyncApp,
     securityViewModel: SecurityViewModel,
     verseViewModel: VerseViewModel,
-    hybridRecognitionViewModel: HybridRecognitionViewModel
+    hybridRecognitionViewModel: HybridRecognitionViewModel,
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -178,17 +182,19 @@ fun VerseSyncNavHost(
     val trialViewModel: TrialViewModel = viewModel(factory = TrialViewModelFactory(application))
     val onboardingViewModel: OnboardingViewModel = viewModel(factory = OnboardingViewModelFactory(application))
     val generalViewModel: GeneralViewModel = viewModel(factory = GeneralViewModelFactory(application))
-    
-    val bluetoothViewModel: BluetoothViewModel? = bluetoothAdapter?.let {
-        viewModel(factory = BluetoothViewModelFactory(application, it))
-    }
+
+    val bluetoothViewModel: BluetoothViewModel? =
+        bluetoothAdapter?.let {
+            viewModel(factory = BluetoothViewModelFactory(application, it))
+        }
 
     // Google sends no callback when a subscription expires, so re-check it on every return to the app.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, billingViewModel) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) billingViewModel.refreshPurchases()
-        }
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) billingViewModel.refreshPurchases()
+            }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
@@ -203,7 +209,7 @@ fun VerseSyncNavHost(
             context,
             languageViewModel.downloader.onDownloadComplete,
             filter,
-            ContextCompat.RECEIVER_EXPORTED
+            ContextCompat.RECEIVER_EXPORTED,
         )
         onDispose {
             context.unregisterReceiver(languageViewModel.downloader.onDownloadComplete)
@@ -214,42 +220,46 @@ fun VerseSyncNavHost(
     val isSetupComplete by languageViewModel.isSetupComplete.collectAsState()
     var pendingSongIdForSync by remember { mutableIntStateOf(-1) }
 
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { _: Boolean ->
-        languageViewModel.detectRegion()
-    }
+    val locationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { _: Boolean ->
+            languageViewModel.detectRegion()
+        }
 
-    val audioPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            if (pendingSongIdForSync != -1) {
-                navController.navigate("lyric_sync/$pendingSongIdForSync")
-                pendingSongIdForSync = -1
-            } else {
-                navController.navigate(AppRoutes.RECOGNITION_SCREEN)
+    val audioPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                if (pendingSongIdForSync != -1) {
+                    navController.navigate("lyric_sync/$pendingSongIdForSync")
+                    pendingSongIdForSync = -1
+                } else {
+                    navController.navigate(AppRoutes.RECOGNITION_SCREEN)
+                }
             }
         }
-    }
 
     val startDestination = if (isSetupComplete) AppRoutes.MAIN_SCREEN else AppRoutes.LANGUAGE_SELECTION
 
     NavHost(
-        navController = navController, 
+        navController = navController,
         startDestination = startDestination,
         enterTransition = { fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { 300 }, animationSpec = tween(300)) },
         exitTransition = { fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { -300 }, animationSpec = tween(300)) },
         popEnterTransition = { fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { -300 }, animationSpec = tween(300)) },
-        popExitTransition = { fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { 300 }, animationSpec = tween(300)) }
+        popExitTransition = { fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { 300 }, animationSpec = tween(300)) },
     ) {
         composable(AppRoutes.LANGUAGE_SELECTION) {
             // Approximate location only suggests languages during first-run setup, so ask here
             // rather than on every app start. Skip the prompt if it was already granted.
             LaunchedEffect(Unit) {
-                val granted = ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
+                val granted =
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                    ) == PackageManager.PERMISSION_GRANTED
                 if (granted) {
                     languageViewModel.detectRegion()
                 } else {
@@ -258,7 +268,7 @@ fun VerseSyncNavHost(
             }
             LanguageSelectionScreen(
                 viewModel = languageViewModel,
-                onComplete = { navController.navigate(AppRoutes.MAIN_SCREEN) { popUpTo(AppRoutes.LANGUAGE_SELECTION) { inclusive = true } } }
+                onComplete = { navController.navigate(AppRoutes.MAIN_SCREEN) { popUpTo(AppRoutes.LANGUAGE_SELECTION) { inclusive = true } } },
             )
         }
         composable(AppRoutes.MAIN_SCREEN) {
@@ -275,7 +285,7 @@ fun VerseSyncNavHost(
                 onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
                 onboardingViewModel = onboardingViewModel,
                 billingViewModel = billingViewModel,
-                trialViewModel = trialViewModel
+                trialViewModel = trialViewModel,
             )
         }
         composable(AppRoutes.SETTINGS) {
@@ -285,14 +295,14 @@ fun VerseSyncNavHost(
                 verseViewModel = verseViewModel,
                 securityViewModel = securityViewModel,
                 generalViewModel = generalViewModel,
-                onNavigateToHealthCheck = { navController.navigate(AppRoutes.SYNC_HEALTH) }
+                onNavigateToHealthCheck = { navController.navigate(AppRoutes.SYNC_HEALTH) },
             )
         }
         composable(AppRoutes.SYNC_HEALTH) {
             SyncHealthScreen(
                 onBack = { navController.popBackStack() },
                 languageViewModel = languageViewModel,
-                verseViewModel = verseViewModel
+                verseViewModel = verseViewModel,
             )
         }
         composable(AppRoutes.ADD_SONG_SCREEN) {
@@ -302,12 +312,12 @@ fun VerseSyncNavHost(
                     verseViewModel.addSong(title, artist, lyrics, language)
                     navController.popBackStack()
                 },
-                languageViewModel = languageViewModel
+                languageViewModel = languageViewModel,
             )
         }
         composable(
             route = AppRoutes.SONG_DETAIL_SCREEN,
-            arguments = listOf(navArgument("songId") { type = NavType.IntType })
+            arguments = listOf(navArgument("songId") { type = NavType.IntType }),
         ) { backStackEntry ->
             val songId = backStackEntry.arguments?.getInt("songId") ?: 0
             val songFlow = remember(songId) { verseViewModel.getSong(songId) }
@@ -315,7 +325,7 @@ fun VerseSyncNavHost(
             song?.let {
                 SongDetailScreen(
                     song = it,
-                    onSyncLyrics = { 
+                    onSyncLyrics = {
                         pendingSongIdForSync = songId
                         audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     },
@@ -323,13 +333,13 @@ fun VerseSyncNavHost(
                         navController.navigate(AppRoutes.SHARE_SCREEN)
                     },
                     onBack = { navController.popBackStack() },
-                    billingViewModel = billingViewModel
+                    billingViewModel = billingViewModel,
                 )
             }
         }
         composable(
             route = AppRoutes.LYRIC_SYNC_SCREEN,
-            arguments = listOf(navArgument("songId") { type = NavType.IntType })
+            arguments = listOf(navArgument("songId") { type = NavType.IntType }),
         ) { backStackEntry ->
             val songId = backStackEntry.arguments?.getInt("songId") ?: 0
             LyricSyncScreen(
@@ -338,7 +348,7 @@ fun VerseSyncNavHost(
                 songId = songId,
                 onNavigateBack = { navController.popBackStack() },
                 onboardingViewModel = onboardingViewModel,
-                generalViewModel = generalViewModel
+                generalViewModel = generalViewModel,
             )
         }
         composable(AppRoutes.TIP_JAR_SCREEN) {
@@ -351,7 +361,7 @@ fun VerseSyncNavHost(
                 billingViewModel = billingViewModel,
                 languageViewModel = languageViewModel,
                 trialViewModel = trialViewModel,
-                onboardingViewModel = onboardingViewModel
+                onboardingViewModel = onboardingViewModel,
             )
         }
         composable(AppRoutes.SHARE_SCREEN) {
@@ -360,7 +370,7 @@ fun VerseSyncNavHost(
                     onBack = { navController.popBackStack() },
                     bluetoothViewModel = bluetoothViewModel,
                     shareViewModel = shareViewModel,
-                    verseViewModel = verseViewModel
+                    verseViewModel = verseViewModel,
                 )
             }
         }

@@ -24,10 +24,10 @@ import java.util.concurrent.Executors
 
 @ExperimentalCoroutinesApi
 class TrialViewModelTest {
-
     @TempDir
     lateinit var tempDir: File
     private lateinit var dataStoreScope: CoroutineScope
+
     // A real single thread stands in for Android's main thread.
     private val mainExecutor = Executors.newSingleThreadExecutor()
     private lateinit var applicationMock: Application
@@ -56,34 +56,38 @@ class TrialViewModelTest {
     }
 
     @Test
-    fun remainingTrials_shouldInitiallyBeMax() = runBlocking {
-        assertEquals(TrialPreferences.MAX_TRIALS, awaitReal { newViewModel().remainingTrials.first() })
-    }
+    fun remainingTrials_shouldInitiallyBeMax() =
+        runBlocking {
+            assertEquals(TrialPreferences.MAX_TRIALS, awaitReal { newViewModel().remainingTrials.first() })
+        }
 
     @Test
-    fun remainingTrials_reflectsTrialsUsedBeforeStartup() = runBlocking {
-        prefs.useTrial()
+    fun remainingTrials_reflectsTrialsUsedBeforeStartup() =
+        runBlocking {
+            prefs.useTrial()
 
-        val remaining = awaitReal { newViewModel().remainingTrials.first { it != TrialPreferences.MAX_TRIALS } }
+            val remaining = awaitReal { newViewModel().remainingTrials.first { it != TrialPreferences.MAX_TRIALS } }
 
-        assertEquals(TrialPreferences.MAX_TRIALS - 1, remaining)
-    }
-
-    @Test
-    fun useTrial_shouldDecrementCount() = runBlocking {
-        newViewModel().useTrial()
-
-        assertEquals(
-            TrialPreferences.MAX_TRIALS - 1,
-            awaitReal { prefs.remainingTrials.first { it == TrialPreferences.MAX_TRIALS - 1 } }
-        )
-    }
+            assertEquals(TrialPreferences.MAX_TRIALS - 1, remaining)
+        }
 
     @Test
-    fun useTrial_neverGoesBelowZero() = runBlocking {
-        val viewModel = newViewModel()
-        repeat(TrialPreferences.MAX_TRIALS + 2) { viewModel.useTrial() }
+    fun useTrial_shouldDecrementCount() =
+        runBlocking {
+            newViewModel().useTrial()
 
-        assertEquals(0, awaitReal { prefs.remainingTrials.first { it == 0 } })
-    }
+            assertEquals(
+                TrialPreferences.MAX_TRIALS - 1,
+                awaitReal { prefs.remainingTrials.first { it == TrialPreferences.MAX_TRIALS - 1 } },
+            )
+        }
+
+    @Test
+    fun useTrial_neverGoesBelowZero() =
+        runBlocking {
+            val viewModel = newViewModel()
+            repeat(TrialPreferences.MAX_TRIALS + 2) { viewModel.useTrial() }
+
+            assertEquals(0, awaitReal { prefs.remainingTrials.first { it == 0 } })
+        }
 }

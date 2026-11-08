@@ -11,12 +11,14 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DataTransferServiceLimitsTest {
-
-    private fun socketWith(input: ByteArray, output: ByteArrayOutputStream): BluetoothSocket {
+    private fun socketWith(
+        input: ByteArray,
+        output: ByteArrayOutputStream,
+    ): BluetoothSocket {
         val socket: BluetoothSocket = mock()
         whenever(socket.inputStream).thenReturn(ByteArrayInputStream(input))
         whenever(socket.outputStream).thenReturn(output)
@@ -25,7 +27,11 @@ class DataTransferServiceLimitsTest {
 
     private fun header(size: Int): ByteArray {
         val bytes = ByteArrayOutputStream()
-        DataOutputStream(bytes).apply { writeUTF("t"); writeInt(size); flush() }
+        DataOutputStream(bytes).apply {
+            writeUTF("t")
+            writeInt(size)
+            flush()
+        }
         return bytes.toByteArray()
     }
 
@@ -52,9 +58,12 @@ class DataTransferServiceLimitsTest {
     @Test
     fun receiveSongs_alwaysRepliesWithOffsetZero() {
         val json = "[]".toByteArray()
-        val input = ByteArrayOutputStream().apply {
-            write(header(json.size)); write(json)
-        }.toByteArray()
+        val input =
+            ByteArrayOutputStream()
+                .apply {
+                    write(header(json.size))
+                    write(json)
+                }.toByteArray()
         val out = ByteArrayOutputStream()
         val service = DataTransferService(socketWith(input, out))
 
@@ -76,7 +85,6 @@ class DataTransferServiceLimitsTest {
 }
 
 class DataTransferPayloadSizeTest {
-
     @Test
     fun smallSelection_isNotTooLarge() {
         val songs = List(10) { Song(it, "T$it", "A", "lyrics $it") }

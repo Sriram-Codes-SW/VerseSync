@@ -15,7 +15,7 @@ fun ProFeatureTrialDialog(
     remainingTrials: Int,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    onUpgrade: () -> Unit
+    onUpgrade: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -28,7 +28,7 @@ fun ProFeatureTrialDialog(
                 Text(
                     text = "Fallback: After trials, this feature will be restricted to the standard version.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
@@ -41,7 +41,7 @@ fun ProFeatureTrialDialog(
             TextButton(onClick = onUpgrade) {
                 Text("Upgrade Now")
             }
-        }
+        },
     )
 }
 
@@ -50,13 +50,13 @@ fun TrialBadge(remaining: Int) {
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer,
         shape = RoundedCornerShape(4.dp),
-        modifier = Modifier.padding(horizontal = 4.dp)
+        modifier = Modifier.padding(horizontal = 4.dp),
     ) {
         Text(
             text = "Trial: $remaining",
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-            color = MaterialTheme.colorScheme.onSecondaryContainer
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
 }

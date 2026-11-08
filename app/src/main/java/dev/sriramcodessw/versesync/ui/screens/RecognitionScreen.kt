@@ -30,12 +30,12 @@ import dev.sriramcodessw.versesync.ui.components.TourStep
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecognitionScreen(
-    onBack: () -> Unit, 
-    hybridViewModel: HybridRecognitionViewModel, 
+    onBack: () -> Unit,
+    hybridViewModel: HybridRecognitionViewModel,
     billingViewModel: BillingViewModel,
     languageViewModel: LanguageViewModel,
     trialViewModel: TrialViewModel,
-    onboardingViewModel: OnboardingViewModel
+    onboardingViewModel: OnboardingViewModel,
 ) {
     var isRecognizing by remember { mutableStateOf(false) }
     val recognitionResult by hybridViewModel.recognitionResult.collectAsState(initial = null)
@@ -48,13 +48,14 @@ fun RecognitionScreen(
     val remainingTrials by trialViewModel.remainingTrials.collectAsState()
     val isTourCompleted by onboardingViewModel.isRecognitionTourCompleted.collectAsState()
 
-    val availableLanguages = languageViewModel.availableLanguages.filter { 
-        lang -> installedLanguages.contains(lang.code) 
-    }
+    val availableLanguages =
+        languageViewModel.availableLanguages.filter { lang ->
+            installedLanguages.contains(lang.code)
+        }
 
     var expanded by remember { mutableStateOf(false) }
-    var selectedLanguage by remember { 
-        mutableStateOf(availableLanguages.firstOrNull() ?: languageViewModel.availableLanguages[0]) 
+    var selectedLanguage by remember {
+        mutableStateOf(availableLanguages.firstOrNull() ?: languageViewModel.availableLanguages[0])
     }
 
     // Tour State
@@ -64,20 +65,21 @@ fun RecognitionScreen(
     var startBtnAnchor by remember { mutableStateOf(Offset.Zero) }
     var startBtnSize by remember { mutableStateOf(IntSize.Zero) }
 
-    val tourSteps = listOf(
-        TourStep(
-            "Select Language",
-            "Choose the language of the song you want to recognize. You can download more in Settings.",
-            anchor = langSelectorAnchor,
-            size = langSelectorSize
-        ),
-        TourStep(
-            "Start Recognizing",
-            "Tap this button and sing or play music. ${if (isPro) "Your Pro status enables real-time pitch matching!" else "Standard users use the STT engine."}",
-            anchor = startBtnAnchor,
-            size = startBtnSize
+    val tourSteps =
+        listOf(
+            TourStep(
+                "Select Language",
+                "Choose the language of the song you want to recognize. You can download more in Settings.",
+                anchor = langSelectorAnchor,
+                size = langSelectorSize,
+            ),
+            TourStep(
+                "Start Recognizing",
+                "Tap this button and sing or play music. ${if (isPro) "Your Pro status enables real-time pitch matching!" else "Standard users use the STT engine."}",
+                anchor = startBtnAnchor,
+                size = startBtnSize,
+            ),
         )
-    )
 
     LaunchedEffect(selectedLanguage) {
         hybridViewModel.loadLanguageModel(selectedLanguage.code)
@@ -91,19 +93,20 @@ fun RecognitionScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).systemBarsPadding()) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (availableLanguages.isEmpty()) {
                     Text("No language models installed. Please go to Settings to download one.")
@@ -113,19 +116,20 @@ fun RecognitionScreen(
                             text = "Trial Usage: $remainingTrials/3 daily hybrid attempts remaining",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = 8.dp),
                         )
                     }
 
                     ExposedDropdownMenuBox(
                         expanded = expanded,
                         onExpandedChange = { if (!isRecognizing) expanded = !expanded },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onGloballyPositioned {
-                                langSelectorAnchor = it.positionInRoot()
-                                langSelectorSize = it.size
-                            }
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned {
+                                    langSelectorAnchor = it.positionInRoot()
+                                    langSelectorSize = it.size
+                                },
                     ) {
                         OutlinedTextField(
                             value = selectedLanguage.name,
@@ -134,11 +138,11 @@ fun RecognitionScreen(
                             enabled = !isRecognizing,
                             label = { Text("Listening Language") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = !isRecognizing).fillMaxWidth()
+                            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = !isRecognizing).fillMaxWidth(),
                         )
                         ExposedDropdownMenu(
                             expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                            onDismissRequest = { expanded = false },
                         ) {
                             availableLanguages.forEach { language ->
                                 DropdownMenuItem(
@@ -146,7 +150,7 @@ fun RecognitionScreen(
                                     onClick = {
                                         selectedLanguage = language
                                         expanded = false
-                                    }
+                                    },
                                 )
                             }
                         }
@@ -157,18 +161,18 @@ fun RecognitionScreen(
                     if (isRecognizing) {
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                         ) {
                             Text(
                                 text = "Heard: ${sttText.ifBlank { "..." }}",
                                 modifier = Modifier.padding(16.dp),
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MaterialTheme.typography.bodyLarge,
                             )
                         }
 
                         PitchVisualizer(
                             pitch = instantPitch,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(vertical = 8.dp),
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -178,12 +182,12 @@ fun RecognitionScreen(
                             text = "Offline speech model for ${selectedLanguage.name} not downloaded. Pitch matching is active.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = 8.dp),
                         )
                     }
 
                     Button(
-                        onClick = { 
+                        onClick = {
                             if (!isRecognizing) {
                                 if (isPro || remainingTrials > 0) {
                                     if (!isPro) trialViewModel.useTrial()
@@ -196,14 +200,14 @@ fun RecognitionScreen(
                                 hybridViewModel.stopRecognition()
                             }
                         },
-                        modifier = Modifier
-                            .onGloballyPositioned {
-                                startBtnAnchor = it.positionInRoot()
-                                startBtnSize = it.size
-                            }
-                            .semantics { 
-                                contentDescription = if (isRecognizing) "Stop recognition" else "Start recognition"
-                            }
+                        modifier =
+                            Modifier
+                                .onGloballyPositioned {
+                                    startBtnAnchor = it.positionInRoot()
+                                    startBtnSize = it.size
+                                }.semantics {
+                                    contentDescription = if (isRecognizing) "Stop recognition" else "Start recognition"
+                                },
                     ) {
                         Text(text = if (isRecognizing) "Stop Recognizing" else "Start Recognizing")
                     }
@@ -226,9 +230,10 @@ fun RecognitionScreen(
                                     ListItem(
                                         headlineContent = { Text(song.title) },
                                         supportingContent = { Text("${song.artist} (${song.language})") },
-                                        modifier = Modifier.background(
-                                            if (it.candidates.size == 1) Color.Green else Color.Transparent
-                                        )
+                                        modifier =
+                                            Modifier.background(
+                                                if (it.candidates.size == 1) Color.Green else Color.Transparent,
+                                            ),
                                     )
                                 }
                             }
@@ -242,10 +247,13 @@ fun RecognitionScreen(
                     steps = tourSteps,
                     currentStepIndex = currentTourStep,
                     onNext = {
-                        if (currentTourStep < tourSteps.size - 1) currentTourStep++
-                        else onboardingViewModel.completeRecognitionTour()
+                        if (currentTourStep < tourSteps.size - 1) {
+                            currentTourStep++
+                        } else {
+                            onboardingViewModel.completeRecognitionTour()
+                        }
                     },
-                    onSkip = { onboardingViewModel.completeRecognitionTour() }
+                    onSkip = { onboardingViewModel.completeRecognitionTour() },
                 )
             }
         }
