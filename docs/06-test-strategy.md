@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.6 |
+| Version | 0.7 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -38,3 +38,7 @@ This document establishes the verification strategy for audio capture, pitch fin
 | **TC-M-05** | Security / Settings | On a device with no screen lock, tap Enable App Lock | The switch stays off and a message explains that a screen lock is needed | ADR-10 |
 | **TC-M-06** | Trials / Live update | In a non-Pro build, use a trial from the Folders tab | The trial badge and the dialog count decrease immediately (3, 2, 1) | ADR-08 |
 | **TC-M-07** | Settings / Live update | Enable the lock and change the lock type in Settings | The switch and the lock type label change immediately | ADR-10 |
+| **TC-U-16** | Engine / Matching | A spoken phrase and the saved lyrics of the same phrase in each of the 29 supported languages, with punctuation, diacritics and word spacing as each source would produce | Score is at or above the 0.35 threshold in every language | ADR-14 |
+| **TC-U-17** | Engine / Matching | Speech from one language scored against the lyrics of the next language in the table | Score is below the threshold, so there are no false matches | ADR-14 |
+| **TC-U-18** | Engine / Matching | Speech in decomposed Unicode form against composed lyrics, and a partial phrase | Still matches | ADR-14 |
+| **TC-U-19** | Languages / Coverage | Language list compared with the sample phrase table | Every configured language has a sample, codes are unique and model URLs use HTTPS | ADR-14 |

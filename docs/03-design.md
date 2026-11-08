@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.6 |
+| Version | 0.7 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -263,12 +263,33 @@ VerseSync is an offline-first Android application designed for musicians, worshi
 
 ---
 
+### ADR-14: Script-Aware Lyric Tokenization for All Supported Languages
+
+* **Status:** Accepted
+* **Context:**
+  `matchLyricsScore` removed every character that was not a letter, digit or space. Combining marks, such as the vowel signs of Devanagari, Tamil, Telugu, Bengali and Punjabi, are neither, so words were cut into one or two letter fragments and then dropped by the three character minimum. Arabic printed with short-vowel marks no longer matched speech without them. Chinese and Japanese lyrics have no word spaces, while their speech models insert spaces at other places, so no word ever matched. Text in decomposed Unicode form did not match composed text. A test over all 29 configured languages failed for 22 of 88 checks. Some other languages passed only because both sides were damaged in the same way.
+* **Decision:**
+  Replace the inline matching with `tokenizeLyrics` and `lyricMatchScore`:
+  1. Lowercase and normalize both sides to composed Unicode form.
+  2. Keep combining marks inside words, and treat only punctuation as a separator.
+  3. Remove marks that printed lyrics and speech models disagree about: Arabic tatweel and short-vowel marks, the Devanagari nukta, and zero-width space and joiner.
+  4. Turn runs of Han, Hiragana and Katakana, ignoring spaces inside them, into overlapping pairs of characters.
+  The 0.35 threshold and the three character minimum for other words are unchanged.
+* **Consequences:**
+  * All 29 languages match their own lyrics and reject the lyrics of other languages in tests.
+  * A new language fails a test until a sample phrase is added for it.
+  * The samples are short written phrases and a hand-made guess at how each speech model reports them. Real recognition accuracy per language still needs audio and the real models.
+  * Chinese and Japanese pair matching can match common pairs by chance, so the threshold may need tuning on real data.
+
+---
+
 ## 3. Amendments to Accepted ADRs
 
 These corrections bring the records in line with the code as built.
 
 * **ADR-01 (implementation status):** Only the shared 16 kHz sample rate is implemented. TarsosDSP (`AudioDispatcherFactory.fromDefaultMicrophone`) and Vosk (`SpeechService`) still open their own `AudioRecord`, so the "single shared stream" option was not built. Concurrent capture by one app is permitted on Android 10 and later, but it has not been verified on every device.
 * **ADR-03 (implementation):** Tokenized matching exists only in `HybridRecognitionEngine`, which loads all songs and ranks them in memory. No multi-token query was added to `SongDao`. The unused exact-substring query `searchSongsByLyrics` has been removed so the code no longer contradicts this record.
+* **ADR-03 (tokenization):** Matching now uses script-aware tokens, described in ADR-14, because the original rule broke Indic scripts, Arabic with diacritics, and Chinese and Japanese.
 * **ADR-04 (distance rule):** Unvoiced frames are `NaN` in the relative contour and are skipped when either contour is unvoiced at that frame. Previously a frame silent in only one contour was compared against 0 and inflated the distance. A match also needs at least 8 frames voiced in both contours. Mean-centering still uses the whole live buffer and not only the compared window.
 * **ADR-10 (enabling the lock):** The Enable App Lock switch refuses to turn on, and explains why, when the device has no screen lock or biometrics. Because the lock now fails closed, enabling it without a way to authenticate would lock the user out of their own library.
 * **ADR-11 and ADR-12 (lifecycle):** The Bluetooth server tracks every listening socket and closes all of them after the first connection or on stop. Before, only the last socket was closed and the other accept thread blocked forever. The location permission is requested on the first-run language screen only, not on every app start.
