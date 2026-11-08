@@ -9,7 +9,7 @@ The checklist for a release. The first release has extra steps, marked **first r
 - [ ] **Signing key.** Create an upload keystore and keep it, and its passwords, outside the repository. Back it up. Losing it blocks updates. Play App Signing holds the final key.
 - [ ] **Privacy policy.** Review `docs/PRIVACY.md`, publish it at a stable address and enter that address in Play Console. Fill in the Data safety form to match it, including approximate location and the speech model downloads.
 - [ ] **Keys tied to the package name.** Register again anything bound to the old id.
-- [ ] **Branch protection.** Add the `build` check from the CI workflow as a required status check on `main`.
+- [x] **Branch protection.** Done. The `Protect main` ruleset requires the `build` check and an up-to-date branch before merging. Update a pull request branch with `main` and wait for the check before merging.
 
 ## Every release
 

@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.14 |
+| Version | 0.15 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -38,3 +38,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.12 | 2026-11-08 | Claude Code | Added PRIVACY.md (draft) and RELEASING.md for the first release (issue #18). The README no longer claims everything happens on the device, because language suggestion and model downloads use the network. |
 | 0.13 | 2026-11-08 | Claude Code | CI and formatting resolved: the CI workflow and Spotless are in place and the `build` check is required on `main`. Removed that open item. |
 | 0.14 | 2026-11-08 | Claude Code | Follow-ups from a review: the CI workflow also builds the release APK, PRIVACY.md corrected to Android 11 and older, key files ignored by git, new open items for pre-release dependencies and the migration test. The document header version now matches this table. |
+| 0.15 | 2026-11-08 | Claude Code | The `Protect main` ruleset now also requires branches to be up to date before merging. RELEASING.md updated. |
