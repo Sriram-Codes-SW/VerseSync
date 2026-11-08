@@ -6,7 +6,7 @@ VerseSync is an offline-first mobile application that empowers users to create p
 
 -   **Interactive Lyric Syncing:** Manually create timestamps for any lyrics using an intuitive "karaoke-style" tapping interface. Your song, your sync.
 -   **Hybrid Song Recognition (Pro):** A unique, on-device engine that combines **Audio Fingerprinting** and **Speech-to-Text** to accurately identify songs from your personal library, even in noisy environments like concerts.
--   **Offline First:** All your data, syncing, and recognition happens 100% on your device. No internet connection required for core features.
+-   **Offline First:** Your songs, syncing and recognition stay on your device, and core features need no internet connection. The only network use is the one-time download of a speech model per language and, if you allow it, an approximate location to suggest languages at first start. See [docs/PRIVACY.md](docs/PRIVACY.md).
 -   **Multi-Language Support:** Create, manage, and recognize songs and lyrics in multiple languages.
 -   **Peer-to-Peer Sharing:** Share your synced lyric files directly with other VerseSync users via Bluetooth.
 
@@ -85,7 +85,7 @@ To protect the app's proprietary logic from reverse engineering, R8 will be enab
 *   **Rules:** Custom ProGuard rules will be maintained in `proguard-rules.pro` to ensure full functionality of Jetpack Compose and other essential libraries after obfuscation.
 
 ### 4. Privacy & Legal Compliance
-*   **Privacy Policy:** A clear and concise privacy policy will be publicly available at a stable URL (hosted via GitHub Pages). It will state that all data is stored locally on the user's device and will list the purpose of all requested permissions.
+*   **Privacy Policy:** The privacy policy is drafted in [docs/PRIVACY.md](docs/PRIVACY.md). Before the first release it will be published at a stable URL (for example GitHub Pages). It states that songs are stored locally on the device, which three features use the network, and the purpose of every requested permission.
 *   **Developer Verification:** The Google Play Console account will be kept up-to-date with all required developer verification details to comply with Google's 2025/2026 policies.
 
 ### 5. Production Security & Distribution Integrity
