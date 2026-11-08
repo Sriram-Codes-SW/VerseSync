@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.7 |
+| Version | 0.8 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,8 +14,8 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.7 | Active |
-| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.7 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.8 | Active |
+| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.8 | Active |
 
 ## Revision History
 
@@ -28,3 +28,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.5 | 2026-11-08 | Claude Code | Enabling the app lock requires a device screen lock or biometrics. Added manual test cases TC-M-04 to TC-M-07, run on an emulator. |
 | 0.6 | 2026-11-08 | Claude Code | ADR-13 licenses the project under GPL-3.0. Added LICENSE and THIRD_PARTY_NOTICES.md, corrected the README, and updated the open items. |
 | 0.7 | 2026-11-08 | Claude Code | ADR-14 script-aware lyric tokenization, test cases TC-U-16 to TC-U-19 covering all 29 languages. |
+| 0.8 | 2026-11-08 | Claude Code | ADR-15 speech model availability, amendments to ADR-05 and ADR-07, real-audio results for 28 languages, test cases TC-U-20, TC-U-21, TC-M-08 and TC-M-09. |

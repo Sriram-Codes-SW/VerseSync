@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.7 |
+| Version | 0.8 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -283,6 +283,28 @@ VerseSync is an offline-first Android application designed for musicians, worshi
 
 ---
 
+### ADR-15: Speech Model Availability per Language
+
+* **Status:** Accepted
+* **Context:**
+  Nine of the 29 model download links returned HTTP 404 (Tamil, Marathi, Bengali, Kannada, Malayalam, Punjabi, Greek, Swedish and Ukrainian), so downloads for those languages always failed. Vosk's published list has no model of any size for Tamil, Marathi, Bengali, Kannada, Malayalam or Punjabi. For Greek it lists only `vosk-model-el-gr-0.7`, about 1.1 GB. Swedish and Ukrainian models do exist, under different names. The song language list and recognition were both limited to languages whose model was downloaded, so a language with no model could never be used.
+* **Decision Drivers:**
+  * Never offer a download that cannot succeed.
+  * Lyrics and pitch matching do not need a speech model.
+  * Do not ship a 1.1 GB model through the download manager.
+* **Decision:**
+  1. Swedish uses `vosk-model-small-sv-rhasspy-0.15` (about 303 MB) and Ukrainian uses `vosk-model-small-uk-v3-nano` (about 78 MB).
+  2. `LanguageModelInfo.url` is nullable. It is null for Tamil, Marathi, Bengali, Kannada, Malayalam, Punjabi and Greek, and `hasSpeechModel` is false for them.
+  3. The language screens say "No speech model" for those languages instead of a download button, and `downloadLanguage` does nothing for them.
+  4. Add Song offers them, and they are not reported as missing a model on the sync health screen or in Settings.
+* **Consequences:**
+  * Speech recognition is unavailable for those seven languages. They rely on pitch matching.
+  * The recognition screen still lists only languages with an installed model, so a user whose songs are all in those languages cannot start recognition yet. This is an open item.
+  * Greek can be added if a small model is published.
+  * The Swedish model is much larger than the others.
+
+---
+
 ## 3. Amendments to Accepted ADRs
 
 These corrections bring the records in line with the code as built.
@@ -294,6 +316,8 @@ These corrections bring the records in line with the code as built.
 * **ADR-10 (enabling the lock):** The Enable App Lock switch refuses to turn on, and explains why, when the device has no screen lock or biometrics. Because the lock now fails closed, enabling it without a way to authenticate would lock the user out of their own library.
 * **ADR-11 and ADR-12 (lifecycle):** The Bluetooth server tracks every listening socket and closes all of them after the first connection or on stop. Before, only the last socket was closed and the other accept thread blocked forever. The location permission is requested on the first-run language screen only, not on every app start.
 * **Preferences storage (ADR-10, ADR-12):** The preferences classes take an injectable `DataStore<Preferences>`, and each view model accepts its preferences object. The default is unchanged, so the app still uses one process-wide DataStore. Tests use a private DataStore per test. The three DataStore-backed test classes previously shared one on-disk file through a mock context, so results depended on test order. They also reset the Main dispatcher before cancelling coroutines that still needed it. Tests run on a real single-thread Main dispatcher. Write paths are asserted on the preferences object, and view model state is asserted by creating the view model after the data is saved, as on a cold start.
+* **ADR-05 (when speech is matched):** Speech used to be matched only on a fixed 5 second tick that fired together with the pitch tick, and the later trigger cancelled the earlier one. A sentence the speech model had heard in full could be replaced before a successful check. A real-audio run showed this in Korean, Russian, Dutch and Swedish. The engine now searches whenever the speech text changes, and on each pitch tick, and every search reads both the current speech text and the current pitch contour. Candidate retention is unchanged.
+* **ADR-07 (stopping speech recognition):** `VoskVoiceRecognition.stopListening` and `startListening` are synchronized, and stop takes ownership of the speech service and recognizer before freeing them. Vosk reports the final result on the main thread after a stop, and that callback calls stop again. An overlapping call from another thread freed the native recognizer twice and crashed the process.
 
 ---
 
@@ -304,3 +328,5 @@ These corrections bring the records in line with the code as built.
 * **Pro product:** Only the `pro_subscription` product is implemented (ADR-08). The README now says so, but the one-time purchase it describes is still a product decision.
 * **Resumable transfer:** Not supported until partial data is persisted (ADR-11).
 * **State flow after a live write:** In unit tests, a view model state flow occasionally did not show a value written just after the view model started, even though the DataStore held the correct value. It happened about 1 in 10 times under test dispatchers and was not seen in 100 runs with a real Main thread. DataStore 1.3.0 reduced it but did not remove it. The cause is not identified. An emulator run (TC-M-06, TC-M-07) showed the trial counter, the lock switch and the lock type label updating immediately, so this has not been seen in the app.
+* **No-model languages in recognition:** The recognition screen only offers languages with an installed speech model (ADR-15), so a user whose songs are all in Tamil, Marathi, Bengali, Kannada, Malayalam, Punjabi or Greek cannot start recognition, even though pitch matching would work.
+* **Real-audio coverage:** Sanskrit was not tested with real audio, and every other language was tested with one sentence only (see the results section of the test strategy).

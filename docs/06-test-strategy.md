@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.7 |
+| Version | 0.8 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -42,3 +42,24 @@ This document establishes the verification strategy for audio capture, pitch fin
 | **TC-U-17** | Engine / Matching | Speech from one language scored against the lyrics of the next language in the table | Score is below the threshold, so there are no false matches | ADR-14 |
 | **TC-U-18** | Engine / Matching | Speech in decomposed Unicode form against composed lyrics, and a partial phrase | Still matches | ADR-14 |
 | **TC-U-19** | Languages / Coverage | Language list compared with the sample phrase table | Every configured language has a sample, codes are unique and model URLs use HTTPS | ADR-14 |
+| **TC-U-20** | Engine / Matching | Speech heard for under a second and replaced before the next pitch tick, with realistic database latency | The song is still recognized | ADR-05 |
+| **TC-U-21** | Languages / Models | Languages without a published model, and downloads for them | Exactly seven languages have no model, they do not count as missing one, and their download does nothing | ADR-15 |
+| **TC-M-08** | Engine / Real audio | Run `tools/audio-test/run_lang.sh <code>` for each language with real speech played into the emulator microphone | The Target song is recognized and the Decoy is not (results in section 3) | ADR-14, ADR-15 |
+| **TC-M-09** | Emulator / Audio path | Run `MicrophoneLevelInstrumentedTest` while a recording plays into the cable | The reported peak level rises well above the idle level | ADR-15 |
+
+## 3. Real-Audio Results (2026-11-08)
+
+Method: a real recording of one sentence per language, from Google FLEURS (CC BY 4.0), was played into an emulator's microphone through a virtual audio cable (`tools/audio-test`). The real recognition engine and the real small Vosk model for that language ran in the app. The sentence was the lyrics of a "Target" song, and an unrelated "Decoy" song was also in the library. A language passes when the Target is recognized and the Decoy is not.
+
+| Result | Languages |
+|---|---|
+| Passed (21) | English, Hindi, Telugu, Gujarati, Arabic, Korean, French, Spanish, German, Russian, Chinese, Japanese, Portuguese, Turkish, Vietnamese, Italian, Dutch, Polish, Swedish, Ukrainian, Farsi |
+| No speech model exists (7) | Tamil, Marathi, Bengali, Kannada, Malayalam, Punjabi, Greek |
+| Not tested (1) | Sanskrit, which uses the Hindi model and has no recording in FLEURS |
+
+Notes:
+
+* The first run passed 15 languages. Five of the six failures were the engine matching speech only on a fixed tick (ADR-05 amendment), and they passed after the fix. The sixth, Vietnamese, heard the sentence wrongly. It passed with a different sentence, so the first sentence was a model miss and not a bug.
+* One sentence per language is thin evidence. The small models also transcribe imperfectly, and several passed with an inexact transcript, because the match threshold is 0.35.
+* Chinese and Japanese pass through character-pair matching (ADR-14), which could match common pairs by chance.
+* Swedish uses the 303 MB model and Ukrainian the 78 MB model from ADR-15. Both were exercised by this run.
