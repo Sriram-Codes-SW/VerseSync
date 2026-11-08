@@ -253,12 +253,13 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   2. *Obtain a commercial license for TarsosDSP:* Depends on the author, and the bundled jar has no recorded source.
   3. *License the app under GPL-3.0:* Chosen. It matches the current state and the bundled library.
 * **Decision:**
-  License the project under GPL-3.0-only. Add `LICENSE` with the full text and `THIRD_PARTY_NOTICES.md` listing each dependency's license. Correct the README, which no longer claims the repository is private.
+  License the project under GPL-3.0-only. Add `LICENSE` with the full text and `THIRD_PARTY_NOTICES.md` listing each dependency's license. Correct the README, which no longer claims the repository is private. The owner confirmed this choice on 2026-11-08.
 * **Consequences:**
   * Anyone may use, modify and redistribute the app under GPL-3.0, including the source of the Pro gate, so a fork can remove it. Revenue then relies on Google Play distribution, convenience and support, not on keeping the code secret.
   * Distributing an APK, including on Google Play, requires offering the matching source.
   * Contributions are accepted under the same license.
   * Replacing TarsosDSP later would allow relicensing, but code already published stays available under GPL-3.0.
+  * The owner also plans a refactor that makes the pitch logic independent of TarsosDSP (issue #13, design in `docs/07-pitch-detection-design.md` once it is merged). It does not change this decision. It keeps relicensing possible for future work.
   * The Apache-2.0 dependencies and the dual-licensed JNA are compatible with GPL-3.0.
 
 ---
