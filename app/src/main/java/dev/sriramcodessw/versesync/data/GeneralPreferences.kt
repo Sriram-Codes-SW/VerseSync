@@ -16,8 +16,8 @@ class GeneralPreferences(private val dataStore: DataStore<Preferences>) {
         private val METRONOME_DEFAULT_ON = booleanPreferencesKey("metronome_default_on")
     }
 
-    val showPitchTrail: Flow<Boolean> = dataStore.data.map { it[SHOW_PITCH_TRAIL] ?: true }
-    val metronomeDefaultOn: Flow<Boolean> = dataStore.data.map { it[METRONOME_DEFAULT_ON] ?: false }
+    val showPitchTrail: Flow<Boolean> = dataStore.safeData.map { it[SHOW_PITCH_TRAIL] ?: true }
+    val metronomeDefaultOn: Flow<Boolean> = dataStore.safeData.map { it[METRONOME_DEFAULT_ON] ?: false }
 
     suspend fun setShowPitchTrail(show: Boolean) {
         dataStore.edit { it[SHOW_PITCH_TRAIL] = show }

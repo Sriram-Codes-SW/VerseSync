@@ -19,7 +19,7 @@ class TransferPreferences(private val dataStore: DataStore<Preferences>) {
         private val BYTES_RECEIVED = intPreferencesKey("bytes_received")
     }
 
-    val transferProgress: Flow<TransferProgress?> = dataStore.data.map { prefs ->
+    val transferProgress: Flow<TransferProgress?> = dataStore.safeData.map { prefs ->
         val id = prefs[CURRENT_TRANSFER_ID]
         if (id != null) {
             TransferProgress(id, prefs[BYTES_RECEIVED] ?: 0)

@@ -17,9 +17,9 @@ class OnboardingPreferences(private val dataStore: DataStore<Preferences>) {
         private val SYNC_TOUR_COMPLETED = booleanPreferencesKey("sync_tour_completed")
     }
 
-    val isMainTourCompleted: Flow<Boolean> = dataStore.data.map { it[MAIN_TOUR_COMPLETED] ?: false }
-    val isRecognitionTourCompleted: Flow<Boolean> = dataStore.data.map { it[RECOGNITION_TOUR_COMPLETED] ?: false }
-    val isSyncTourCompleted: Flow<Boolean> = dataStore.data.map { it[SYNC_TOUR_COMPLETED] ?: false }
+    val isMainTourCompleted: Flow<Boolean> = dataStore.safeData.map { it[MAIN_TOUR_COMPLETED] ?: false }
+    val isRecognitionTourCompleted: Flow<Boolean> = dataStore.safeData.map { it[RECOGNITION_TOUR_COMPLETED] ?: false }
+    val isSyncTourCompleted: Flow<Boolean> = dataStore.safeData.map { it[SYNC_TOUR_COMPLETED] ?: false }
 
     suspend fun setMainTourCompleted(completed: Boolean) {
         dataStore.edit { it[MAIN_TOUR_COMPLETED] = completed }

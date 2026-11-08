@@ -21,8 +21,8 @@ class SecurityPreferences(private val dataStore: DataStore<Preferences>) {
         private val SELECTED_LOCK_TYPE = stringPreferencesKey("selected_lock_type")
     }
 
-    val isAppLockEnabled: Flow<Boolean> = dataStore.data.map { it[APP_LOCK_ENABLED] ?: false }
-    val lockType: Flow<LockType> = dataStore.data.map { 
+    val isAppLockEnabled: Flow<Boolean> = dataStore.safeData.map { it[APP_LOCK_ENABLED] ?: false }
+    val lockType: Flow<LockType> = dataStore.safeData.map { 
         runCatching { LockType.valueOf(it[SELECTED_LOCK_TYPE] ?: LockType.DEVICE.name) }
             .getOrDefault(LockType.DEVICE) 
     }

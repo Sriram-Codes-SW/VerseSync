@@ -16,7 +16,7 @@ class TrialPreferences(private val dataStore: DataStore<Preferences>) {
         const val MAX_TRIALS = 3
     }
 
-    val remainingTrials: Flow<Int> = dataStore.data.map { prefs ->
+    val remainingTrials: Flow<Int> = dataStore.safeData.map { prefs ->
         prefs[REMAINING_TRIALS] ?: MAX_TRIALS
     }
 
