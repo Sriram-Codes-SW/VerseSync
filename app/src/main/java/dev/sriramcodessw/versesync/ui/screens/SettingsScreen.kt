@@ -2,7 +2,7 @@ package dev.sriramcodessw.versesync.ui.screens
 
 import android.content.Intent
 import android.widget.Toast
-import androidx.biometric.BiometricManager
+import dev.sriramcodessw.versesync.nfc.canUseAppLock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -131,11 +131,8 @@ fun SettingsScreen(
                                 // The lock never opens without a successful system authentication,
                                 // so enabling it on a device with no screen lock or biometrics
                                 // would lock the user out of their own library.
-                                val canAuthenticate = BiometricManager.from(context).canAuthenticate(
-                                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                                        BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                                ) == BiometricManager.BIOMETRIC_SUCCESS
-                                if (enable && !canAuthenticate) {
+                                // Same authenticators as the unlock prompt, see appLockAuthenticators.
+                                if (enable && !canUseAppLock(context)) {
                                     Toast.makeText(
                                         context,
                                         "Set a screen lock or biometrics in system settings first",
