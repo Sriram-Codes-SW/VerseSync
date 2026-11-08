@@ -22,10 +22,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // The upload key is read from Gradle properties on the release machine (see docs/RELEASING.md).
+    // Without them the release build stays unsigned, which is what CI and contributors get.
+    val signingStoreFile = providers.gradleProperty("versesync.signing.storeFile").orNull
+    signingConfigs {
+        if (signingStoreFile != null) {
+            create("release") {
+                storeFile = file(signingStoreFile)
+                storePassword = providers.gradleProperty("versesync.signing.storePassword").orNull
+                keyAlias = providers.gradleProperty("versesync.signing.keyAlias").orNull
+                keyPassword = providers.gradleProperty("versesync.signing.keyPassword").orNull
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

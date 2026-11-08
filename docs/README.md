@@ -17,6 +17,8 @@ This directory contains the system architecture, security, design records (ADRs)
 | [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.11 | Active |
 | [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.10 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
+| [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
+| [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
 
 ## Revision History
 
@@ -33,3 +35,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.9 | 2026-11-08 | Claude Code | Changes from an external review: authenticators on Android 9 and 10, corrupt settings, search cost, size check, safe model install, billing refresh, migration test. Test cases TC-U-22 to TC-U-27 and TC-M-10, and two open items. |
 | 0.10 | 2026-11-08 | Claude Code | ADR-16 application id change with a written migration note, and test case TC-M-11. |
 | 0.11 | 2026-11-08 | Claude Code | Added 07-pitch-detection-design.md (Proposed), the plan for making the pitch logic independent of TarsosDSP. New open items for CI, end-to-end sync, real devices, the level meter, the unused view model, matching enhancements and the release checklist, each linked to its issue. |
+| 0.12 | 2026-11-08 | Claude Code | Added PRIVACY.md (draft) and RELEASING.md for the first release (issue #18). The README no longer claims everything happens on the device, because language suggestion and model downloads use the network. |
