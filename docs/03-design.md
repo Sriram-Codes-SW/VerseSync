@@ -293,7 +293,7 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   * Purchases and subscriptions belong to the Play Console entry for the old id and are not carried over. The new id needs its own Play Console app, with the `pro_subscription`, `small_tip` and `big_tip` products created again under the same product ids.
   * Anything registered against the package name, such as API keys tied to a signing certificate, must be registered again for the new id.
   * Bluetooth sharing uses fixed service UUIDs and not the application id, so builds with the two ids can still exchange songs. Library exports are encrypted with a device-bound key, so they could not be moved between installs anyway.
-  * This is safe only if the old id has no users and no Play listing. If it does, do not merge this change and keep the old id.
+  * This is safe only if the old id has no users and no Play listing. If it does, do not merge this change and keep the old id. The owner confirmed on 2026-11-08 that the old id has no users. A Play listing was not mentioned, so check for one before the first upload.
   * The scripts in `tools/audio-test` name the id for adb, and they use the new one.
   * Checked on an emulator: a build with each id installs next to the other, and a file written in the old app's data folder does not exist in the new app.
 
