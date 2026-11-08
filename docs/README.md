@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.10 |
+| Version | 0.14 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,7 +14,7 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.13 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.14 | Active |
 | [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.10 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
@@ -37,3 +37,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.11 | 2026-11-08 | Claude Code | Added 07-pitch-detection-design.md (Proposed), the plan for making the pitch logic independent of TarsosDSP. New open items for CI, end-to-end sync, real devices, the level meter, the unused view model, matching enhancements and the release checklist, each linked to its issue. |
 | 0.12 | 2026-11-08 | Claude Code | Added PRIVACY.md (draft) and RELEASING.md for the first release (issue #18). The README no longer claims everything happens on the device, because language suggestion and model downloads use the network. |
 | 0.13 | 2026-11-08 | Claude Code | CI and formatting resolved: the CI workflow and Spotless are in place and the `build` check is required on `main`. Removed that open item. |
+| 0.14 | 2026-11-08 | Claude Code | Follow-ups from a review: the CI workflow also builds the release APK, PRIVACY.md corrected to Android 11 and older, key files ignored by git, new open items for pre-release dependencies and the migration test. The document header version now matches this table. |

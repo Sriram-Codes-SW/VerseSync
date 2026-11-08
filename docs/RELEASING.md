@@ -48,5 +48,6 @@ Without them the release build is unsigned, which is what CI and contributors ge
 
 ## Known gaps to decide before publishing
 
+- Room and the biometric library are pre-release versions in the release build (issue #26). Decide before publishing.
 - The README says the Play Integrity API and the Licensing library will be integrated. Under GPL-3.0 anyone may build a modified version, so these only protect the Play Store build. Decide whether they are still wanted.
 - The README says everything happens 100 percent on the device. Language suggestion and model downloads use the network (see `docs/PRIVACY.md`), so the README wording should be softened before the listing is written.

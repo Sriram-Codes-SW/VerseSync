@@ -7,7 +7,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -17,8 +17,12 @@ import java.util.concurrent.TimeUnit
  * Cancelling a view model or the DataStore scope resumes coroutines through `Dispatchers.Main`,
  * from the fake main thread and from IO threads. If `Main` is reset while that happens, the reset
  * throws `IllegalStateException` ("Dispatchers.Main is used concurrently with setting it").
- * So each of [scopes] is cancelled and awaited, in order, and then the executor's queue is
- * drained before `Main` is reset. List the view model scopes before the DataStore scope.
+ * So each of [scopes] is cancelled and awaited, in order, and then the executor is shut down and
+ * awaited so that everything already queued has run. Only then is `Main` reset. List the view model
+ * scopes before the DataStore scope.
+ *
+ * A scope or executor that does not finish within five seconds fails the test, because carrying on
+ * would bring back the race this exists to prevent.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal fun resetTestMain(
@@ -26,10 +30,9 @@ internal fun resetTestMain(
     vararg scopes: CoroutineScope,
 ) {
     runBlocking {
-        withTimeoutOrNull(5_000) { scopes.forEach { it.coroutineContext.job.cancelAndJoin() } }
+        withTimeout(5_000) { scopes.forEach { it.coroutineContext.job.cancelAndJoin() } }
     }
-    // Drain twice: the first batch of tasks can queue more.
-    repeat(2) { runCatching { executor.submit {}.get(5, TimeUnit.SECONDS) } }
+    executor.shutdown()
+    check(executor.awaitTermination(5, TimeUnit.SECONDS)) { "The fake main thread did not finish its queued work" }
     Dispatchers.resetMain()
-    executor.shutdownNow()
 }

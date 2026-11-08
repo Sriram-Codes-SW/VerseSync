@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.13 |
+| Version | 0.14 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -364,3 +364,5 @@ These corrections bring the records in line with the code as built.
 * **Real devices:** Bluetooth sharing between two phones and the biometric prompt have never run, because the emulator has neither ([#8](https://github.com/Sriram-Codes-SW/VerseSync/issues/8)).
 * **Matching enhancements, not yet needed:** Elastic (DTW) pitch matching for tempo variation ([#16](https://github.com/Sriram-Codes-SW/VerseSync/issues/16)) and an FTS5 index for very large libraries ([#17](https://github.com/Sriram-Codes-SW/VerseSync/issues/17)).
 * **First-release checklist:** Play Console setup, the license decision, the privacy policy and release signing ([#18](https://github.com/Sriram-Codes-SW/VerseSync/issues/18)).
+* **Pre-release dependencies:** The release build uses Room 2.7.0-alpha11 and `biometric-ktx` 1.4.0-alpha02. Room has a stable version. Biometric has no stable version newer than 1.1.0, so the choice is recorded in the issue ([#26](https://github.com/Sriram-Codes-SW/VerseSync/issues/26)).
+* **Migration test in CI:** `VerseDatabaseMigrationTest` needs an emulator and never runs in CI ([#27](https://github.com/Sriram-Codes-SW/VerseSync/issues/27)).
