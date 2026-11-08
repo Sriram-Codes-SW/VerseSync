@@ -40,6 +40,10 @@ android {
         compose = true
         buildConfig = true
     }
+    sourceSets {
+        // Lets the migration test read the exported Room schema files.
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
     testOptions {
         unitTests {
             isReturnDefaultValues = true
@@ -63,6 +67,7 @@ dependencies {
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
+    androidTestImplementation("androidx.room:room-testing:$room_version")
     implementation(libs.androidx.glance.appwidget)
 
     implementation(libs.androidx.core.ktx)
