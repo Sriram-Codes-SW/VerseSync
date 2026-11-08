@@ -66,6 +66,7 @@ class VoskVoiceRecognition(private val context: Context) : RecognitionListener {
         }
     }
 
+    @Synchronized
     fun startListening() {
         val model = currentModel
         if (model == null) {
@@ -86,13 +87,22 @@ class VoskVoiceRecognition(private val context: Context) : RecognitionListener {
         }
     }
 
+    /**
+     * Safe to call from any thread, and more than once. Vosk reports the final result on the main
+     * thread after [SpeechService.stop], and that callback calls this again. Without taking
+     * ownership of the objects first, two overlapping calls freed the native recognizer twice and
+     * crashed the process.
+     */
+    @Synchronized
     fun stopListening() {
-        speechService?.stop()
-        speechService?.shutdown()
+        val service = speechService
+        val rec = recognizer
         speechService = null
-        // The recognizer owns native memory and is not closed by SpeechService.
-        recognizer?.close()
         recognizer = null
+        service?.stop()
+        service?.shutdown()
+        // The recognizer owns native memory and is not closed by SpeechService.
+        rec?.close()
         _recognitionResult.value = "" // Clear results on stop to prevent state leaks
         Log.d(TAG, "Stopped Vosk listening and cleared results.")
     }
