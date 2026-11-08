@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.11 |
+| Version | 0.13 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -360,7 +360,6 @@ These corrections bring the records in line with the code as built.
 * **Pitch detection independence from TarsosDSP:** Pitch detection and audio capture are tied to one GPL-3.0 library, which makes tests awkward and leaves two microphone recorders open at once. The design and phased plan are in [07-pitch-detection-design.md](07-pitch-detection-design.md) ([#13](https://github.com/Sriram-Codes-SW/VerseSync/issues/13)). It would also finish what ADR-01 intended.
 * **Level meter shows pitch confidence:** `AudioFingerprinter` sets the amplitude from the detector's probability, so the Lyric Sync meter does not follow the input volume ([#14](https://github.com/Sriram-Codes-SW/VerseSync/issues/14)).
 * **Unused `FingerprintingViewModel`:** It has no callers and opens a 22,050 Hz dispatcher, which conflicts with the 16,000 Hz used elsewhere ([#15](https://github.com/Sriram-Codes-SW/VerseSync/issues/15)).
-* **CI and formatting:** Nothing runs the tests on a pull request, so the `main` ruleset cannot yet require status checks ([#4](https://github.com/Sriram-Codes-SW/VerseSync/issues/4)).
 * **Sync flow and vocal lock end to end:** Real audio was tested at the engine level only. The lyric sync and vocal lock screens have not been driven with real audio ([#9](https://github.com/Sriram-Codes-SW/VerseSync/issues/9)).
 * **Real devices:** Bluetooth sharing between two phones and the biometric prompt have never run, because the emulator has neither ([#8](https://github.com/Sriram-Codes-SW/VerseSync/issues/8)).
 * **Matching enhancements, not yet needed:** Elastic (DTW) pitch matching for tempo variation ([#16](https://github.com/Sriram-Codes-SW/VerseSync/issues/16)) and an FTS5 index for very large libraries ([#17](https://github.com/Sriram-Codes-SW/VerseSync/issues/17)).
