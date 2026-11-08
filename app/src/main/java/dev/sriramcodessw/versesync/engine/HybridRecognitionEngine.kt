@@ -17,6 +17,9 @@ private const val TAG = "HybridRecognitionEngine"
 /** Minimum frames voiced in both contours before a pitch distance is trusted. */
 private const val MIN_VOICED_OVERLAP = 8
 
+/** How often the pitch contour is re-scored against the library. */
+private const val PITCH_INTERVAL_MS = 5000L
+
 data class RecognitionResult(val candidates: List<Song>)
 
 @SuppressLint("MissingPermission")
@@ -42,18 +45,11 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
     // Persistent candidate accumulator to prevent state flickering
     private val accumulatedSttCandidates = mutableListOf<Song>()
 
-    // Separate Heartbeats for different resolutions
-    private val sttHeartbeat = flow {
+    // The pitch contour grows continuously and only needs re-scoring now and then.
+    private val pitchHeartbeat = flow {
         while (currentCoroutineContext().isActive) {
             emit(Unit)
-            delay(5000) // STT every 5 seconds
-        }
-    }
-
-    private val fingerprintHeartbeat = flow {
-        while (currentCoroutineContext().isActive) {
-            emit(Unit)
-            delay(5000) // Fingerprint every 5 seconds
+            delay(PITCH_INTERVAL_MS)
         }
     }
 
@@ -78,22 +74,29 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
     }
 
     /**
-     * Unified Multi-Resolution Recognition Flow with Candidate Retention (ADR-05)
+     * Recognition flow with candidate retention (ADR-05).
+     *
+     * A search runs whenever the speech text changes and on every pitch tick, and each search
+     * looks at both the current speech text and the current pitch contour. Speech used to be
+     * checked only on a fixed tick that fired together with the pitch tick, and the later of the
+     * two cancelled the earlier one. A sentence the model had heard in full could be missed
+     * because it was replaced before the next successful check. `conflate` only skips triggers
+     * that arrive while a search is running, which is safe because a search always reads the
+     * latest state. `vosk` is read when collection starts, not when the engine is built.
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
     val recognitionResult: Flow<RecognitionResult> = merge(
-        sttHeartbeat.map { "stt" },
-        fingerprintHeartbeat.map { "fingerprint" }
-    ).flatMapLatest { triggerType ->
-        searchHybrid(triggerType)
+        flow { emitAll(vosk.recognitionResult.map { }) },
+        pitchHeartbeat
+    ).conflate().flatMapConcat {
+        searchHybrid()
     }.flowOn(Dispatchers.Default)
 
-    private suspend fun searchHybrid(triggerType: String): Flow<RecognitionResult> = flow {
+    private suspend fun searchHybrid(): Flow<RecognitionResult> = flow {
         val allSongs = songDao.getAllSongs().first()
 
         // ADR-03: Tokenized & Fuzzy Lyric Matching
         val sttQuery = normalizeForSanskrit(vosk.recognitionResult.value)
-        if (sttQuery.isNotBlank() && triggerType == "stt") {
+        if (sttQuery.isNotBlank()) {
             val newlyFound = allSongs.filter { song ->
                 matchLyricsScore(sttQuery, song.lyrics) >= 0.35f
             }
@@ -117,7 +120,8 @@ class HybridRecognitionEngine(private val context: Context, private val songDao:
             }.sortedBy { it.second }.map { it.first }.take(3)
         } else emptyList()
 
-        val combined = (accumulatedSttCandidates + scoredCandidates).distinctBy { it.id }
+        val retained = synchronized(accumulatedSttCandidates) { accumulatedSttCandidates.toList() }
+        val combined = (retained + scoredCandidates).distinctBy { it.id }
         emit(RecognitionResult(combined))
     }
 

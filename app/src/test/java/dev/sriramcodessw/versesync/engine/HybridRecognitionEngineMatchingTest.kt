@@ -5,13 +5,16 @@ import dev.sriramcodessw.versesync.data.Song
 import dev.sriramcodessw.versesync.data.SongDao
 import dev.sriramcodessw.versesync.fingerprinting.AudioFingerprinter
 import dev.sriramcodessw.versesync.stt.VoskVoiceRecognition
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -65,6 +68,34 @@ class HybridRecognitionEngineMatchingTest {
     @Test
     fun calculateMatchScore_withAllSilentLive_isNoMatch() {
         assertEquals(Float.MAX_VALUE, engine.calculateMatchScore(melody, List(12) { 0f }))
+    }
+
+    @Test
+    fun recognitionResult_findsSpeechThatIsOnlyBrieflyPresent() {
+        // Real speech models replace the text as soon as the next utterance starts. The match
+        // must happen when the text changes, not on a later fixed tick that may find it gone.
+        val song = Song(id = 9, title = "Brief", artist = "x", lyrics = "Amazing Grace! How sweet the sound")
+        whenever(songDao.getAllSongs()).thenReturn(flow { delay(50); emit(listOf(song)) })
+        val spokenText = MutableStateFlow("")
+        val vosk: VoskVoiceRecognition = mock()
+        whenever(vosk.isModelReady).thenReturn(MutableStateFlow(true))
+        whenever(vosk.recognitionResult).thenReturn(spokenText)
+        engine.javaClass.getDeclaredField("vosk").also { it.isAccessible = true }.set(engine, vosk)
+
+        val found = runBlocking {
+            val search = async {
+                withTimeoutOrNull(3_000) {
+                    engine.recognitionResult.first { result -> result.candidates.any { it.id == 9 } }
+                }
+            }
+            delay(300)
+            spokenText.value = "amazing grace how sweet the sound"
+            delay(400)
+            spokenText.value = "" // gone well before the next 5 second pitch tick
+            search.await()
+        }
+
+        assertTrue(found != null, "A phrase heard for under a second was never matched")
     }
 
     @Test
