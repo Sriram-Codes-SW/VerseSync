@@ -36,7 +36,7 @@ class DataTransferServiceTest {
         whenever(socketMock.inputStream).thenReturn(inStream)
 
         val service = DataTransferService(socketMock)
-        val success = service.sendSongs(songsToSend, "transfer-123") { /* progress */ }
+        val success = service.sendSongs(DataTransferService.encode(songsToSend), "transfer-123") { /* progress */ }
 
         assertTrue(success)
     }

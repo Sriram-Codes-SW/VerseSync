@@ -239,6 +239,31 @@ VerseSync is an offline-first Android application designed for musicians, worshi
 
 ---
 
+### ADR-13: License the Project under GPL-3.0
+
+* **Status:** Accepted
+* **Context:**
+  The repository is public and had no license file, so by default nobody had permission to use it. The README said the repository would be private to protect intellectual property. The app also bundles TarsosDSP, which is licensed under GPL-3.0 (`app/libs`, version 2.4, built 2016-12-08), and links it directly. Distributing the app without offering its source under a compatible license would break that license.
+* **Decision Drivers:**
+  * The repository is already public.
+  * The bundled GPL-3.0 library cannot be shipped in a closed-source app.
+  * Every other dependency must stay compatible.
+* **Considered Options:**
+  1. *Replace TarsosDSP and keep the app closed:* Needs a new pitch detector (YIN is a published algorithm) and re-validation of matching. Largest effort.
+  2. *Obtain a commercial license for TarsosDSP:* Depends on the author, and the bundled jar has no recorded source.
+  3. *License the app under GPL-3.0:* Chosen. It matches the current state and the bundled library.
+* **Decision:**
+  License the project under GPL-3.0-only. Add `LICENSE` with the full text and `THIRD_PARTY_NOTICES.md` listing each dependency's license. Correct the README, which no longer claims the repository is private. The owner confirmed this choice on 2026-11-08.
+* **Consequences:**
+  * Anyone may use, modify and redistribute the app under GPL-3.0, including the source of the Pro gate, so a fork can remove it. Revenue then relies on Google Play distribution, convenience and support, not on keeping the code secret.
+  * Distributing an APK, including on Google Play, requires offering the matching source.
+  * Contributions are accepted under the same license.
+  * Replacing TarsosDSP later would allow relicensing, but code already published stays available under GPL-3.0.
+  * The owner also plans a refactor that makes the pitch logic independent of TarsosDSP (issue #13, design in `docs/07-pitch-detection-design.md` once it is merged). It does not change this decision. It keeps relicensing possible for future work.
+  * The Apache-2.0 dependencies and the dual-licensed JNA are compatible with GPL-3.0.
+
+---
+
 ### ADR-14: Script-Aware Lyric Tokenization for All Supported Languages
 
 * **Status:** Accepted
@@ -310,7 +335,7 @@ These corrections bring the records in line with the code as built.
 * **ADR-10 (enabling the lock):** The Enable App Lock switch refuses to turn on, and explains why, when the device has no screen lock or biometrics. Because the lock now fails closed, enabling it without a way to authenticate would lock the user out of their own library.
 * **ADR-11 and ADR-12 (lifecycle):** The Bluetooth server tracks every listening socket and closes all of them after the first connection or on stop. Before, only the last socket was closed and the other accept thread blocked forever. The location permission is requested on the first-run language screen only, not on every app start.
 * **Preferences storage (ADR-10, ADR-12):** The preferences classes take an injectable `DataStore<Preferences>`, and each view model accepts its preferences object. The default is unchanged, so the app still uses one process-wide DataStore. Tests use a private DataStore per test. The three DataStore-backed test classes previously shared one on-disk file through a mock context, so results depended on test order. They also reset the Main dispatcher before cancelling coroutines that still needed it. Tests run on a real single-thread Main dispatcher. Write paths are asserted on the preferences object, and view model state is asserted by creating the view model after the data is saved, as on a cold start.
-* **ADR-05 (when speech is matched):** Speech used to be matched only on a fixed 5 second tick that fired together with the pitch tick, and the later trigger cancelled the earlier one. A sentence the speech model had heard in full could be replaced before a successful check. A real-audio run showed this in Korean, Russian, Dutch and Swedish. The engine now searches whenever the speech text changes, and on each pitch tick, and every search reads both the current speech text and the current pitch contour. Candidate retention is unchanged.
+* **ADR-05 (when speech is matched):** Speech used to be matched only on a fixed 5 second tick that fired together with the pitch tick, and the later trigger cancelled the earlier one. A sentence the speech model had heard in full could be replaced before a successful check. A real-audio run showed this in Korean, Russian, Dutch and Swedish. The engine now searches whenever the speech text changes, and on each pitch tick, and every search reads both the current speech text and the current pitch contour. Candidates found from speech are kept until recognition stops, except that a candidate whose song is deleted in the meantime is dropped.
 * **ADR-07 (stopping speech recognition):** `VoskVoiceRecognition.stopListening` and `startListening` are synchronized, and stop takes ownership of the speech service and recognizer before freeing them. Vosk reports the final result on the main thread after a stop, and that callback calls stop again. An overlapping call from another thread freed the native recognizer twice and crashed the process.
 * **ADR-10 (authenticators):** androidx.biometric rejects `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` on Android 9 and 10 (API 28 and 29). Checking availability reports "unsupported", and building a prompt with it throws. `appLockAuthenticators` returns `BIOMETRIC_WEAK or DEVICE_CREDENTIAL` on those two versions and the strong pair elsewhere, and both the Settings switch and the unlock prompt use it. The original startup bypass had hidden this problem, because the prompt was never reached. It is tested for every Android version but has not been run on a real Android 9 or 10 device.
 * **ADR-12 (corrupt settings):** A corrupt settings file used to crash the app on every launch, on the original code as well. The file is now replaced with empty settings through a corruption handler, and reads that fail with an I/O error report empty settings. After corruption every setting returns to its default, including the app lock, because the lock lives in the same file. Only someone who can already change the app's private files can cause this.
@@ -324,9 +349,8 @@ These corrections bring the records in line with the code as built.
 ## 4. Known Open Items
 
 * **Transfer integrity (TC-U-10):** The transfer protocol has no checksum. Integrity relies on the announced length and JSON parsing. Adding a checksum needs a new protocol version.
-* **Licensing:** TarsosDSP is licensed GPL-3.0 and the bundled jar (`app/libs`, version 2.4, built 2016-12-08) has no recorded source. Shipping it in a closed commercial app conflicts with that license. The options are to replace it, relicense the app, or obtain a commercial license.
+* **Licensing:** Resolved by ADR-13, which licenses the project under GPL-3.0 because the bundled TarsosDSP jar is GPL-3.0. Revisit if TarsosDSP is replaced.
 * **Final Pro products:** Only the `pro_subscription` product exists, as a deliberate stand-in (ADR-08). The one-time Pro purchase and the Pro+ tier described in the README are planned, and the free and Pro split above is the basic differentiation until they are set up.
-* **Repository:** The repository is public and has no license file, while the README states it will be private.
 * **Resumable transfer:** Not supported until partial data is persisted (ADR-11).
 * **State flow after a live write:** In unit tests, a view model state flow occasionally did not show a value written just after the view model started, even though the DataStore held the correct value. It happened about 1 in 10 times under test dispatchers and was not seen in 100 runs with a real Main thread. DataStore 1.3.0 reduced it but did not remove it. The cause is not identified. An emulator run (TC-M-06, TC-M-07) showed the trial counter, the lock switch and the lock type label updating immediately, so this has not been seen in the app.
 * **No-model languages in recognition:** The recognition screen only offers languages with an installed speech model (ADR-15), so a user whose songs are all in Tamil, Marathi, Bengali, Kannada, Malayalam, Punjabi or Greek cannot start recognition, even though pitch matching would work.

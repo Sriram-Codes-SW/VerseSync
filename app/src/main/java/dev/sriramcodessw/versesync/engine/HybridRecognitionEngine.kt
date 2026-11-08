@@ -113,6 +113,8 @@ class HybridRecognitionEngine(
                 if (trigger == SearchTrigger.LIBRARY) {
                     val ids = library.mapTo(HashSet()) { it.id }
                     lyricTokens.keys.retainAll(ids)
+                    // A deleted song must not stay a candidate.
+                    synchronized(accumulatedSttCandidates) { accumulatedSttCandidates.removeAll { it.id !in ids } }
                 }
                 if (trigger != SearchTrigger.SPEECH) pitchCandidates = scorePitch(library)
                 matchSpeech(library, lyricTokens)

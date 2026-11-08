@@ -178,4 +178,35 @@ class HybridRecognitionEngineMatchingTest {
         assertTrue(matched, "The spoken phrase should have matched the song")
         assertTrue(afterClear.all { it }, "Candidate must be retained after the speech text clears: $afterClear")
     }
+
+    @Test
+    fun recognitionResult_dropsACandidateWhoseSongWasDeleted() {
+        val song = Song(id = 7, title = "Amazing Grace", artist = "x", lyrics = "Amazing Grace! How sweet the sound")
+        val spokenText = MutableStateFlow("amazing grace how sweet")
+        val library = MutableStateFlow(listOf(song))
+        whenever(songDao.getAllSongs()).thenReturn(library)
+        val vosk: VoskVoiceRecognition = mock()
+        whenever(vosk.isModelReady).thenReturn(MutableStateFlow(true))
+        whenever(vosk.recognitionResult).thenReturn(spokenText)
+        val engine = HybridRecognitionEngine(mock<Context>(), songDao, vosk, pitchIntervalMs = 100)
+
+        val gone = runBlocking {
+            withTimeoutOrNull(10_000) {
+                var deleted = false
+                var result: Boolean? = null
+                engine.recognitionResult.takeWhile { result == null }.collect { r ->
+                    val hasSong = r.candidates.any { it.id == 7 }
+                    if (!deleted && hasSong) {
+                        deleted = true
+                        library.value = emptyList()
+                    } else if (deleted && !hasSong) {
+                        result = true
+                    }
+                }
+                result
+            }
+        }
+
+        assertTrue(gone == true, "A deleted song stayed in the candidates")
+    }
 }
