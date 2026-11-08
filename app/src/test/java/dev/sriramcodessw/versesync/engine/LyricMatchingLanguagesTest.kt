@@ -47,6 +47,36 @@ class LyricMatchingLanguagesTest {
         }
     }
 
+    /**
+     * Languages that share a script are the ones that could really be confused, because they share
+     * letters and sometimes whole words. Comparing each language with the next one in the table
+     * mostly crosses scripts and cannot fail, so this compares every ordered pair inside a script.
+     */
+    @TestFactory
+    fun speechDoesNotMatchTheLyricsOfAnotherLanguage_thatSharesItsScript(): List<DynamicTest> {
+        fun scriptOf(text: String): String {
+            val letter = text.codePoints().toArray().first { Character.isLetter(it) }
+            return when (val script = Character.UnicodeScript.of(letter)) {
+                Character.UnicodeScript.HAN, Character.UnicodeScript.HIRAGANA, Character.UnicodeScript.KATAKANA -> "CJK"
+                else -> script.name
+            }
+        }
+
+        val groups = languageSamples.entries.groupBy { scriptOf(it.value.spoken) }.filterValues { it.size > 1 }
+        assertTrue(groups.getValue("LATIN").size > 5, "The Latin group should be the large one")
+
+        return groups.flatMap { (script, members) ->
+            members.flatMap { speaker ->
+                members.filter { it.key != speaker.key }.map { lyricsOwner ->
+                    DynamicTest.dynamicTest("$script: ${speaker.value.name} speech vs ${lyricsOwner.value.name} lyrics") {
+                        val score = engine.matchLyricsScore(speaker.value.spoken, lyricsOwner.value.lyrics)
+                        assertTrue(score < MATCH_THRESHOLD, "False match: $score")
+                    }
+                }
+            }
+        }
+    }
+
     @TestFactory
     fun decomposedAndComposedText_matchEachOther_inEveryLanguage(): List<DynamicTest> =
         languageSamples.map { (code, sample) ->
