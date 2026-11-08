@@ -16,22 +16,33 @@ const val MAX_TRANSFER_BYTES = 8 * 1024 * 1024
 
 class DataTransferService(private val socket: BluetoothSocket) {
 
+    companion object {
+        /** The bytes that would be sent for [songs]. */
+        fun encode(songs: List<Song>): ByteArray = Gson().toJson(songs).toByteArray(StandardCharsets.UTF_8)
+
+        /**
+         * Whether [payloadBytes] is more than a receiver accepts. Fingerprinted songs are large,
+         * roughly 35 KB for a four minute song, so a few hundred songs can exceed the limit. The
+         * sender checks first so the user is told why, instead of a generic failure.
+         */
+        fun isTooLarge(payloadBytes: Int): Boolean = payloadBytes > MAX_TRANSFER_BYTES
+    }
+
     private val dataInputStream = DataInputStream(socket.inputStream)
     private val dataOutputStream = DataOutputStream(socket.outputStream)
 
     /**
      * Protocol:
      * 1. Sender sends TRANSFER_ID (UTF) and TOTAL_SIZE (Int)
-     * 2. Receiver validates the size and replies with an OFFSET (Int), or -1 to refuse
-     * 3. Sender sends data from that offset
+     * 2. Receiver validates the size and replies with OFFSET 0, or -1 to refuse
+     * 3. Sender sends the data
      *
-     * The receiver does not persist partial data, so it always replies with offset 0.
+     * There is no resume: the receiver does not keep partial data, so it always starts at 0.
      */
 
     fun sendSongs(songs: List<Song>, transferId: String, onProgress: (Int) -> Unit): Boolean {
         return try {
-            val json = Gson().toJson(songs)
-            val data = json.toByteArray(StandardCharsets.UTF_8)
+            val data = encode(songs)
             val totalSize = data.size
 
             // Step 1: Send Header
@@ -45,7 +56,6 @@ class DataTransferService(private val socket: BluetoothSocket) {
                 Log.w(TAG, "Receiver refused transfer $transferId (offset $offset)")
                 return false
             }
-            Log.d(TAG, "Resuming transfer $transferId from offset $offset")
 
             // Step 3: Send Data from Offset
             var bytesWritten = offset
@@ -65,23 +75,21 @@ class DataTransferService(private val socket: BluetoothSocket) {
         }
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    fun receiveSongs(getOffsetForId: (String) -> Int, onProgress: (String, Int) -> Unit): List<Song>? {
+    fun receiveSongs(onProgress: (String, Int) -> Unit): List<Song>? {
         return try {
             // Step 1: Read Header
             val transferId = dataInputStream.readUTF()
             val totalSize = dataInputStream.readInt()
 
             // Never allocate based on an unchecked remote value.
-            if (totalSize < 0 || totalSize > MAX_TRANSFER_BYTES) {
+            if (totalSize < 0 || isTooLarge(totalSize)) {
                 Log.w(TAG, "Rejecting transfer with invalid size $totalSize")
                 dataOutputStream.writeInt(-1)
                 dataOutputStream.flush()
                 return null
             }
 
-            // Step 2: Always restart from 0. Resuming from a stored offset would leave the
-            // start of the buffer zero-filled, because partial data is not kept.
+            // Step 2: Always start from 0, because partial data is not kept.
             val offset = 0
             dataOutputStream.writeInt(offset)
             dataOutputStream.flush()
