@@ -188,6 +188,7 @@ fun RecognitionScreen(
                                 if (isPro || remainingTrials > 0) {
                                     if (!isPro) trialViewModel.useTrial()
                                     isRecognizing = true
+                                    // Inside the entitlement check above, so pitch matching is allowed here.
                                     hybridViewModel.startRecognition(true)
                                 }
                             } else {

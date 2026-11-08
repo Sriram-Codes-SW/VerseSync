@@ -191,7 +191,7 @@ class BluetoothService(
                 return@launch
             }
             mainDispatcher.launch { _state.value = BluetoothState.Transferring(0) }
-            val success = dataTransferService?.sendSongs(songs, transferId, payload) { progress ->
+            val success = dataTransferService?.sendSongs(payload, transferId) { progress ->
                 mainDispatcher.launch { _state.value = BluetoothState.Transferring(progress) }
             } ?: false
             mainDispatcher.launch {
