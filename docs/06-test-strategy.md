@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.8 |
+| Version | 0.9 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -63,3 +63,9 @@ Notes:
 * One sentence per language is thin evidence. The small models also transcribe imperfectly, and several passed with an inexact transcript, because the match threshold is 0.35.
 * Chinese and Japanese pass through character-pair matching (ADR-14), which could match common pairs by chance.
 * Swedish uses the 303 MB model and Ukrainian the 78 MB model from ADR-15. Both were exercised by this run.
+| **TC-U-22** | Settings / Corruption | A truncated settings file, writing afterwards, an I/O error while reading, and a non-I/O error | The file is replaced and settings default; writes work; I/O errors report defaults; other errors are not hidden | ADR-12 |
+| **TC-U-23** | Security / Authenticators | The authenticators chosen for API 26 to 36 | API 28 and 29 use the weak pair, all others the strong pair | ADR-10 |
+| **TC-U-24** | Models / Install | Install over an existing model with a good, malicious and corrupt archive | A good archive replaces it; a bad one leaves the old model working | ADR-11 |
+| **TC-U-25** | Bluetooth / Size check | A small selection, a selection over 8 MiB, and the limit itself | Only a selection over the limit is reported as too large | ADR-11 |
+| **TC-U-26** | Engine / Matching | Speech of one language against the lyrics of every other language that shares its script | No pair reaches the match threshold | ADR-14 |
+| **TC-M-10** | Database / Migration | Run `VerseDatabaseMigrationTest` on a device or emulator, and again after raising the version without a migration | Passes at version 3; fails with a missing-migration error when the version is raised alone | ADR-12 |
