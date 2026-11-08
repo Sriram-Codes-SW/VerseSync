@@ -83,12 +83,24 @@ internal fun tokenizeLyrics(text: String): List<LyricToken> {
  * Fraction of the spoken tokens that also appear in the lyrics, from 0 to 1.
  * Short words are ignored on the spoken side, as they are too common to identify a song.
  */
-internal fun lyricMatchScore(spoken: String, lyrics: String): Float {
-    val spokenTokens = tokenizeLyrics(spoken).filter { it.cjk || it.text.length >= MIN_WORD_LENGTH }
-    if (spokenTokens.isEmpty()) return 0f
+internal fun lyricMatchScore(spoken: String, lyrics: String): Float =
+    tokenMatchScore(spokenMatchTokens(spoken), lyricTokenSet(lyrics))
 
-    val lyricTokens = tokenizeLyrics(lyrics).map { it.text }.toSet()
-    if (lyricTokens.isEmpty()) return 0f
+/**
+ * The tokens of speech that take part in scoring. Short words are dropped, because they are too
+ * common to identify a song. Computed once per speech text, not once per song.
+ */
+internal fun spokenMatchTokens(spoken: String): List<String> =
+    tokenizeLyrics(spoken).filter { it.cjk || it.text.length >= MIN_WORD_LENGTH }.map { it.text }
 
-    return spokenTokens.count { it.text in lyricTokens }.toFloat() / spokenTokens.size
+/**
+ * Every token of a song's lyrics. Tokenizing is the expensive part of matching, so callers that
+ * search a whole library on every speech update keep this per song and reuse it.
+ */
+internal fun lyricTokenSet(lyrics: String): Set<String> = tokenizeLyrics(lyrics).map { it.text }.toSet()
+
+/** Fraction of [spokenTokens] found in [lyricTokens], from 0 to 1. */
+internal fun tokenMatchScore(spokenTokens: List<String>, lyricTokens: Set<String>): Float {
+    if (spokenTokens.isEmpty() || lyricTokens.isEmpty()) return 0f
+    return spokenTokens.count { it in lyricTokens }.toFloat() / spokenTokens.size
 }

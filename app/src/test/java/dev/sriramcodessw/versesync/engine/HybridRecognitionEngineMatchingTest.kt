@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
@@ -70,69 +72,110 @@ class HybridRecognitionEngineMatchingTest {
         assertEquals(Float.MAX_VALUE, engine.calculateMatchScore(melody, List(12) { 0f }))
     }
 
-    @Test
-    fun recognitionResult_findsSpeechThatIsOnlyBrieflyPresent() {
-        // Real speech models replace the text as soon as the next utterance starts. The match
-        // must happen when the text changes, not on a later fixed tick that may find it gone.
-        val song = Song(id = 9, title = "Brief", artist = "x", lyrics = "Amazing Grace! How sweet the sound")
-        whenever(songDao.getAllSongs()).thenReturn(flow { delay(50); emit(listOf(song)) })
-        val spokenText = MutableStateFlow("")
+    /**
+     * An engine hearing [spokenText] with [songs] in its library. The recognizer is a fake and the
+     * pitch interval is short, so nothing here waits for the real 5 second tick.
+     */
+    private fun engineHearing(spokenText: MutableStateFlow<String>, vararg songs: Song): HybridRecognitionEngine {
+        // The delay mimics Room hopping to its query executor.
+        whenever(songDao.getAllSongs()).thenReturn(flow { delay(50); emit(songs.toList()) })
         val vosk: VoskVoiceRecognition = mock()
         whenever(vosk.isModelReady).thenReturn(MutableStateFlow(true))
         whenever(vosk.recognitionResult).thenReturn(spokenText)
-        engine.javaClass.getDeclaredField("vosk").also { it.isAccessible = true }.set(engine, vosk)
+        return HybridRecognitionEngine(mock<Context>(), songDao, vosk, pitchIntervalMs = 100)
+    }
+
+    @Test
+    fun recognitionResult_findsSpeechThatIsOnlyBrieflyPresent() {
+        // Real speech models replace the text as soon as the next utterance starts. The match
+        // must happen when the text changes, not on a later tick that may find it gone.
+        val song = Song(id = 9, title = "Brief", artist = "x", lyrics = "Amazing Grace! How sweet the sound")
+        val spokenText = MutableStateFlow("")
+        val engine = engineHearing(spokenText, song)
 
         val found = runBlocking {
             val search = async {
-                withTimeoutOrNull(3_000) {
+                withTimeoutOrNull(5_000) {
                     engine.recognitionResult.first { result -> result.candidates.any { it.id == 9 } }
                 }
             }
-            delay(300)
+            delay(200)
             spokenText.value = "amazing grace how sweet the sound"
-            delay(400)
-            spokenText.value = "" // gone well before the next 5 second pitch tick
+            delay(120)
+            spokenText.value = "" // gone again after a fraction of a second
             search.await()
         }
 
-        assertTrue(found != null, "A phrase heard for under a second was never matched")
+        assertTrue(found != null, "A phrase heard for a fraction of a second was never matched")
+    }
+
+    @Test
+    fun recognitionResult_doesNotReportASongForUnrelatedSpeech() {
+        val song = Song(id = 5, title = "Other", artist = "x", lyrics = "Amazing Grace! How sweet the sound")
+        val spokenText = MutableStateFlow("completely different words about something else entirely")
+        val engine = engineHearing(spokenText, song)
+
+        val emissions = runBlocking {
+            withTimeoutOrNull(1_500) { engine.recognitionResult.take(5).toList() } ?: emptyList()
+        }
+
+        assertTrue(emissions.isNotEmpty(), "The engine should still report, with no candidates")
+        assertTrue(emissions.none { r -> r.candidates.any { it.id == 5 } }, "Unrelated speech matched a song")
+    }
+
+    @Test
+    fun recognitionResult_followsLibraryChanges() {
+        // A song added while listening must be searchable without restarting recognition.
+        val spokenText = MutableStateFlow("amazing grace how sweet the sound")
+        val library = MutableStateFlow(emptyList<Song>())
+        whenever(songDao.getAllSongs()).thenReturn(library)
+        val vosk: VoskVoiceRecognition = mock()
+        whenever(vosk.isModelReady).thenReturn(MutableStateFlow(true))
+        whenever(vosk.recognitionResult).thenReturn(spokenText)
+        val engine = HybridRecognitionEngine(mock<Context>(), songDao, vosk, pitchIntervalMs = 100)
+
+        val found = runBlocking {
+            val search = async {
+                withTimeoutOrNull(5_000) {
+                    engine.recognitionResult.first { r -> r.candidates.any { it.id == 3 } }
+                }
+            }
+            delay(300)
+            library.value = listOf(Song(id = 3, title = "Late", artist = "x", lyrics = "Amazing Grace! How sweet the sound"))
+            search.await()
+        }
+
+        assertTrue(found != null, "A song added during recognition was not searched")
     }
 
     @Test
     fun recognitionResult_retainsSttCandidatesAfterSpeechTextClears() {
         // TC-U-08 (ADR-05): a candidate found from speech must stay once the text is empty again.
         val song = Song(id = 7, title = "Amazing Grace", artist = "x", lyrics = "Amazing Grace! How sweet the sound")
-        // Delay mimics Room hopping to its query executor.
-        whenever(songDao.getAllSongs()).thenReturn(flow { delay(50); emit(listOf(song)) })
         val spokenText = MutableStateFlow("amazing grace how sweet")
-        val vosk: VoskVoiceRecognition = mock()
-        whenever(vosk.isModelReady).thenReturn(MutableStateFlow(true))
-        whenever(vosk.recognitionResult).thenReturn(spokenText)
-        val voskField = engine.javaClass.getDeclaredField("vosk").also { it.isAccessible = true }
-        voskField.set(engine, vosk)
+        val engine = engineHearing(spokenText, song)
 
         var matched = false
-        var clearedAt = 0L
-        var retained: Boolean? = null
+        val afterClear = mutableListOf<Boolean>()
         runBlocking {
-            withTimeout(25_000) {
+            withTimeout(10_000) {
+                // Several pitch ticks pass after the text is cleared, each computed with empty text.
                 engine.recognitionResult
-                    .takeWhile { retained == null }
+                    .takeWhile { afterClear.size < 5 }
                     .collect { result ->
                         val hasSong = result.candidates.any { it.id == 7 }
-                        if (!matched && hasSong) {
-                            matched = true
-                            spokenText.value = ""
-                            clearedAt = System.nanoTime()
-                        } else if (matched && System.nanoTime() - clearedAt > 4_500_000_000L) {
-                            // A full heartbeat later, so this result was computed with empty text.
-                            retained = hasSong
+                        when {
+                            !matched && hasSong -> {
+                                matched = true
+                                spokenText.value = ""
+                            }
+                            matched -> afterClear += hasSong
                         }
                     }
             }
         }
 
         assertTrue(matched, "The spoken phrase should have matched the song")
-        assertEquals(true, retained, "Candidate must be retained after the speech text clears")
+        assertTrue(afterClear.all { it }, "Candidate must be retained after the speech text clears: $afterClear")
     }
 }
