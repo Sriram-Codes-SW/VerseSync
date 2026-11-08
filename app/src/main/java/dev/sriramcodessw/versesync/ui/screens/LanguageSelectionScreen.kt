@@ -48,6 +48,9 @@ fun LanguageSelectionScreen(viewModel: LanguageViewModel, onComplete: () -> Unit
                                 contentDescription = "Installed",
                                 tint = MaterialTheme.colorScheme.primary
                             )
+                        } else if (!lang.hasSpeechModel) {
+                            // No Vosk model exists for this language, so a download could only fail.
+                            Text("No speech model", style = MaterialTheme.typography.labelMedium)
                         } else if (status != null && status >= 0) {
                             CircularProgressIndicator(
                                 progress = { status / 100f },

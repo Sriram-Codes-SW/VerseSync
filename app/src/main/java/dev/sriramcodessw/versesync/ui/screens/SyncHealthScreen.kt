@@ -23,7 +23,7 @@ fun SyncHealthScreen(
     val songs by verseViewModel.songs.collectAsState()
     
     // Filter songs that have missing models
-    val affectedSongs = songs.filter { !installedLanguages.contains(it.language) }
+    val affectedSongs = songs.filter { languageViewModel.needsSpeechModel(it.language) && !installedLanguages.contains(it.language) }
 
     Scaffold(
         topBar = {

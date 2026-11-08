@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -80,7 +81,27 @@ class LanguageViewModelTest {
     fun availableLanguages_haveUniqueCodesAndHttpsModelUrls() {
         val languages = viewModel.availableLanguages
         assertEquals(languages.size, languages.map { it.code }.toSet().size)
-        assertTrue(languages.all { it.url.startsWith("https://") })
+        assertTrue(languages.all { it.url == null || it.url.startsWith("https://") })
+    }
+
+    @Test
+    fun languagesWithoutAPublishedSpeechModel_areMarkedAndDoNotNeedOne() {
+        // Vosk publishes no usable model for these. A download link would only ever fail.
+        val withoutModel = viewModel.availableLanguages.filter { !it.hasSpeechModel }.map { it.code }.toSet()
+
+        assertEquals(setOf("ta", "mr", "bn", "kn", "ml", "pa", "el"), withoutModel)
+        withoutModel.forEach { assertFalse(viewModel.needsSpeechModel(it)) }
+        assertTrue(viewModel.needsSpeechModel("en-us"))
+        assertTrue(viewModel.needsSpeechModel("not-a-language"))
+    }
+
+    @Test
+    fun downloadLanguage_doesNothingWhenNoSpeechModelExists() {
+        val tamil = viewModel.availableLanguages.first { it.code == "ta" }
+
+        viewModel.downloadLanguage(tamil)
+
+        assertEquals(emptyMap<String, Int>(), viewModel.downloadStatus.value)
     }
 
     @Test

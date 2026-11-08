@@ -44,7 +44,7 @@ fun SettingsScreen(
     
     var showLockTypeDialog by remember { mutableStateOf(false) }
     val hasSyncIssues = remember(songs, installedLanguages) {
-        songs.any { !installedLanguages.contains(it.language) }
+        songs.any { languageViewModel.needsSpeechModel(it.language) && !installedLanguages.contains(it.language) }
     }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -247,13 +247,21 @@ fun SettingsScreen(
                 val isInstalled = installedLanguages.contains(lang.code)
                 ListItem(
                     headlineContent = { Text(lang.name) },
-                    supportingContent = { Text(if (isInstalled) "Ready for offline use" else "Not downloaded") },
+                    supportingContent = {
+                        Text(
+                            when {
+                                isInstalled -> "Ready for offline use"
+                                !lang.hasSpeechModel -> "No speech model exists yet. Lyrics and pitch matching still work."
+                                else -> "Not downloaded"
+                            }
+                        )
+                    },
                     trailingContent = {
                         if (isInstalled) {
                             IconButton(onClick = { languageViewModel.removeLanguage(lang.code) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete model")
                             }
-                        } else {
+                        } else if (lang.hasSpeechModel) {
                             Button(onClick = { languageViewModel.downloadLanguage(lang) }) {
                                 Text("Download")
                             }

@@ -22,9 +22,10 @@ fun AddSongScreen(
     
     val installedLanguageCodes by languageViewModel.installedLanguages.collectAsState()
     
-    // Map installed codes back to human-readable names
+    // Offer installed languages, plus languages with no speech model to download, since those
+    // can only ever be used without one.
     val languages = languageViewModel.availableLanguages.filter { 
-        installedLanguageCodes.contains(it.code) 
+        !it.hasSpeechModel || installedLanguageCodes.contains(it.code)
     }
     
     var expanded by remember { mutableStateOf(false) }
