@@ -14,7 +14,7 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.11 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.13 | Active |
 | [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.10 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
@@ -36,3 +36,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.10 | 2026-11-08 | Claude Code | ADR-16 application id change with a written migration note, and test case TC-M-11. |
 | 0.11 | 2026-11-08 | Claude Code | Added 07-pitch-detection-design.md (Proposed), the plan for making the pitch logic independent of TarsosDSP. New open items for CI, end-to-end sync, real devices, the level meter, the unused view model, matching enhancements and the release checklist, each linked to its issue. |
 | 0.12 | 2026-11-08 | Claude Code | Added PRIVACY.md (draft) and RELEASING.md for the first release (issue #18). The README no longer claims everything happens on the device, because language suggestion and model downloads use the network. |
+| 0.13 | 2026-11-08 | Claude Code | CI and formatting resolved: the CI workflow and Spotless are in place and the `build` check is required on `main`. Removed that open item. |
