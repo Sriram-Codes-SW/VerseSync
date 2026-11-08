@@ -13,6 +13,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @ExperimentalCoroutinesApi
 class BillingViewModelTest {
@@ -40,9 +43,27 @@ class BillingViewModelTest {
     fun launchPurchaseFlow_shouldCallBillingClientWrapper() {
         val activity: Activity = mock()
         val productDetails: ProductDetails = mock()
+        whenever(billingClientWrapperMock.launchPurchaseFlow(activity, productDetails)).thenReturn(true)
 
-        viewModel.launchPurchaseFlow(activity, productDetails)
+        val launched = viewModel.launchPurchaseFlow(activity, productDetails)
 
         verify(billingClientWrapperMock).launchPurchaseFlow(activity, productDetails)
+        assertTrue(launched)
+    }
+
+    @Test
+    fun launchPurchaseFlow_reportsWhenThePurchaseScreenCouldNotOpen() {
+        val activity: Activity = mock()
+        val productDetails: ProductDetails = mock()
+        whenever(billingClientWrapperMock.launchPurchaseFlow(activity, productDetails)).thenReturn(false)
+
+        assertFalse(viewModel.launchPurchaseFlow(activity, productDetails))
+    }
+
+    @Test
+    fun refreshPurchases_asksTheWrapperToRecheckSubscriptions() {
+        viewModel.refreshPurchases()
+
+        verify(billingClientWrapperMock).refreshPurchases()
     }
 }

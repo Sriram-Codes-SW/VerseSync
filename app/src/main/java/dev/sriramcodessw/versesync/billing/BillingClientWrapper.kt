@@ -133,12 +133,23 @@ class BillingClientWrapper(private val context: Context) {
         return hasPro
     }
 
-    fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails) {
+    /**
+     * Re-checks the user's subscriptions. Google sends no callback when a subscription expires or
+     * is cancelled, so without this Pro would last until the process restarts. Call it whenever
+     * the app comes to the foreground.
+     */
+    fun refreshPurchases() {
+        if (billingClient.isReady) queryPurchases()
+    }
+
+    /** Returns false when the purchase screen could not be opened, so the caller can say so. */
+    fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails): Boolean {
+        if (!billingClient.isReady) return false
         val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(productDetails)
         if (productDetails.productType == BillingClient.ProductType.SUBS) {
             // Subscriptions require an offer token or the flow fails with a developer error.
-            val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+            val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return false
             productParams.setOfferToken(offerToken)
         }
 
@@ -146,6 +157,7 @@ class BillingClientWrapper(private val context: Context) {
             .setProductDetailsParamsList(listOf(productParams.build()))
             .build()
 
-        billingClient.launchBillingFlow(activity, billingFlowParams)
+        return billingClient.launchBillingFlow(activity, billingFlowParams).responseCode ==
+            BillingClient.BillingResponseCode.OK
     }
 }

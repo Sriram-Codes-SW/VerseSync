@@ -25,8 +25,13 @@ class BillingViewModel(
         super.onCleared()
     }
 
-    fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails) {
+    /** Returns false when the purchase screen could not be opened. */
+    fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails): Boolean =
         billingClientWrapper.launchPurchaseFlow(activity, productDetails)
+
+    /** Re-checks subscriptions, so an expired one stops unlocking Pro without a restart. */
+    fun refreshPurchases() {
+        billingClientWrapper.refreshPurchases()
     }
 }
 

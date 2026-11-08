@@ -1,6 +1,7 @@
 package dev.sriramcodessw.versesync.ui.screens
 
 import android.app.Activity
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import com.android.billingclient.api.ProductDetails
 import dev.sriramcodessw.versesync.billing.BillingViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,6 +30,16 @@ import dev.sriramcodessw.versesync.billing.BillingViewModel
 fun TipJarScreen(onBack: () -> Unit, viewModel: BillingViewModel) {
     val productDetails by viewModel.productDetails.collectAsState()
     val activity = LocalContext.current as Activity
+
+    fun buy(product: ProductDetails) {
+        if (!viewModel.launchPurchaseFlow(activity, product)) {
+            Toast.makeText(
+                activity,
+                "This purchase is not available right now. Check your connection and try again.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -49,14 +61,24 @@ fun TipJarScreen(onBack: () -> Unit, viewModel: BillingViewModel) {
                 ListItem(
                     headlineContent = { Text(product.name) },
                     supportingContent = { Text(product.description) },
-                    trailingContent = { Text(product.oneTimePurchaseOfferDetails?.formattedPrice ?: "") },
+                    trailingContent = { Text(displayPrice(product)) },
                     modifier = Modifier
-                        .clickable { viewModel.launchPurchaseFlow(activity, product) }
+                        .clickable { buy(product) }
                         .semantics(mergeDescendants = true) {
-                            contentDescription = "${product.name} for ${product.oneTimePurchaseOfferDetails?.formattedPrice}"
+                            contentDescription = "${product.name} for ${displayPrice(product)}"
                         }
                 )
             }
         }
     }
 }
+
+/**
+ * The price to show for a product. A one-time product has one price. A subscription has its price
+ * in the first pricing phase of its first offer, which is the phase the purchase starts with.
+ * Reading only the one-time price left the subscription row without a price.
+ */
+internal fun displayPrice(product: ProductDetails): String =
+    product.oneTimePurchaseOfferDetails?.formattedPrice
+        ?: product.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
+        ?: ""
