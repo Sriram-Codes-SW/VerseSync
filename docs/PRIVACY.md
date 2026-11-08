@@ -38,7 +38,7 @@ The app listens only while you use lyric sync, recognition or the vocal lock. Th
 |---|---|
 | Microphone | Lyric sync, recognition and the vocal lock |
 | Bluetooth (scan, connect, advertise) | Sharing songs with a nearby device. The scan permission is declared as not used to find your location. |
-| Precise location, Android 10 and older only | Those versions require it for Bluetooth scanning. It is not read. |
+| Precise location, Android 11 and older only | Those versions require it for Bluetooth scanning. It is not read. |
 | Approximate location | Suggesting languages at first start, as described above |
 | Google Play billing | Pro and tips |
 
