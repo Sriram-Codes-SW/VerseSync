@@ -4,12 +4,12 @@ import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import org.vosk.Model
-import org.vosk.Recognizer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.vosk.Model
+import org.vosk.Recognizer
 import org.vosk.android.RecognitionListener
 import org.vosk.android.SpeechService
 import java.io.File
@@ -17,8 +17,9 @@ import java.io.IOException
 
 private const val TAG = "VoskVoiceRecognition"
 
-class VoskVoiceRecognition(private val context: Context) : RecognitionListener {
-
+class VoskVoiceRecognition(
+    private val context: Context,
+) : RecognitionListener {
     private var currentModel: Model? = null
     private var currentLanguage: String? = null
     private var speechService: SpeechService? = null
@@ -39,15 +40,16 @@ class VoskVoiceRecognition(private val context: Context) : RecognitionListener {
         stopListening()
         _isModelReady.value = false
         currentLanguage = languageCode
-        
+
         val modelPath = File(context.filesDir, "models/model-$languageCode")
-        
+
         scope.launch {
             try {
                 if (modelPath.exists()) {
-                    val loadedModel = withContext(Dispatchers.IO) {
-                        Model(modelPath.absolutePath)
-                    }
+                    val loadedModel =
+                        withContext(Dispatchers.IO) {
+                            Model(modelPath.absolutePath)
+                        }
                     val previousModel = currentModel
                     currentModel = loadedModel
                     _isModelReady.value = true
@@ -118,12 +120,15 @@ class VoskVoiceRecognition(private val context: Context) : RecognitionListener {
     private fun parseAndEmit(json: String) {
         try {
             val jsonObject = gson.fromJson(json, JsonObject::class.java)
-            val text = if (jsonObject.has("partial")) {
-                jsonObject.get("partial").asString
-            } else if (jsonObject.has("text")) {
-                jsonObject.get("text").asString
-            } else ""
-            
+            val text =
+                if (jsonObject.has("partial")) {
+                    jsonObject.get("partial").asString
+                } else if (jsonObject.has("text")) {
+                    jsonObject.get("text").asString
+                } else {
+                    ""
+                }
+
             if (text.isNotBlank()) {
                 _recognitionResult.value = text
             }

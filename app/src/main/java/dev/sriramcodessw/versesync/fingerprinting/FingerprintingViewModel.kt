@@ -10,8 +10,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class FingerprintingViewModel(application: Application) : AndroidViewModel(application) {
-
+class FingerprintingViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private val dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(22050, 1024, 0)
     private val fingerprinter = AudioFingerprinter(dispatcher)
 
@@ -20,7 +21,7 @@ class FingerprintingViewModel(application: Application) : AndroidViewModel(appli
 
     init {
         viewModelScope.launch {
-            fingerprinter.fingerprint.collect { 
+            fingerprinter.fingerprint.collect {
                 _fingerprint.value = it
             }
         }
@@ -36,7 +37,9 @@ class FingerprintingViewModel(application: Application) : AndroidViewModel(appli
     }
 }
 
-class FingerprintingViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+class FingerprintingViewModelFactory(
+    private val application: Application,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(FingerprintingViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

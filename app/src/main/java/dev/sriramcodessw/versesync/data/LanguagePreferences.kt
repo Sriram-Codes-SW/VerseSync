@@ -11,8 +11,8 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import java.io.IOException
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 
 /**
  * What to do when the settings file cannot be parsed: replace it with empty settings.
@@ -25,7 +25,7 @@ internal val settingsCorruptionHandler = ReplaceFileCorruptionHandler<Preference
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "settings",
-    corruptionHandler = settingsCorruptionHandler
+    corruptionHandler = settingsCorruptionHandler,
 )
 
 /**
@@ -34,11 +34,14 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
  * crash the app.
  */
 internal val DataStore<Preferences>.safeData: Flow<Preferences>
-    get() = data.catch { error ->
-        if (error is IOException) emit(emptyPreferences()) else throw error
-    }
+    get() =
+        data.catch { error ->
+            if (error is IOException) emit(emptyPreferences()) else throw error
+        }
 
-class LanguagePreferences(private val dataStore: DataStore<Preferences>) {
+class LanguagePreferences(
+    private val dataStore: DataStore<Preferences>,
+) {
     constructor(context: Context) : this(context.dataStore)
 
     companion object {

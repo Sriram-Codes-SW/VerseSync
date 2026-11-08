@@ -25,14 +25,24 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class HybridRecognitionEngineMatchingTest {
-
     private lateinit var engine: HybridRecognitionEngine
     private lateinit var songDao: SongDao
 
-    private val melody = listOf(
-        261.63f, 293.66f, 329.63f, 349.23f, 392.00f, 440.00f,
-        493.88f, 523.25f, 493.88f, 440.00f, 392.00f, 349.23f
-    )
+    private val melody =
+        listOf(
+            261.63f,
+            293.66f,
+            329.63f,
+            349.23f,
+            392.00f,
+            440.00f,
+            493.88f,
+            523.25f,
+            493.88f,
+            440.00f,
+            392.00f,
+            349.23f,
+        )
 
     @BeforeEach
     fun setup() {
@@ -52,7 +62,11 @@ class HybridRecognitionEngineMatchingTest {
     @Test
     fun calculateMatchScore_skipsFramesSilentInEitherContour() {
         // TC-U-05: the live take has two silent frames where the reference is voiced.
-        val live = melody.toMutableList().also { it[2] = 0f; it[9] = 0f }
+        val live =
+            melody.toMutableList().also {
+                it[2] = 0f
+                it[9] = 0f
+            }
 
         val score = engine.calculateMatchScore(melody, live)
 
@@ -76,9 +90,17 @@ class HybridRecognitionEngineMatchingTest {
      * An engine hearing [spokenText] with [songs] in its library. The recognizer is a fake and the
      * pitch interval is short, so nothing here waits for the real 5 second tick.
      */
-    private fun engineHearing(spokenText: MutableStateFlow<String>, vararg songs: Song): HybridRecognitionEngine {
+    private fun engineHearing(
+        spokenText: MutableStateFlow<String>,
+        vararg songs: Song,
+    ): HybridRecognitionEngine {
         // The delay mimics Room hopping to its query executor.
-        whenever(songDao.getAllSongs()).thenReturn(flow { delay(50); emit(songs.toList()) })
+        whenever(songDao.getAllSongs()).thenReturn(
+            flow {
+                delay(50)
+                emit(songs.toList())
+            },
+        )
         val vosk: VoskVoiceRecognition = mock()
         whenever(vosk.isModelReady).thenReturn(MutableStateFlow(true))
         whenever(vosk.recognitionResult).thenReturn(spokenText)
@@ -93,18 +115,20 @@ class HybridRecognitionEngineMatchingTest {
         val spokenText = MutableStateFlow("")
         val engine = engineHearing(spokenText, song)
 
-        val found = runBlocking {
-            val search = async {
-                withTimeoutOrNull(5_000) {
-                    engine.recognitionResult.first { result -> result.candidates.any { it.id == 9 } }
-                }
+        val found =
+            runBlocking {
+                val search =
+                    async {
+                        withTimeoutOrNull(5_000) {
+                            engine.recognitionResult.first { result -> result.candidates.any { it.id == 9 } }
+                        }
+                    }
+                delay(200)
+                spokenText.value = "amazing grace how sweet the sound"
+                delay(120)
+                spokenText.value = "" // gone again after a fraction of a second
+                search.await()
             }
-            delay(200)
-            spokenText.value = "amazing grace how sweet the sound"
-            delay(120)
-            spokenText.value = "" // gone again after a fraction of a second
-            search.await()
-        }
 
         assertTrue(found != null, "A phrase heard for a fraction of a second was never matched")
     }
@@ -115,9 +139,10 @@ class HybridRecognitionEngineMatchingTest {
         val spokenText = MutableStateFlow("completely different words about something else entirely")
         val engine = engineHearing(spokenText, song)
 
-        val emissions = runBlocking {
-            withTimeoutOrNull(1_500) { engine.recognitionResult.take(5).toList() } ?: emptyList()
-        }
+        val emissions =
+            runBlocking {
+                withTimeoutOrNull(1_500) { engine.recognitionResult.take(5).toList() } ?: emptyList()
+            }
 
         assertTrue(emissions.isNotEmpty(), "The engine should still report, with no candidates")
         assertTrue(emissions.none { r -> r.candidates.any { it.id == 5 } }, "Unrelated speech matched a song")
@@ -134,16 +159,18 @@ class HybridRecognitionEngineMatchingTest {
         whenever(vosk.recognitionResult).thenReturn(spokenText)
         val engine = HybridRecognitionEngine(mock<Context>(), songDao, vosk, pitchIntervalMs = 100)
 
-        val found = runBlocking {
-            val search = async {
-                withTimeoutOrNull(5_000) {
-                    engine.recognitionResult.first { r -> r.candidates.any { it.id == 3 } }
-                }
+        val found =
+            runBlocking {
+                val search =
+                    async {
+                        withTimeoutOrNull(5_000) {
+                            engine.recognitionResult.first { r -> r.candidates.any { it.id == 3 } }
+                        }
+                    }
+                delay(300)
+                library.value = listOf(Song(id = 3, title = "Late", artist = "x", lyrics = "Amazing Grace! How sweet the sound"))
+                search.await()
             }
-            delay(300)
-            library.value = listOf(Song(id = 3, title = "Late", artist = "x", lyrics = "Amazing Grace! How sweet the sound"))
-            search.await()
-        }
 
         assertTrue(found != null, "A song added during recognition was not searched")
     }
@@ -169,7 +196,10 @@ class HybridRecognitionEngineMatchingTest {
                                 matched = true
                                 spokenText.value = ""
                             }
-                            matched -> afterClear += hasSong
+
+                            matched -> {
+                                afterClear += hasSong
+                            }
                         }
                     }
             }
@@ -190,22 +220,23 @@ class HybridRecognitionEngineMatchingTest {
         whenever(vosk.recognitionResult).thenReturn(spokenText)
         val engine = HybridRecognitionEngine(mock<Context>(), songDao, vosk, pitchIntervalMs = 100)
 
-        val gone = runBlocking {
-            withTimeoutOrNull(10_000) {
-                var deleted = false
-                var result: Boolean? = null
-                engine.recognitionResult.takeWhile { result == null }.collect { r ->
-                    val hasSong = r.candidates.any { it.id == 7 }
-                    if (!deleted && hasSong) {
-                        deleted = true
-                        library.value = emptyList()
-                    } else if (deleted && !hasSong) {
-                        result = true
+        val gone =
+            runBlocking {
+                withTimeoutOrNull(10_000) {
+                    var deleted = false
+                    var result: Boolean? = null
+                    engine.recognitionResult.takeWhile { result == null }.collect { r ->
+                        val hasSong = r.candidates.any { it.id == 7 }
+                        if (!deleted && hasSong) {
+                            deleted = true
+                            library.value = emptyList()
+                        } else if (deleted && !hasSong) {
+                            result = true
+                        }
                     }
+                    result
                 }
-                result
             }
-        }
 
         assertTrue(gone == true, "A deleted song stayed in the candidates")
     }

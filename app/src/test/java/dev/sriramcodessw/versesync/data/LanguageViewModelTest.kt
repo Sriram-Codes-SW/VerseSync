@@ -1,8 +1,8 @@
 package dev.sriramcodessw.versesync.data
 
 import android.app.Application
-import dev.sriramcodessw.versesync.engine.languageSamples
 import androidx.lifecycle.viewModelScope
+import dev.sriramcodessw.versesync.engine.languageSamples
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,10 +27,10 @@ import java.util.concurrent.Executors
 
 @ExperimentalCoroutinesApi
 class LanguageViewModelTest {
-
     @TempDir
     lateinit var tempDir: File
     private lateinit var dataStoreScope: CoroutineScope
+
     // A real single thread stands in for Android's main thread.
     private val mainExecutor = Executors.newSingleThreadExecutor()
     private lateinit var prefs: LanguagePreferences
@@ -60,16 +60,18 @@ class LanguageViewModelTest {
     }
 
     @Test
-    fun isSetupComplete_shouldInitiallyBeFalse() = runBlocking {
-        assertEquals(false, awaitReal { viewModel.isSetupComplete.first() })
-    }
+    fun isSetupComplete_shouldInitiallyBeFalse() =
+        runBlocking {
+            assertEquals(false, awaitReal { viewModel.isSetupComplete.first() })
+        }
 
     @Test
-    fun markSetupComplete_persistsCompletion() = runBlocking {
-        viewModel.markSetupComplete()
+    fun markSetupComplete_persistsCompletion() =
+        runBlocking {
+            viewModel.markSetupComplete()
 
-        assertTrue(awaitReal { prefs.isSetupComplete.first { it } })
-    }
+            assertTrue(awaitReal { prefs.isSetupComplete.first { it } })
+        }
 
     @Test
     fun availableLanguages_areAllCoveredByMatchingSamples() {
@@ -87,7 +89,11 @@ class LanguageViewModelTest {
     @Test
     fun languagesWithoutAPublishedSpeechModel_areMarkedAndDoNotNeedOne() {
         // Vosk publishes no usable model for these. A download link would only ever fail.
-        val withoutModel = viewModel.availableLanguages.filter { !it.hasSpeechModel }.map { it.code }.toSet()
+        val withoutModel =
+            viewModel.availableLanguages
+                .filter { !it.hasSpeechModel }
+                .map { it.code }
+                .toSet()
 
         assertEquals(setOf("ta", "mr", "bn", "kn", "ml", "pa", "el"), withoutModel)
         withoutModel.forEach { assertFalse(viewModel.needsSpeechModel(it)) }

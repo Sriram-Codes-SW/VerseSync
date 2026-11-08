@@ -8,8 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.log2
 
-class AudioFingerprinter(private val audioDispatcher: AudioDispatcher) {
-
+class AudioFingerprinter(
+    private val audioDispatcher: AudioDispatcher,
+) {
     private val rawFingerprintList = mutableListOf<Float>()
 
     private val _fingerprint = MutableStateFlow<List<Float>>(emptyList())
@@ -23,33 +24,38 @@ class AudioFingerprinter(private val audioDispatcher: AudioDispatcher) {
 
     private var isProcessorAttached = false
 
-    fun attachPitchProcessor(sampleRate: Float = 16000f, bufferSize: Int = 1024) {
+    fun attachPitchProcessor(
+        sampleRate: Float = 16000f,
+        bufferSize: Int = 1024,
+    ) {
         if (isProcessorAttached) return
         isProcessorAttached = true
 
-        val pitchDetectionHandler = PitchDetectionHandler { res, _ ->
-            val pitch = res.pitch
-            val processedPitch = if (pitch > 0f) pitch else 0f
-            
-            _instantPitch.value = processedPitch
+        val pitchDetectionHandler =
+            PitchDetectionHandler { res, _ ->
+                val pitch = res.pitch
+                val processedPitch = if (pitch > 0f) pitch else 0f
 
-            synchronized(rawFingerprintList) {
-                rawFingerprintList.add(processedPitch)
-                // Periodically update the state flow snapshot without hammering garbage collection
-                if (rawFingerprintList.size % 4 == 0) {
-                    _fingerprint.value = rawFingerprintList.toList()
+                _instantPitch.value = processedPitch
+
+                synchronized(rawFingerprintList) {
+                    rawFingerprintList.add(processedPitch)
+                    // Periodically update the state flow snapshot without hammering garbage collection
+                    if (rawFingerprintList.size % 4 == 0) {
+                        _fingerprint.value = rawFingerprintList.toList()
+                    }
                 }
-            }
-            
-            _amplitude.value = res.probability
-        }
 
-        val pitchProcessor = PitchProcessor(
-            PitchEstimationAlgorithm.YIN,
-            sampleRate,
-            bufferSize,
-            pitchDetectionHandler
-        )
+                _amplitude.value = res.probability
+            }
+
+        val pitchProcessor =
+            PitchProcessor(
+                PitchEstimationAlgorithm.YIN,
+                sampleRate,
+                bufferSize,
+                pitchDetectionHandler,
+            )
 
         audioDispatcher.addAudioProcessor(pitchProcessor)
     }

@@ -12,7 +12,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class ModelDownloaderTest {
-
     @TempDir
     lateinit var tempDir: File
 
@@ -42,11 +41,13 @@ class ModelDownloaderTest {
 }
 
 class ModelArchiveInstallTest {
-
     @TempDir
     lateinit var tempDir: File
 
-    private fun zip(name: String, vararg entries: Pair<String, String>): File {
+    private fun zip(
+        name: String,
+        vararg entries: Pair<String, String>,
+    ): File {
         val file = File(tempDir, name)
         ZipOutputStream(file.outputStream()).use { out ->
             entries.forEach { (entryName, content) ->
@@ -58,10 +59,11 @@ class ModelArchiveInstallTest {
         return file
     }
 
-    private fun existingModel(): File = File(tempDir, "models/model-xx").also {
-        File(it, "am").mkdirs()
-        File(it, "am/final.mdl").writeText("working model")
-    }
+    private fun existingModel(): File =
+        File(tempDir, "models/model-xx").also {
+            File(it, "am").mkdirs()
+            File(it, "am/final.mdl").writeText("working model")
+        }
 
     @Test
     fun install_flattensTheArchiveRootFolder() {

@@ -16,30 +16,32 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AudioLevelMeter(
     amplitude: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     // Smooth the level transitions
     val smoothedLevel by animateFloatAsState(targetValue = amplitude.coerceIn(0f, 1f))
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(12.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.CenterStart
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.CenterStart,
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth(smoothedLevel)
-                .fillMaxHeight()
-                .background(
-                    when {
-                        smoothedLevel > 0.8f -> Color.Red
-                        smoothedLevel > 0.5f -> Color.Yellow
-                        else -> Color.Green
-                    }
-                )
+            modifier =
+                Modifier
+                    .fillMaxWidth(smoothedLevel)
+                    .fillMaxHeight()
+                    .background(
+                        when {
+                            smoothedLevel > 0.8f -> Color.Red
+                            smoothedLevel > 0.5f -> Color.Yellow
+                            else -> Color.Green
+                        },
+                    ),
         )
     }
 }

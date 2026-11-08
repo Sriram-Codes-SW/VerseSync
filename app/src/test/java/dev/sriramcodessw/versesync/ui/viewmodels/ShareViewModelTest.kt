@@ -17,7 +17,6 @@ import kotlin.test.assertTrue
 
 @ExperimentalCoroutinesApi
 class ShareViewModelTest {
-
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var verseViewModelMock: VerseViewModel
@@ -49,16 +48,17 @@ class ShareViewModelTest {
     }
 
     @Test
-    fun acceptSong_shouldAddSongAndRemoveFromIncoming() = runTest {
-        val song = Song(2, "t2", "a2", "l2")
-        viewModel.incomingSongs.add(song)
+    fun acceptSong_shouldAddSongAndRemoveFromIncoming() =
+        runTest {
+            val song = Song(2, "t2", "a2", "l2")
+            viewModel.incomingSongs.add(song)
 
-        viewModel.acceptSong(song)
-        testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.acceptSong(song)
+            testDispatcher.scheduler.advanceUntilIdle()
 
-        verify(verseViewModelMock).addSongWithConflictResolution(song)
-        assertFalse(viewModel.incomingSongs.contains(song), "Accepted song should be removed from incoming list")
-    }
+            verify(verseViewModelMock).addSongWithConflictResolution(song)
+            assertFalse(viewModel.incomingSongs.contains(song), "Accepted song should be removed from incoming list")
+        }
 
     @Test
     fun rejectSong_shouldRemoveFromIncoming() {
@@ -71,20 +71,21 @@ class ShareViewModelTest {
     }
 
     @Test
-    fun acceptSelectedSongs_shouldAddAllSelectedAndClearLists() = runTest {
-        val song1 = Song(4, "t4", "a4", "l4")
-        val song2 = Song(5, "t5", "a5", "l5")
-        viewModel.incomingSongs.addAll(listOf(song1, song2))
-        viewModel.selectedSongs.addAll(listOf(song1, song2))
+    fun acceptSelectedSongs_shouldAddAllSelectedAndClearLists() =
+        runTest {
+            val song1 = Song(4, "t4", "a4", "l4")
+            val song2 = Song(5, "t5", "a5", "l5")
+            viewModel.incomingSongs.addAll(listOf(song1, song2))
+            viewModel.selectedSongs.addAll(listOf(song1, song2))
 
-        viewModel.acceptSelectedSongs()
-        testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.acceptSelectedSongs()
+            testDispatcher.scheduler.advanceUntilIdle()
 
-        verify(verseViewModelMock).addSongWithConflictResolution(song1)
-        verify(verseViewModelMock).addSongWithConflictResolution(song2)
-        assertTrue(viewModel.incomingSongs.isEmpty(), "Incoming songs list should be empty after accepting all")
-        assertTrue(viewModel.selectedSongs.isEmpty(), "Selected songs list should be empty after accepting all")
-    }
+            verify(verseViewModelMock).addSongWithConflictResolution(song1)
+            verify(verseViewModelMock).addSongWithConflictResolution(song2)
+            assertTrue(viewModel.incomingSongs.isEmpty(), "Incoming songs list should be empty after accepting all")
+            assertTrue(viewModel.selectedSongs.isEmpty(), "Selected songs list should be empty after accepting all")
+        }
 
     @Test
     fun rejectAllSongs_shouldClearIncomingAndSelectedLists() {

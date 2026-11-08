@@ -38,7 +38,7 @@ fun ShareScreen(
     onBack: () -> Unit,
     bluetoothViewModel: BluetoothViewModel,
     shareViewModel: ShareViewModel,
-    verseViewModel: VerseViewModel
+    verseViewModel: VerseViewModel,
 ) {
     val songs by verseViewModel.songs.collectAsState()
     val bluetoothState by bluetoothViewModel.state.collectAsState()
@@ -49,29 +49,33 @@ fun ShareScreen(
     // location for discovery. Without this, scanning or listening throws SecurityException.
     val context = LocalContext.current
     var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { grants ->
-        if (grants.isNotEmpty() && grants.values.all { it }) {
-            pendingAction?.invoke()
-        } else {
-            Toast.makeText(context, "Bluetooth permission is required to share songs", Toast.LENGTH_SHORT).show()
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) { grants ->
+            if (grants.isNotEmpty() && grants.values.all { it }) {
+                pendingAction?.invoke()
+            } else {
+                Toast.makeText(context, "Bluetooth permission is required to share songs", Toast.LENGTH_SHORT).show()
+            }
+            pendingAction = null
         }
-        pendingAction = null
-    }
+
     fun withBluetoothPermissions(action: () -> Unit) {
-        val required = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            arrayOf(
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.BLUETOOTH_ADVERTISE
-            )
-        } else {
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-        val missing = required.filter {
-            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-        }
+        val required =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_ADVERTISE,
+                )
+            } else {
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        val missing =
+            required.filter {
+                ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+            }
         if (missing.isEmpty()) {
             action()
         } else {
@@ -104,9 +108,9 @@ fun ShareScreen(
                             Text("Scan")
                         }
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         when (val state = bluetoothState) {
             is BluetoothService.BluetoothState.Transferring -> {
@@ -118,17 +122,19 @@ fun ShareScreen(
                     }
                 }
             }
+
             is BluetoothService.BluetoothState.Error -> {
-                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                     Text(state.message)
                 }
             }
+
             else -> {
                 if (isReceiver) {
                     ReceiverContent(
                         modifier = Modifier.padding(paddingValues),
                         shareViewModel = shareViewModel,
-                        onBack = onBack
+                        onBack = onBack,
                     )
                 } else {
                     SenderContent(
@@ -137,7 +143,7 @@ fun ShareScreen(
                         bluetoothState = state,
                         onDeviceClick = { deviceAddress -> bluetoothViewModel.connectToDevice(deviceAddress) },
                         onStartSending = { songsToShare -> bluetoothViewModel.sendSongs(songsToShare) },
-                        onStartServer = { withBluetoothPermissions { bluetoothViewModel.startServer() } }
+                        onStartServer = { withBluetoothPermissions { bluetoothViewModel.startServer() } },
                     )
                 }
             }
@@ -152,7 +158,7 @@ fun SenderContent(
     bluetoothState: BluetoothService.BluetoothState,
     onDeviceClick: (String) -> Unit,
     onStartSending: (List<Song>) -> Unit,
-    onStartServer: () -> Unit
+    onStartServer: () -> Unit,
 ) {
     val songsToShare = remember { mutableStateListOf<Song>() }
     val configuration = LocalConfiguration.current
@@ -175,18 +181,21 @@ fun SenderContent(
             is BluetoothService.BluetoothState.Discovering -> {
                 DiscoveredDevicesDialog(devices = state.devices, onDeviceClick = onDeviceClick)
             }
+
             is BluetoothService.BluetoothState.Connecting -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
+
             is BluetoothService.BluetoothState.Connected -> {
                 Button(
                     onClick = { onStartSending(songsToShare.toList()) },
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                    enabled = songsToShare.isNotEmpty()
+                    enabled = songsToShare.isNotEmpty(),
                 ) {
                     Text("Send Selected Songs")
                 }
             }
+
             else -> {
                 Button(onClick = onStartServer, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
                     Text("Become Discoverable")
@@ -197,7 +206,10 @@ fun SenderContent(
 }
 
 @Composable
-fun DiscoveredDevicesDialog(devices: List<BluetoothDeviceDomain>, onDeviceClick: (String) -> Unit) {
+fun DiscoveredDevicesDialog(
+    devices: List<BluetoothDeviceDomain>,
+    onDeviceClick: (String) -> Unit,
+) {
     AlertDialog(
         onDismissRequest = { },
         title = { Text("Found Devices") },
@@ -207,20 +219,20 @@ fun DiscoveredDevicesDialog(devices: List<BluetoothDeviceDomain>, onDeviceClick:
                     ListItem(
                         headlineContent = { Text(device.name) },
                         supportingContent = { Text(device.address) },
-                        modifier = Modifier.clickable { onDeviceClick(device.address) }
+                        modifier = Modifier.clickable { onDeviceClick(device.address) },
                     )
                 }
             }
         },
-        confirmButton = { }
+        confirmButton = { },
     )
 }
 
 @Composable
 fun ReceiverContent(
-    modifier: Modifier = Modifier, 
+    modifier: Modifier = Modifier,
     shareViewModel: ShareViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val incomingSongs = shareViewModel.incomingSongs
     val selectedSongs = shareViewModel.selectedSongs
@@ -243,15 +255,15 @@ fun ReceiverContent(
 
         Row(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            Button(onClick = { 
+            Button(onClick = {
                 shareViewModel.acceptSelectedSongs()
                 if (incomingSongs.isEmpty()) onBack()
             }) {
                 Text("Accept Selected")
             }
-            Button(onClick = { 
+            Button(onClick = {
                 shareViewModel.rejectAllSongs()
                 onBack()
             }) {
@@ -262,7 +274,12 @@ fun ReceiverContent(
 }
 
 @Composable
-fun SongListPanel(modifier: Modifier = Modifier, title: String, songs: List<Song>, onSongClicked: (Song) -> Unit) {
+fun SongListPanel(
+    modifier: Modifier = Modifier,
+    title: String,
+    songs: List<Song>,
+    onSongClicked: (Song) -> Unit,
+) {
     Card(modifier = modifier.padding(8.dp)) {
         Column(Modifier.padding(8.dp)) {
             Text(text = title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
@@ -270,7 +287,7 @@ fun SongListPanel(modifier: Modifier = Modifier, title: String, songs: List<Song
                 items(songs, key = { it.id }) { song ->
                     ListItem(
                         headlineContent = { Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        modifier = Modifier.clickable { onSongClicked(song) }
+                        modifier = Modifier.clickable { onSongClicked(song) },
                     )
                 }
             }
@@ -286,7 +303,7 @@ fun ReceiverSongListPanel(
     onSongSelected: (Song, Boolean) -> Unit,
     onViewSong: (Song) -> Unit,
     onAcceptSong: (Song) -> Unit,
-    onRejectSong: (Song) -> Unit
+    onRejectSong: (Song) -> Unit,
 ) {
     Card(modifier = modifier.padding(8.dp)) {
         Column(Modifier.padding(8.dp)) {
@@ -308,7 +325,7 @@ fun ReceiverSongListPanel(
                                 }
                             }
                         },
-                        modifier = Modifier.clickable { onViewSong(song) }
+                        modifier = Modifier.clickable { onViewSong(song) },
                     )
                 }
             }
@@ -317,7 +334,10 @@ fun ReceiverSongListPanel(
 }
 
 @Composable
-fun LyricPreviewPanel(modifier: Modifier = Modifier, song: Song?) {
+fun LyricPreviewPanel(
+    modifier: Modifier = Modifier,
+    song: Song?,
+) {
     Card(modifier = modifier.padding(8.dp)) {
         Column(Modifier.padding(16.dp).fillMaxSize()) {
             if (song != null) {

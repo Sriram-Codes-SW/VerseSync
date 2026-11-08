@@ -24,7 +24,6 @@ import kotlin.test.assertFailsWith
  * same corruption handler and safe read the app uses.
  */
 class DataStoreResilienceTest {
-
     @TempDir
     lateinit var tempDir: File
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -35,39 +34,44 @@ class DataStoreResilienceTest {
     }
 
     /** A file that ends in the middle of a field, which the preferences parser rejects. */
-    private fun corruptFile(): File = File(tempDir, "settings.preferences_pb").also {
-        it.writeBytes(byteArrayOf(0x0d, 0x0a, 0x64, 0x61, 0x62, 0x63))
-    }
+    private fun corruptFile(): File =
+        File(tempDir, "settings.preferences_pb").also {
+            it.writeBytes(byteArrayOf(0x0d, 0x0a, 0x64, 0x61, 0x62, 0x63))
+        }
 
     @Test
-    fun corruptSettingsFile_isReplacedAndSettingsFallBackToDefaults() = runBlocking {
-        val file = corruptFile()
-        val store = PreferenceDataStoreFactory.create(
-            corruptionHandler = settingsCorruptionHandler,
-            scope = scope,
-            produceFile = { file }
-        )
-        val prefs = SecurityPreferences(store)
+    fun corruptSettingsFile_isReplacedAndSettingsFallBackToDefaults() =
+        runBlocking {
+            val file = corruptFile()
+            val store =
+                PreferenceDataStoreFactory.create(
+                    corruptionHandler = settingsCorruptionHandler,
+                    scope = scope,
+                    produceFile = { file },
+                )
+            val prefs = SecurityPreferences(store)
 
-        assertEquals(false, prefs.isAppLockEnabled.first())
-        assertEquals(LockType.DEVICE, prefs.lockType.first())
-    }
+            assertEquals(false, prefs.isAppLockEnabled.first())
+            assertEquals(LockType.DEVICE, prefs.lockType.first())
+        }
 
     @Test
-    fun afterCorruption_settingsCanBeWrittenAgain() = runBlocking {
-        val file = corruptFile()
-        val store = PreferenceDataStoreFactory.create(
-            corruptionHandler = settingsCorruptionHandler,
-            scope = scope,
-            produceFile = { file }
-        )
-        val prefs = SecurityPreferences(store)
+    fun afterCorruption_settingsCanBeWrittenAgain() =
+        runBlocking {
+            val file = corruptFile()
+            val store =
+                PreferenceDataStoreFactory.create(
+                    corruptionHandler = settingsCorruptionHandler,
+                    scope = scope,
+                    produceFile = { file },
+                )
+            val prefs = SecurityPreferences(store)
 
-        // The write path also threw on a corrupt file before the handler was added.
-        prefs.setAppLockEnabled(true)
+            // The write path also threw on a corrupt file before the handler was added.
+            prefs.setAppLockEnabled(true)
 
-        assertEquals(true, prefs.isAppLockEnabled.first())
-    }
+            assertEquals(true, prefs.isAppLockEnabled.first())
+        }
 
     @Test
     fun withoutTheHandler_aCorruptFileStillFails() {
@@ -79,11 +83,12 @@ class DataStoreResilienceTest {
     }
 
     @Test
-    fun ioErrorWhileReading_fallsBackToDefaults() = runBlocking {
-        val prefs = TrialPreferences(failingStore(IOException("disk full")))
+    fun ioErrorWhileReading_fallsBackToDefaults() =
+        runBlocking {
+            val prefs = TrialPreferences(failingStore(IOException("disk full")))
 
-        assertEquals(TrialPreferences.MAX_TRIALS, prefs.remainingTrials.first())
-    }
+            assertEquals(TrialPreferences.MAX_TRIALS, prefs.remainingTrials.first())
+        }
 
     @Test
     fun otherErrorsWhileReading_areNotHidden() {
@@ -92,9 +97,10 @@ class DataStoreResilienceTest {
         assertFailsWith<IllegalStateException> { runBlocking { prefs.remainingTrials.first() } }
     }
 
-    private fun failingStore(error: Throwable): DataStore<Preferences> = object : DataStore<Preferences> {
-        override val data: Flow<Preferences> = flow { throw error }
-        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
-            throw error
-    }
+    private fun failingStore(error: Throwable): DataStore<Preferences> =
+        object : DataStore<Preferences> {
+            override val data: Flow<Preferences> = flow { throw error }
+
+            override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences = throw error
+        }
 }

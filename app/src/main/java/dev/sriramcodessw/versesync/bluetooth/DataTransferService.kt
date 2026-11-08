@@ -14,8 +14,9 @@ private const val TAG = "DataTransferService"
 /** Upper bound for one transfer. The size comes from the remote device, so it is not trusted. */
 const val MAX_TRANSFER_BYTES = 8 * 1024 * 1024
 
-class DataTransferService(private val socket: BluetoothSocket) {
-
+class DataTransferService(
+    private val socket: BluetoothSocket,
+) {
     companion object {
         /** The bytes that would be sent for [songs]. */
         fun encode(songs: List<Song>): ByteArray = Gson().toJson(songs).toByteArray(StandardCharsets.UTF_8)
@@ -40,7 +41,11 @@ class DataTransferService(private val socket: BluetoothSocket) {
      * There is no resume: the receiver does not keep partial data, so it always starts at 0.
      */
 
-    fun sendSongs(data: ByteArray, transferId: String, onProgress: (Int) -> Unit): Boolean {
+    fun sendSongs(
+        data: ByteArray,
+        transferId: String,
+        onProgress: (Int) -> Unit,
+    ): Boolean {
         return try {
             val totalSize = data.size
 

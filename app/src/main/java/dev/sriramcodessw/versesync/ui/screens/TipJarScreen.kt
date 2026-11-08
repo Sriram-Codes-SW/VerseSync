@@ -27,17 +27,21 @@ import dev.sriramcodessw.versesync.billing.BillingViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TipJarScreen(onBack: () -> Unit, viewModel: BillingViewModel) {
+fun TipJarScreen(
+    onBack: () -> Unit,
+    viewModel: BillingViewModel,
+) {
     val productDetails by viewModel.productDetails.collectAsState()
     val activity = LocalContext.current as Activity
 
     fun buy(product: ProductDetails) {
         if (!viewModel.launchPurchaseFlow(activity, product)) {
-            Toast.makeText(
-                activity,
-                "This purchase is not available right now. Check your connection and try again.",
-                Toast.LENGTH_LONG
-            ).show()
+            Toast
+                .makeText(
+                    activity,
+                    "This purchase is not available right now. Check your connection and try again.",
+                    Toast.LENGTH_LONG,
+                ).show()
         }
     }
 
@@ -49,12 +53,12 @@ fun TipJarScreen(onBack: () -> Unit, viewModel: BillingViewModel) {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
             items(productDetails) { product ->
@@ -62,11 +66,12 @@ fun TipJarScreen(onBack: () -> Unit, viewModel: BillingViewModel) {
                     headlineContent = { Text(product.name) },
                     supportingContent = { Text(product.description) },
                     trailingContent = { Text(displayPrice(product)) },
-                    modifier = Modifier
-                        .clickable { buy(product) }
-                        .semantics(mergeDescendants = true) {
-                            contentDescription = "${product.name} for ${displayPrice(product)}"
-                        }
+                    modifier =
+                        Modifier
+                            .clickable { buy(product) }
+                            .semantics(mergeDescendants = true) {
+                                contentDescription = "${product.name} for ${displayPrice(product)}"
+                            },
                 )
             }
         }
@@ -80,5 +85,10 @@ fun TipJarScreen(onBack: () -> Unit, viewModel: BillingViewModel) {
  */
 internal fun displayPrice(product: ProductDetails): String =
     product.oneTimePurchaseOfferDetails?.formattedPrice
-        ?: product.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
+        ?: product.subscriptionOfferDetails
+            ?.firstOrNull()
+            ?.pricingPhases
+            ?.pricingPhaseList
+            ?.firstOrNull()
+            ?.formattedPrice
         ?: ""

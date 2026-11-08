@@ -19,7 +19,6 @@ import kotlin.test.assertTrue
 
 @ExperimentalCoroutinesApi
 class BillingViewModelTest {
-
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var applicationMock: Application

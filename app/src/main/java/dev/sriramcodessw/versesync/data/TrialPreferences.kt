@@ -8,7 +8,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class TrialPreferences(private val dataStore: DataStore<Preferences>) {
+class TrialPreferences(
+    private val dataStore: DataStore<Preferences>,
+) {
     constructor(context: Context) : this(context.dataStore)
 
     companion object {
@@ -16,9 +18,10 @@ class TrialPreferences(private val dataStore: DataStore<Preferences>) {
         const val MAX_TRIALS = 3
     }
 
-    val remainingTrials: Flow<Int> = dataStore.safeData.map { prefs ->
-        prefs[REMAINING_TRIALS] ?: MAX_TRIALS
-    }
+    val remainingTrials: Flow<Int> =
+        dataStore.safeData.map { prefs ->
+            prefs[REMAINING_TRIALS] ?: MAX_TRIALS
+        }
 
     suspend fun useTrial() {
         dataStore.edit { prefs ->

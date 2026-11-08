@@ -21,36 +21,39 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class VerseDatabaseMigrationTest {
-
     @get:Rule
-    val helper = MigrationTestHelper(
-        InstrumentationRegistry.getInstrumentation(),
-        VerseDatabase::class.java
-    )
+    val helper =
+        MigrationTestHelper(
+            InstrumentationRegistry.getInstrumentation(),
+            VerseDatabase::class.java,
+        )
 
     private val databaseName = "migration-test"
 
     @Test
-    fun songsSurviveOpeningTheDatabaseOfTheFirstReleasedVersion() = runBlocking {
-        val firstReleasedVersion = 3
+    fun songsSurviveOpeningTheDatabaseOfTheFirstReleasedVersion() =
+        runBlocking {
+            val firstReleasedVersion = 3
 
-        helper.createDatabase(databaseName, firstReleasedVersion).use { db ->
-            db.execSQL(
-                "INSERT INTO songs (id, title, artist, lyrics, language, folderId, dateAdded, lrcData, fingerprint) " +
-                    "VALUES (1, 'Kept', 'Artist', 'Words', 'en-us', NULL, 1, NULL, NULL)"
-            )
-        }
+            helper.createDatabase(databaseName, firstReleasedVersion).use { db ->
+                db.execSQL(
+                    "INSERT INTO songs (id, title, artist, lyrics, language, folderId, dateAdded, lrcData, fingerprint) " +
+                        "VALUES (1, 'Kept', 'Artist', 'Words', 'en-us', NULL, 1, NULL, NULL)",
+                )
+            }
 
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val database = Room.databaseBuilder(context, VerseDatabase::class.java, databaseName)
-            .addMigrations(*VerseDatabase.MIGRATIONS)
-            .build()
-        try {
-            val songs = database.songDao().getAllSongs().first()
-            assertEquals(listOf("Kept"), songs.map { it.title })
-        } finally {
-            database.close()
-            context.deleteDatabase(databaseName)
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            val database =
+                Room
+                    .databaseBuilder(context, VerseDatabase::class.java, databaseName)
+                    .addMigrations(*VerseDatabase.MIGRATIONS)
+                    .build()
+            try {
+                val songs = database.songDao().getAllSongs().first()
+                assertEquals(listOf("Kept"), songs.map { it.title })
+            } finally {
+                database.close()
+                context.deleteDatabase(databaseName)
+            }
         }
-    }
 }

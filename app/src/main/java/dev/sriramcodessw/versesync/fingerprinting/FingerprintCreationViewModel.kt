@@ -14,8 +14,9 @@ import kotlinx.coroutines.launch
 private const val TAG = "FingerprintViewModel"
 
 @SuppressLint("MissingPermission")
-class FingerprintCreationViewModel(application: Application) : AndroidViewModel(application) {
-
+class FingerprintCreationViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private var dispatcher: be.tarsos.dsp.AudioDispatcher? = null
     private var fingerprinter: AudioFingerprinter? = null
     private var recognitionThread: Thread? = null
@@ -45,25 +46,28 @@ class FingerprintCreationViewModel(application: Application) : AndroidViewModel(
             fingerprinter = newFingerprinter
 
             collectionJob?.cancel()
-            collectionJob = viewModelScope.launch {
-                newFingerprinter.fingerprint.collect { 
-                    _fingerprint.value = it
+            collectionJob =
+                viewModelScope.launch {
+                    newFingerprinter.fingerprint.collect {
+                        _fingerprint.value = it
+                    }
                 }
-            }
 
             instantPitchJob?.cancel()
-            instantPitchJob = viewModelScope.launch {
-                newFingerprinter.instantPitch.collect {
-                    _instantPitch.value = it
+            instantPitchJob =
+                viewModelScope.launch {
+                    newFingerprinter.instantPitch.collect {
+                        _instantPitch.value = it
+                    }
                 }
-            }
 
             amplitudeJob?.cancel()
-            amplitudeJob = viewModelScope.launch {
-                newFingerprinter.amplitude.collect {
-                    _amplitude.value = it
+            amplitudeJob =
+                viewModelScope.launch {
+                    newFingerprinter.amplitude.collect {
+                        _amplitude.value = it
+                    }
                 }
-            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize audio components", e)
             _error.value = "Microphone initialization failed. Please ensure no other app is using it."
@@ -73,10 +77,10 @@ class FingerprintCreationViewModel(application: Application) : AndroidViewModel(
     fun startRecording() {
         _error.value = null
         initializeAudioComponents()
-        
+
         val currentFingerprinter = fingerprinter
         val currentDispatcher = dispatcher
-        
+
         if (currentFingerprinter != null && currentDispatcher != null) {
             try {
                 currentFingerprinter.attachPitchProcessor(sampleRate = 16000f, bufferSize = 1024)
@@ -101,7 +105,7 @@ class FingerprintCreationViewModel(application: Application) : AndroidViewModel(
             Log.e(TAG, "Error stopping dispatcher", e)
         }
         recognitionThread?.interrupt()
-        
+
         dispatcher = null
         fingerprinter = null
         recognitionThread = null

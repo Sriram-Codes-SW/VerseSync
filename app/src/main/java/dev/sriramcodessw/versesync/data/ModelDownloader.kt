@@ -20,25 +20,34 @@ import java.util.zip.ZipInputStream
  * outside it (a "zip slip" entry such as `../../x`). Entries from a downloaded archive
  * are untrusted, so every extraction path must go through this.
  */
-internal fun resolveInside(targetDir: File, relativePath: String): File? {
+internal fun resolveInside(
+    targetDir: File,
+    relativePath: String,
+): File? {
     val root = targetDir.canonicalFile
     val dest = File(root, relativePath).canonicalFile
     return if (dest.path == root.path || dest.path.startsWith(root.path + File.separator)) dest else null
 }
 
-class ModelDownloader(private val context: Context) {
-
+class ModelDownloader(
+    private val context: Context,
+) {
     private val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val activeDownloads = mutableMapOf<Long, String>()
     val downloadStatus = MutableStateFlow<Map<String, Int>>(emptyMap())
 
-    fun downloadModel(languageCode: String, url: String) {
+    fun downloadModel(
+        languageCode: String,
+        url: String,
+    ) {
         try {
-            val request = DownloadManager.Request(url.toUri())
-                .setTitle("Downloading $languageCode Model")
-                .setDescription("VerseSyncModel:$languageCode")
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-                .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "model-$languageCode.zip")
+            val request =
+                DownloadManager
+                    .Request(url.toUri())
+                    .setTitle("Downloading $languageCode Model")
+                    .setDescription("VerseSyncModel:$languageCode")
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+                    .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "model-$languageCode.zip")
 
             val downloadId = downloadManager.enqueue(request)
             activeDownloads[downloadId] = languageCode
@@ -50,29 +59,36 @@ class ModelDownloader(private val context: Context) {
     }
 
     @Synchronized
-    private fun updateStatus(lang: String, progress: Int) {
+    private fun updateStatus(
+        lang: String,
+        progress: Int,
+    ) {
         val current = downloadStatus.value.toMutableMap()
         current[lang] = progress
         downloadStatus.value = current
     }
 
-    val onDownloadComplete = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-            // Unpacking a model can take seconds. Doing it on the main thread risks an ANR,
-            // so keep the broadcast alive and finish it from a worker thread.
-            val pending = goAsync()
-            Thread {
-                try {
-                    handleDownloadComplete(id)
-                } catch (e: Exception) {
-                    Log.e("ModelDownloader", "Download completion handling failed", e)
-                } finally {
-                    pending.finish()
-                }
-            }.start()
+    val onDownloadComplete =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context,
+                intent: Intent,
+            ) {
+                val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                // Unpacking a model can take seconds. Doing it on the main thread risks an ANR,
+                // so keep the broadcast alive and finish it from a worker thread.
+                val pending = goAsync()
+                Thread {
+                    try {
+                        handleDownloadComplete(id)
+                    } catch (e: Exception) {
+                        Log.e("ModelDownloader", "Download completion handling failed", e)
+                    } finally {
+                        pending.finish()
+                    }
+                }.start()
+            }
         }
-    }
 
     private fun handleDownloadComplete(id: Long) {
         val cursor = downloadManager.query(DownloadManager.Query().setFilterById(id)) ?: return
@@ -122,7 +138,10 @@ class ModelDownloader(private val context: Context) {
  *
  * @throws SecurityException if an entry would be written outside the model folder
  */
-internal fun installModelArchive(zipFile: File, targetDir: File) {
+internal fun installModelArchive(
+    zipFile: File,
+    targetDir: File,
+) {
     val parent = targetDir.parentFile ?: throw IOException("Model folder has no parent: $targetDir")
     val stagingDir = File(parent, targetDir.name + ".tmp")
     val backupDir = File(parent, targetDir.name + ".old")
@@ -144,13 +163,17 @@ internal fun installModelArchive(zipFile: File, targetDir: File) {
                     rootFolderName = name
                 }
 
-                val relativePath = if (rootFolderName != null && name.startsWith(rootFolderName)) {
-                    name.substring(rootFolderName.length)
-                } else name
+                val relativePath =
+                    if (rootFolderName != null && name.startsWith(rootFolderName)) {
+                        name.substring(rootFolderName.length)
+                    } else {
+                        name
+                    }
 
                 if (relativePath.isNotEmpty()) {
-                    val newFile = resolveInside(stagingDir, relativePath)
-                        ?: throw SecurityException("Blocked archive entry outside model directory: $name")
+                    val newFile =
+                        resolveInside(stagingDir, relativePath)
+                            ?: throw SecurityException("Blocked archive entry outside model directory: $name")
                     if (entry.isDirectory) {
                         newFile.mkdirs()
                     } else {

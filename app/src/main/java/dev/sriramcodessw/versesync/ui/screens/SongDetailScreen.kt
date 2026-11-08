@@ -19,15 +19,15 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongDetailScreen(
-    song: Song, 
-    onSyncLyrics: () -> Unit, 
-    onShare: () -> Unit, 
-    onBack: () -> Unit, 
-    billingViewModel: BillingViewModel
+    song: Song,
+    onSyncLyrics: () -> Unit,
+    onShare: () -> Unit,
+    onBack: () -> Unit,
+    billingViewModel: BillingViewModel,
 ) {
     val isPro by billingViewModel.isPro.collectAsState()
     var showSyncedData by remember { mutableStateOf(false) }
-    
+
     val scope = rememberCoroutineScope()
     val pitchPlayer = remember { PitchPlayer() }
     var isPlayingFingerprint by remember { mutableStateOf(false) }
@@ -52,7 +52,7 @@ fun SongDetailScreen(
                             Icon(
                                 imageVector = Icons.Default.Description,
                                 contentDescription = if (showSyncedData) "Show raw lyrics" else "Show synced data",
-                                tint = if (showSyncedData) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                                tint = if (showSyncedData) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                             )
                         }
                     }
@@ -61,37 +61,38 @@ fun SongDetailScreen(
                             Icon(imageVector = Icons.Default.Share, contentDescription = "Share Song")
                         }
                     }
-                }
+                },
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onSyncLyrics) {
                 Icon(imageVector = Icons.Default.Sync, contentDescription = "Sync Lyrics")
             }
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
         ) {
             Text(text = song.artist, style = MaterialTheme.typography.titleMedium)
-            
+
             Spacer(modifier = Modifier.height(16.dp))
 
             if (showSyncedData && song.lrcData != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "Synced Timing Data (LRC):",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
-                    
+
                     if (!song.fingerprint.isNullOrEmpty()) {
                         Button(
                             onClick = {
@@ -110,12 +111,12 @@ fun SongDetailScreen(
                                 }
                             },
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            modifier = Modifier.height(32.dp)
+                            modifier = Modifier.height(32.dp),
                         ) {
                             Icon(
                                 imageVector = if (isPlayingFingerprint) Icons.Default.Stop else Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(16.dp),
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(if (isPlayingFingerprint) "Stop Audio" else "Play Tune", style = MaterialTheme.typography.labelSmall)
@@ -126,20 +127,20 @@ fun SongDetailScreen(
                 if (isPlayingFingerprint) {
                     LinearProgressIndicator(
                         progress = { playbackProgress },
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
                 }
 
                 Card(
                     modifier = Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     LazyColumn(modifier = Modifier.padding(16.dp)) {
                         item {
                             Text(
                                 text = song.lrcData,
                                 style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace
+                                fontFamily = FontFamily.Monospace,
                             )
                         }
                     }
@@ -148,7 +149,7 @@ fun SongDetailScreen(
                 Text(
                     text = "Lyrics:",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary
+                    color = MaterialTheme.colorScheme.secondary,
                 )
                 LazyColumn(modifier = Modifier.weight(1f).padding(top = 8.dp)) {
                     item {

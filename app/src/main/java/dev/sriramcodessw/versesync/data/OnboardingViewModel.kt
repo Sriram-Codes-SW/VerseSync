@@ -12,17 +12,19 @@ import kotlinx.coroutines.launch
 
 class OnboardingViewModel(
     application: Application,
-    private val prefs: OnboardingPreferences = OnboardingPreferences(application)
+    private val prefs: OnboardingPreferences = OnboardingPreferences(application),
 ) : AndroidViewModel(application) {
+    val isMainTourCompleted: StateFlow<Boolean> =
+        prefs.isMainTourCompleted
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    val isMainTourCompleted: StateFlow<Boolean> = prefs.isMainTourCompleted
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val isRecognitionTourCompleted: StateFlow<Boolean> =
+        prefs.isRecognitionTourCompleted
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    val isRecognitionTourCompleted: StateFlow<Boolean> = prefs.isRecognitionTourCompleted
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-
-    val isSyncTourCompleted: StateFlow<Boolean> = prefs.isSyncTourCompleted
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val isSyncTourCompleted: StateFlow<Boolean> =
+        prefs.isSyncTourCompleted
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun completeMainTour() {
         viewModelScope.launch { prefs.setMainTourCompleted(true) }
@@ -37,7 +39,9 @@ class OnboardingViewModel(
     }
 }
 
-class OnboardingViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+class OnboardingViewModelFactory(
+    private val application: Application,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(OnboardingViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

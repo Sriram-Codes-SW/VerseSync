@@ -15,7 +15,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DataTransferServiceTest {
-
     private lateinit var socketMock: BluetoothSocket
     private val outputStream = ByteArrayOutputStream()
 

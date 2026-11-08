@@ -12,11 +12,11 @@ import kotlinx.coroutines.launch
 
 class TrialViewModel(
     application: Application,
-    private val prefs: TrialPreferences = TrialPreferences(application)
+    private val prefs: TrialPreferences = TrialPreferences(application),
 ) : AndroidViewModel(application) {
-
-    val remainingTrials: StateFlow<Int> = prefs.remainingTrials
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
+    val remainingTrials: StateFlow<Int> =
+        prefs.remainingTrials
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
 
     fun useTrial() {
         viewModelScope.launch {
@@ -25,7 +25,9 @@ class TrialViewModel(
     }
 }
 
-class TrialViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+class TrialViewModelFactory(
+    private val application: Application,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TrialViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

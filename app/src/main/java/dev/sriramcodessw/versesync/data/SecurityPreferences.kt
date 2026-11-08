@@ -10,10 +10,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 enum class LockType {
-    NONE, DEVICE, BIOMETRIC, VOCAL
+    NONE,
+    DEVICE,
+    BIOMETRIC,
+    VOCAL,
 }
 
-class SecurityPreferences(private val dataStore: DataStore<Preferences>) {
+class SecurityPreferences(
+    private val dataStore: DataStore<Preferences>,
+) {
     constructor(context: Context) : this(context.dataStore)
 
     companion object {
@@ -22,10 +27,11 @@ class SecurityPreferences(private val dataStore: DataStore<Preferences>) {
     }
 
     val isAppLockEnabled: Flow<Boolean> = dataStore.safeData.map { it[APP_LOCK_ENABLED] ?: false }
-    val lockType: Flow<LockType> = dataStore.safeData.map { 
-        runCatching { LockType.valueOf(it[SELECTED_LOCK_TYPE] ?: LockType.DEVICE.name) }
-            .getOrDefault(LockType.DEVICE) 
-    }
+    val lockType: Flow<LockType> =
+        dataStore.safeData.map {
+            runCatching { LockType.valueOf(it[SELECTED_LOCK_TYPE] ?: LockType.DEVICE.name) }
+                .getOrDefault(LockType.DEVICE)
+        }
 
     suspend fun setAppLockEnabled(enabled: Boolean) {
         dataStore.edit { it[APP_LOCK_ENABLED] = enabled }

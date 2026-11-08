@@ -20,7 +20,7 @@ fun VocalLockScreen(
     hybridViewModel: HybridRecognitionViewModel,
     onSuccess: () -> Unit,
     onFailure: () -> Unit,
-    attemptCount: Int
+    attemptCount: Int,
 ) {
     var isListening by remember { mutableStateOf(false) }
     val recognitionResult by hybridViewModel.recognitionResult.collectAsState(initial = null)
@@ -36,35 +36,36 @@ fun VocalLockScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "Vocal Authentication",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
         )
         Text(
             text = "Attempt $attemptCount of 2",
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.secondary
+            color = MaterialTheme.colorScheme.secondary,
         )
-        
+
         Spacer(Modifier.height(32.dp))
-        
+
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
             Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Sing a verse from:", style = MaterialTheme.typography.bodySmall)
                 Text(
                     text = targetSong.title,
                     style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
                 )
                 Text(targetSong.artist, style = MaterialTheme.typography.bodyMedium)
             }
@@ -92,21 +93,21 @@ fun VocalLockScreen(
             },
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.size(80.dp),
-            contentPadding = PaddingValues(0.dp)
+            contentPadding = PaddingValues(0.dp),
         ) {
             Icon(Icons.Default.Mic, contentDescription = "Listen", modifier = Modifier.size(32.dp))
         }
-        
+
         if (!isListening) {
             Text(
                 "Tap to Start Singing",
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 8.dp)
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
 
         Spacer(Modifier.height(48.dp))
-        
+
         TextButton(onClick = onFailure) {
             Text("Use Device Lock Instead")
         }

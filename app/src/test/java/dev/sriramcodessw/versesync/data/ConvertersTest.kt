@@ -5,7 +5,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class ConvertersTest {
-
     private val converters = Converters()
 
     @Test

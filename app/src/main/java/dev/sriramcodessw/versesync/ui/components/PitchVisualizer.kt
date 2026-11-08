@@ -23,7 +23,7 @@ import kotlin.math.log2
 @Composable
 fun PitchVisualizer(
     pitch: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val pitchHistory = remember { mutableStateListOf<Float>() }
     val maxHistorySize = 50
@@ -37,17 +37,18 @@ fun PitchVisualizer(
     }
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(120.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.Black.copy(alpha = 0.1f)),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = 0.1f)),
+        contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             // Stability indicator / Needle
             StabilityNeedle(pitch = pitch)
-            
+
             Spacer(modifier = Modifier.height(8.dp))
 
             // Scrolling Waveform
@@ -79,11 +80,11 @@ fun PitchVisualizer(
                 drawPath(
                     path = path,
                     color = Color(0xFF4CAF50), // Vibrant Green
-                    style = Stroke(width = 3.dp.toPx())
+                    style = Stroke(width = 3.dp.toPx()),
                 )
             }
         }
-        
+
         // Note name overlay if pitch detected
         if (pitch > 0) {
             Text(
@@ -91,7 +92,7 @@ fun PitchVisualizer(
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
             )
         }
     }
@@ -101,7 +102,7 @@ fun PitchVisualizer(
 fun StabilityNeedle(pitch: Float) {
     // A simple visual to show if the user is holding a note
     val animatedAlpha = remember { Animatable(0f) }
-    
+
     LaunchedEffect(pitch > 0) {
         if (pitch > 0) {
             animatedAlpha.animateTo(1f, animationSpec = tween(200))
@@ -115,13 +116,14 @@ fun StabilityNeedle(pitch: Float) {
             text = if (pitch > 0) "Vocal Signal Detected" else "Waiting for Voice...",
             style = MaterialTheme.typography.labelSmall,
             color = if (pitch > 0) Color(0xFF4CAF50) else Color.Gray,
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.padding(end = 8.dp),
         )
         Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(if (pitch > 0) Color(0xFF4CAF50) else Color.Gray)
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(if (pitch > 0) Color(0xFF4CAF50) else Color.Gray),
         )
     }
 }

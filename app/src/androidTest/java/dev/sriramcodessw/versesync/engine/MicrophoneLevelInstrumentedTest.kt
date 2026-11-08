@@ -18,7 +18,6 @@ import kotlin.math.abs
  */
 @RunWith(AndroidJUnit4::class)
 class MicrophoneLevelInstrumentedTest {
-
     @SuppressLint("MissingPermission")
     @Test
     fun microphone_reportsLevelPerSecond() {
@@ -27,10 +26,14 @@ class MicrophoneLevelInstrumentedTest {
 
         val rate = 16000
         val minBuffer = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-        val record = AudioRecord(
-            MediaRecorder.AudioSource.MIC, rate, AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT, maxOf(minBuffer, rate)
-        )
+        val record =
+            AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                rate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                maxOf(minBuffer, rate),
+            )
         val buffer = ShortArray(rate)
         record.startRecording()
         Log.i("MICLEVEL", "recording state=${record.recordingState}")

@@ -42,26 +42,26 @@ fun MainScreen(
     verseViewModel: VerseViewModel,
     onboardingViewModel: OnboardingViewModel,
     billingViewModel: BillingViewModel,
-    trialViewModel: TrialViewModel
+    trialViewModel: TrialViewModel,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
     val selectedSongs = remember { mutableStateListOf<Song>() }
     var isSelectionMode by remember { mutableStateOf(false) }
-    
+
     var songToDelete by remember { mutableStateOf<Song?>(null) }
     var folderToDelete by remember { mutableStateOf<Folder?>(null) }
     var showMoveToFolderDialog by remember { mutableStateOf(false) }
-    
+
     var selectedTab by remember { mutableIntStateOf(0) }
-    
+
     val searchQuery by verseViewModel.searchQuery.collectAsState()
     val sortOrder by verseViewModel.sortOrder.collectAsState()
     val folders by verseViewModel.folders.collectAsState()
     val isMainTourCompleted by onboardingViewModel.isMainTourCompleted.collectAsState()
     val isPro by billingViewModel.isPro.collectAsState()
     val remainingTrials by trialViewModel.remainingTrials.collectAsState()
-    
+
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var pendingProAction by remember { mutableStateOf<String?>(null) }
@@ -80,10 +80,10 @@ fun MainScreen(
                 pendingProAction = null
             },
             onDismiss = { pendingProAction = null },
-            onUpgrade = { 
+            onUpgrade = {
                 pendingProAction = null
-                onNavigateToTipJar() 
-            }
+                onNavigateToTipJar()
+            },
         )
     }
 
@@ -94,25 +94,26 @@ fun MainScreen(
     var addFabAnchor by remember { mutableStateOf(Offset.Zero) }
     var addFabSize by remember { mutableStateOf(IntSize.Zero) }
 
-    val tourSteps = listOf(
-        TourStep("Welcome to VerseSync", "Manage your songs and folders here."),
-        TourStep("Bulk Actions", "Long press on any song to select multiple items for deletion or moving."),
-        TourStep(
-            "Recognition",
-            "Identify songs using Hybrid Engine (Pro).",
-            anchor = micIconAnchor,
-            size = micIconSize
-        ),
-        TourStep("Add Music", "Create new lyrics.", anchor = addFabAnchor, size = addFabSize)
-    )
+    val tourSteps =
+        listOf(
+            TourStep("Welcome to VerseSync", "Manage your songs and folders here."),
+            TourStep("Bulk Actions", "Long press on any song to select multiple items for deletion or moving."),
+            TourStep(
+                "Recognition",
+                "Identify songs using Hybrid Engine (Pro).",
+                anchor = micIconAnchor,
+                size = micIconSize,
+            ),
+            TourStep("Add Music", "Create new lyrics.", anchor = addFabAnchor, size = addFabSize),
+        )
 
     if (songToDelete != null) {
         DeleteConfirmationDialog(
-            onConfirm = { 
+            onConfirm = {
                 verseViewModel.deleteSong(songToDelete!!)
                 songToDelete = null
             },
-            onDismiss = { songToDelete = null }
+            onDismiss = { songToDelete = null },
         )
     }
 
@@ -129,7 +130,7 @@ fun MainScreen(
             },
             dismissButton = {
                 TextButton(onClick = { folderToDelete = null }) { Text("Cancel") }
-            }
+            },
         )
     }
 
@@ -141,7 +142,7 @@ fun MainScreen(
                 OutlinedTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    label = { Text("Folder Name") }
+                    label = { Text("Folder Name") },
                 )
             },
             confirmButton = {
@@ -155,7 +156,7 @@ fun MainScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAddFolderDialog = false }) { Text("Cancel") }
-            }
+            },
         )
     }
 
@@ -168,28 +169,30 @@ fun MainScreen(
                     item {
                         ListItem(
                             headlineContent = { Text("None (Main List)") },
-                            modifier = Modifier.clickable {
-                                verseViewModel.moveSongsToFolder(selectedSongs.toList(), null)
-                                selectedSongs.clear()
-                                isSelectionMode = false
-                                showMoveToFolderDialog = false
-                            }
+                            modifier =
+                                Modifier.clickable {
+                                    verseViewModel.moveSongsToFolder(selectedSongs.toList(), null)
+                                    selectedSongs.clear()
+                                    isSelectionMode = false
+                                    showMoveToFolderDialog = false
+                                },
                         )
                     }
                     items(folders) { folder ->
                         ListItem(
                             headlineContent = { Text(folder.name) },
-                            modifier = Modifier.clickable {
-                                verseViewModel.moveSongsToFolder(selectedSongs.toList(), folder.id)
-                                selectedSongs.clear()
-                                isSelectionMode = false
-                                showMoveToFolderDialog = false
-                            }
+                            modifier =
+                                Modifier.clickable {
+                                    verseViewModel.moveSongsToFolder(selectedSongs.toList(), folder.id)
+                                    selectedSongs.clear()
+                                    isSelectionMode = false
+                                    showMoveToFolderDialog = false
+                                },
                         )
                     }
                 }
             },
-            confirmButton = {}
+            confirmButton = {},
         )
     }
 
@@ -197,7 +200,7 @@ fun MainScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { 
+                    title = {
                         if (isSelectionMode) {
                             Text("${selectedSongs.size} Selected")
                         } else {
@@ -209,8 +212,8 @@ fun MainScreen(
                     },
                     navigationIcon = {
                         if (isSelectionMode) {
-                            IconButton(onClick = { 
-                                isSelectionMode = false 
+                            IconButton(onClick = {
+                                isSelectionMode = false
                                 selectedSongs.clear()
                             }) {
                                 Icon(Icons.Default.Close, contentDescription = "Cancel selection")
@@ -222,7 +225,7 @@ fun MainScreen(
                             IconButton(onClick = { showMoveToFolderDialog = true }) {
                                 Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = "Move selected")
                             }
-                            IconButton(onClick = { 
+                            IconButton(onClick = {
                                 verseViewModel.deleteSongs(selectedSongs.toList())
                                 selectedSongs.clear()
                                 isSelectionMode = false
@@ -235,36 +238,37 @@ fun MainScreen(
                                 DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
                                     DropdownMenuItem(
                                         text = { Text("Title (A-Z)") },
-                                        onClick = { 
+                                        onClick = {
                                             verseViewModel.updateSortOrder(SortOrder.TITLE)
-                                            showSortMenu = false 
+                                            showSortMenu = false
                                         },
-                                        leadingIcon = { if (sortOrder == SortOrder.TITLE) Icon(Icons.Default.Check, null) }
+                                        leadingIcon = { if (sortOrder == SortOrder.TITLE) Icon(Icons.Default.Check, null) },
                                     )
                                     DropdownMenuItem(
                                         text = { Text("Artist") },
-                                        onClick = { 
+                                        onClick = {
                                             verseViewModel.updateSortOrder(SortOrder.ARTIST)
-                                            showSortMenu = false 
+                                            showSortMenu = false
                                         },
-                                        leadingIcon = { if (sortOrder == SortOrder.ARTIST) Icon(Icons.Default.Check, null) }
+                                        leadingIcon = { if (sortOrder == SortOrder.ARTIST) Icon(Icons.Default.Check, null) },
                                     )
                                     DropdownMenuItem(
                                         text = { Text("Recently Added") },
-                                        onClick = { 
+                                        onClick = {
                                             verseViewModel.updateSortOrder(SortOrder.RECENT)
-                                            showSortMenu = false 
+                                            showSortMenu = false
                                         },
-                                        leadingIcon = { if (sortOrder == SortOrder.RECENT) Icon(Icons.Default.Check, null) }
+                                        leadingIcon = { if (sortOrder == SortOrder.RECENT) Icon(Icons.Default.Check, null) },
                                     )
                                 }
                             }
                             IconButton(
                                 onClick = onNavigateToRecognition,
-                                modifier = Modifier.onGloballyPositioned { 
-                                    micIconAnchor = it.positionInRoot()
-                                    micIconSize = it.size
-                                }
+                                modifier =
+                                    Modifier.onGloballyPositioned {
+                                        micIconAnchor = it.positionInRoot()
+                                        micIconSize = it.size
+                                    },
                             ) {
                                 Icon(Icons.Filled.Mic, contentDescription = "Recognize Song")
                             }
@@ -272,13 +276,19 @@ fun MainScreen(
                                 Icon(Icons.Default.MoreVert, contentDescription = "More options")
                             }
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                DropdownMenuItem(text = { Text("Settings") }, onClick = { showMenu = false; onNavigateToSettings() })
-                                DropdownMenuItem(text = { Text("Tip Jar") }, onClick = { showMenu = false; onNavigateToTipJar() })
+                                DropdownMenuItem(text = { Text("Settings") }, onClick = {
+                                    showMenu = false
+                                    onNavigateToSettings()
+                                })
+                                DropdownMenuItem(text = { Text("Tip Jar") }, onClick = {
+                                    showMenu = false
+                                    onNavigateToTipJar()
+                                })
                             }
                         }
-                    }
+                    },
                 )
-                
+
                 if (!isSelectionMode) {
                     SearchBar(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -290,14 +300,14 @@ fun MainScreen(
                                 expanded = false,
                                 onExpandedChange = {},
                                 placeholder = { Text("Search songs...") },
-                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                             )
                         },
                         expanded = false,
-                        onExpandedChange = {}
+                        onExpandedChange = {},
                     ) {}
                 }
-                
+
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
                         Text("Songs", modifier = Modifier.padding(16.dp))
@@ -313,36 +323,45 @@ fun MainScreen(
                 FloatingActionButton(
                     onClick = {
                         if (selectedTab == 0) {
-                            if (isPro || songs.size < 10) onNavigateToAddSong()
-                            else if (remainingTrials > 0) pendingProAction = "Unlimited Library"
-                            else onNavigateToTipJar()
+                            if (isPro || songs.size < 10) {
+                                onNavigateToAddSong()
+                            } else if (remainingTrials > 0) {
+                                pendingProAction = "Unlimited Library"
+                            } else {
+                                onNavigateToTipJar()
+                            }
                         } else {
-                            if (isPro) showAddFolderDialog = true
-                            else if (remainingTrials > 0) pendingProAction = "Folders"
-                            else onNavigateToTipJar()
+                            if (isPro) {
+                                showAddFolderDialog = true
+                            } else if (remainingTrials > 0) {
+                                pendingProAction = "Folders"
+                            } else {
+                                onNavigateToTipJar()
+                            }
                         }
                     },
-                    modifier = Modifier.onGloballyPositioned { 
-                        addFabAnchor = it.positionInRoot()
-                        addFabSize = it.size
-                    }
+                    modifier =
+                        Modifier.onGloballyPositioned {
+                            addFabAnchor = it.positionInRoot()
+                            addFabSize = it.size
+                        },
                 ) {
                     Icon(
                         imageVector = if (selectedTab == 0) Icons.Default.Add else Icons.Default.CreateNewFolder,
-                        contentDescription = if (selectedTab == 0) "Add Song" else "Add Folder"
+                        contentDescription = if (selectedTab == 0) "Add Song" else "Add Folder",
                     )
                 }
             }
-        }
+        },
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             if (selectedTab == 0) {
                 SongListContent(
-                    songs = songs, 
-                    folders = folders, 
+                    songs = songs,
+                    folders = folders,
                     selectedSongs = selectedSongs,
                     isSelectionMode = isSelectionMode,
-                    onSongClick = { 
+                    onSongClick = {
                         if (isSelectionMode) {
                             if (selectedSongs.contains(it)) selectedSongs.remove(it) else selectedSongs.add(it)
                             if (selectedSongs.isEmpty()) isSelectionMode = false
@@ -350,15 +369,15 @@ fun MainScreen(
                             onSongClick(it.id)
                         }
                     },
-                    onLongClick = { 
+                    onLongClick = {
                         isSelectionMode = true
                         selectedSongs.add(it)
-                    }
+                    },
                 )
             } else {
                 FolderListContent(
-                    folders = folders, 
-                    onDelete = { folderToDelete = it }
+                    folders = folders,
+                    onDelete = { folderToDelete = it },
                 )
             }
 
@@ -366,11 +385,14 @@ fun MainScreen(
                 TourOverlay(
                     steps = tourSteps,
                     currentStepIndex = currentTourStep,
-                    onNext = { 
-                        if (currentTourStep < tourSteps.size - 1) currentTourStep++ 
-                        else onboardingViewModel.completeMainTour()
+                    onNext = {
+                        if (currentTourStep < tourSteps.size - 1) {
+                            currentTourStep++
+                        } else {
+                            onboardingViewModel.completeMainTour()
+                        }
                     },
-                    onSkip = { onboardingViewModel.completeMainTour() }
+                    onSkip = { onboardingViewModel.completeMainTour() },
                 )
             }
         }
@@ -380,12 +402,12 @@ fun MainScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SongListContent(
-    songs: List<Song>, 
-    folders: List<Folder>, 
+    songs: List<Song>,
+    folders: List<Folder>,
     selectedSongs: List<Song>,
     isSelectionMode: Boolean,
     onSongClick: (Song) -> Unit,
-    onLongClick: (Song) -> Unit
+    onLongClick: (Song) -> Unit,
 ) {
     if (songs.isEmpty()) {
         EmptyState("No songs found.")
@@ -397,7 +419,7 @@ fun SongListContent(
                 val hasFingerprint = !song.fingerprint.isNullOrEmpty()
 
                 ListItem(
-                    headlineContent = { 
+                    headlineContent = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(song.title)
                             if (hasStt) {
@@ -406,7 +428,7 @@ fun SongListContent(
                                     imageVector = Icons.Default.Description,
                                     contentDescription = "STT Ready",
                                     modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
                             if (hasFingerprint) {
@@ -415,22 +437,27 @@ fun SongListContent(
                                     imageVector = Icons.Default.GraphicEq,
                                     contentDescription = "Audio Fingerprint Ready",
                                     modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.secondary
+                                    tint = MaterialTheme.colorScheme.secondary,
                                 )
                             }
                         }
                     },
-                    supportingContent = { 
+                    supportingContent = {
                         val folderName = folders.find { it.id == song.folderId }?.name ?: "No Folder"
-                        Text("${song.artist} • $folderName") 
+                        Text("${song.artist} • $folderName")
                     },
-                    leadingContent = if (isSelectionMode) {
-                        { Checkbox(checked = isSelected, onCheckedChange = { onSongClick(song) }) }
-                    } else null,
-                    modifier = Modifier.combinedClickable(
-                        onClick = { onSongClick(song) },
-                        onLongClick = { onLongClick(song) }
-                    ).background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                    leadingContent =
+                        if (isSelectionMode) {
+                            { Checkbox(checked = isSelected, onCheckedChange = { onSongClick(song) }) }
+                        } else {
+                            null
+                        },
+                    modifier =
+                        Modifier
+                            .combinedClickable(
+                                onClick = { onSongClick(song) },
+                                onLongClick = { onLongClick(song) },
+                            ).background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent),
                 )
             }
         }
@@ -438,7 +465,10 @@ fun SongListContent(
 }
 
 @Composable
-fun FolderListContent(folders: List<Folder>, onDelete: (Folder) -> Unit) {
+fun FolderListContent(
+    folders: List<Folder>,
+    onDelete: (Folder) -> Unit,
+) {
     if (folders.isEmpty()) {
         EmptyState("No folders yet.")
     } else {
@@ -452,7 +482,7 @@ fun FolderListContent(folders: List<Folder>, onDelete: (Folder) -> Unit) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete")
                         }
                     },
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable { },
                 )
             }
         }

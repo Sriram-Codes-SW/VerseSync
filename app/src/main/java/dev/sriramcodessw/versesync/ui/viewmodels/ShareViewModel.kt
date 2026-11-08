@@ -6,13 +6,17 @@ import androidx.lifecycle.viewModelScope
 import dev.sriramcodessw.versesync.data.Song
 import kotlinx.coroutines.launch
 
-class ShareViewModel(private val verseViewModel: VerseViewModel) : ViewModel() {
-
+class ShareViewModel(
+    private val verseViewModel: VerseViewModel,
+) : ViewModel() {
     val songsToShare = mutableStateListOf<Song>()
     val incomingSongs = mutableStateListOf<Song>()
     val selectedSongs = mutableStateListOf<Song>()
 
-    fun onSongSelected(song: Song, isSelected: Boolean) {
+    fun onSongSelected(
+        song: Song,
+        isSelected: Boolean,
+    ) {
         if (isSelected) {
             selectedSongs.add(song)
         } else {

@@ -30,69 +30,73 @@ data class LanguageModelInfo(
     val name: String,
     val code: String,
     val url: String?,
-    val regions: List<String> = emptyList()
+    val regions: List<String> = emptyList(),
 ) {
     val hasSpeechModel: Boolean get() = url != null
 }
 
 class LanguageViewModel(
     application: Application,
-    private val prefs: LanguagePreferences = LanguagePreferences(application)
+    private val prefs: LanguagePreferences = LanguagePreferences(application),
 ) : AndroidViewModel(application) {
     val downloader = ModelDownloader(application)
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     private var locationCancellationTokenSource = CancellationTokenSource()
 
-    val isSetupComplete: StateFlow<Boolean> = prefs.isSetupComplete
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val isSetupComplete: StateFlow<Boolean> =
+        prefs.isSetupComplete
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    val installedLanguages: StateFlow<Set<String>> = prefs.installedLanguages
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+    val installedLanguages: StateFlow<Set<String>> =
+        prefs.installedLanguages
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val downloadStatus = downloader.downloadStatus
 
     private val _detectedCountry = MutableStateFlow<String?>(null)
     val detectedCountry = _detectedCountry.asStateFlow()
 
-    val availableLanguages = listOf(
-        LanguageModelInfo("English", "en-us", "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip", listOf("US", "GB", "CA", "AU", "IN")),
-        LanguageModelInfo("Hindi", "hi", "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip", listOf("IN")),
-        LanguageModelInfo("Sanskrit (Beta)", "sa", "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip", listOf("IN")),
-        LanguageModelInfo("Tamil", "ta", null, listOf("IN", "LK", "SG")),
-        LanguageModelInfo("Telugu", "te", "https://alphacephei.com/vosk/models/vosk-model-small-te-0.42.zip", listOf("IN")),
-        LanguageModelInfo("Marathi", "mr", null, listOf("IN")),
-        LanguageModelInfo("Bengali", "bn", null, listOf("IN", "BD")),
-        LanguageModelInfo("Kannada", "kn", null, listOf("IN")),
-        LanguageModelInfo("Malayalam", "ml", null, listOf("IN")),
-        LanguageModelInfo("Gujarati", "gu", "https://alphacephei.com/vosk/models/vosk-model-small-gu-0.42.zip", listOf("IN")),
-        LanguageModelInfo("Punjabi", "pa", null, listOf("IN", "PK")),
-        LanguageModelInfo("Arabic", "ar", "https://alphacephei.com/vosk/models/vosk-model-small-ar-0.3.zip", listOf("SA", "EG", "AE", "JO")),
-        LanguageModelInfo("Korean", "ko", "https://alphacephei.com/vosk/models/vosk-model-small-ko-0.22.zip", listOf("KR")),
-        LanguageModelInfo("French", "fr", "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip", listOf("FR", "CA", "BE")),
-        LanguageModelInfo("Spanish", "es", "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip", listOf("ES", "MX", "AR")),
-        LanguageModelInfo("German", "de", "https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip", listOf("DE", "AT", "CH")),
-        LanguageModelInfo("Russian", "ru", "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip", listOf("RU", "BY", "KZ")),
-        LanguageModelInfo("Chinese", "cn", "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip", listOf("CN", "TW", "SG")),
-        LanguageModelInfo("Japanese", "ja", "https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip", listOf("JP")),
-        LanguageModelInfo("Portuguese", "pt", "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip", listOf("PT", "BR")),
-        LanguageModelInfo("Turkish", "tr", "https://alphacephei.com/vosk/models/vosk-model-small-tr-0.3.zip", listOf("TR")),
-        LanguageModelInfo("Vietnamese", "vn", "https://alphacephei.com/vosk/models/vosk-model-small-vn-0.4.zip", listOf("VN")),
-        LanguageModelInfo("Italian", "it", "https://alphacephei.com/vosk/models/vosk-model-small-it-0.4.zip", listOf("IT")),
-        LanguageModelInfo("Dutch", "nl", "https://alphacephei.com/vosk/models/vosk-model-small-nl-0.22.zip", listOf("NL", "BE")),
-        LanguageModelInfo("Greek", "el", null, listOf("GR")),
-        LanguageModelInfo("Polish", "pl", "https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip", listOf("PL")),
-        LanguageModelInfo("Swedish", "sv", "https://alphacephei.com/vosk/models/vosk-model-small-sv-rhasspy-0.15.zip", listOf("SE")),
-        LanguageModelInfo("Ukrainian", "uk", "https://alphacephei.com/vosk/models/vosk-model-small-uk-v3-nano.zip", listOf("UA")),
-        LanguageModelInfo("Farsi", "fa", "https://alphacephei.com/vosk/models/vosk-model-small-fa-0.4.zip", listOf("IR"))
-    )
+    val availableLanguages =
+        listOf(
+            LanguageModelInfo("English", "en-us", "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip", listOf("US", "GB", "CA", "AU", "IN")),
+            LanguageModelInfo("Hindi", "hi", "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip", listOf("IN")),
+            LanguageModelInfo("Sanskrit (Beta)", "sa", "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip", listOf("IN")),
+            LanguageModelInfo("Tamil", "ta", null, listOf("IN", "LK", "SG")),
+            LanguageModelInfo("Telugu", "te", "https://alphacephei.com/vosk/models/vosk-model-small-te-0.42.zip", listOf("IN")),
+            LanguageModelInfo("Marathi", "mr", null, listOf("IN")),
+            LanguageModelInfo("Bengali", "bn", null, listOf("IN", "BD")),
+            LanguageModelInfo("Kannada", "kn", null, listOf("IN")),
+            LanguageModelInfo("Malayalam", "ml", null, listOf("IN")),
+            LanguageModelInfo("Gujarati", "gu", "https://alphacephei.com/vosk/models/vosk-model-small-gu-0.42.zip", listOf("IN")),
+            LanguageModelInfo("Punjabi", "pa", null, listOf("IN", "PK")),
+            LanguageModelInfo("Arabic", "ar", "https://alphacephei.com/vosk/models/vosk-model-small-ar-0.3.zip", listOf("SA", "EG", "AE", "JO")),
+            LanguageModelInfo("Korean", "ko", "https://alphacephei.com/vosk/models/vosk-model-small-ko-0.22.zip", listOf("KR")),
+            LanguageModelInfo("French", "fr", "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip", listOf("FR", "CA", "BE")),
+            LanguageModelInfo("Spanish", "es", "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip", listOf("ES", "MX", "AR")),
+            LanguageModelInfo("German", "de", "https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip", listOf("DE", "AT", "CH")),
+            LanguageModelInfo("Russian", "ru", "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip", listOf("RU", "BY", "KZ")),
+            LanguageModelInfo("Chinese", "cn", "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip", listOf("CN", "TW", "SG")),
+            LanguageModelInfo("Japanese", "ja", "https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip", listOf("JP")),
+            LanguageModelInfo("Portuguese", "pt", "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip", listOf("PT", "BR")),
+            LanguageModelInfo("Turkish", "tr", "https://alphacephei.com/vosk/models/vosk-model-small-tr-0.3.zip", listOf("TR")),
+            LanguageModelInfo("Vietnamese", "vn", "https://alphacephei.com/vosk/models/vosk-model-small-vn-0.4.zip", listOf("VN")),
+            LanguageModelInfo("Italian", "it", "https://alphacephei.com/vosk/models/vosk-model-small-it-0.4.zip", listOf("IT")),
+            LanguageModelInfo("Dutch", "nl", "https://alphacephei.com/vosk/models/vosk-model-small-nl-0.22.zip", listOf("NL", "BE")),
+            LanguageModelInfo("Greek", "el", null, listOf("GR")),
+            LanguageModelInfo("Polish", "pl", "https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip", listOf("PL")),
+            LanguageModelInfo("Swedish", "sv", "https://alphacephei.com/vosk/models/vosk-model-small-sv-rhasspy-0.15.zip", listOf("SE")),
+            LanguageModelInfo("Ukrainian", "uk", "https://alphacephei.com/vosk/models/vosk-model-small-uk-v3-nano.zip", listOf("UA")),
+            LanguageModelInfo("Farsi", "fa", "https://alphacephei.com/vosk/models/vosk-model-small-fa-0.4.zip", listOf("IR")),
+        )
 
-    val suggestedLanguages: StateFlow<List<LanguageModelInfo>> = combine(_detectedCountry, MutableStateFlow(availableLanguages)) { country, all ->
-        if (country != null) {
-            all.filter { it.regions.contains(country) }
-        } else {
-            all.filter { listOf("en-us", "es", "hi", "fr").contains(it.code) }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val suggestedLanguages: StateFlow<List<LanguageModelInfo>> =
+        combine(_detectedCountry, MutableStateFlow(availableLanguages)) { country, all ->
+            if (country != null) {
+                all.filter { it.regions.contains(country) }
+            } else {
+                all.filter { listOf("en-us", "es", "hi", "fr").contains(it.code) }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
@@ -110,8 +114,9 @@ class LanguageViewModel(
     fun detectRegion() {
         locationCancellationTokenSource.cancel()
         locationCancellationTokenSource = CancellationTokenSource()
-        
-        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, locationCancellationTokenSource.token)
+
+        fusedLocationClient
+            .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, locationCancellationTokenSource.token)
             .addOnSuccessListener { location ->
                 if (location != null) {
                     val geocoder = Geocoder(getApplication(), Locale.getDefault())
@@ -133,8 +138,7 @@ class LanguageViewModel(
                         Log.e("LanguageViewModel", "Geocoding failed", e)
                     }
                 }
-            }
-            .addOnFailureListener { e ->
+            }.addOnFailureListener { e ->
                 Log.e("LanguageViewModel", "Location request failed", e)
             }
     }
@@ -149,8 +153,7 @@ class LanguageViewModel(
      * Whether songs in [languageCode] need a downloaded speech model to be fully usable.
      * Languages Vosk has no model for never do, so they must not be reported as missing one.
      */
-    fun needsSpeechModel(languageCode: String): Boolean =
-        availableLanguages.find { it.code == languageCode }?.hasSpeechModel ?: true
+    fun needsSpeechModel(languageCode: String): Boolean = availableLanguages.find { it.code == languageCode }?.hasSpeechModel ?: true
 
     fun markSetupComplete() {
         viewModelScope.launch {
@@ -178,7 +181,9 @@ class LanguageViewModel(
     }
 }
 
-class LanguageViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+class LanguageViewModelFactory(
+    private val application: Application,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LanguageViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

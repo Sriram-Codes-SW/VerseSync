@@ -3,14 +3,13 @@ package dev.sriramcodessw.versesync.nfc
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
-import org.junit.jupiter.api.DynamicTest
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
 class AppLockAuthenticatorsTest {
-
     private val strongPair = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
     private val weakPair = BIOMETRIC_WEAK or DEVICE_CREDENTIAL
 

@@ -12,10 +12,10 @@ import androidx.room.PrimaryKey
             entity = Folder::class,
             parentColumns = ["id"],
             childColumns = ["folderId"],
-            onDelete = ForeignKey.SET_NULL
-        )
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
-    indices = [Index(value = ["folderId"])]
+    indices = [Index(value = ["folderId"])],
 )
 data class Song(
     @PrimaryKey(autoGenerate = true)
@@ -27,5 +27,5 @@ data class Song(
     val folderId: Int? = null,
     val dateAdded: Long = System.currentTimeMillis(), // New field for sorting
     val lrcData: String? = null,
-    val fingerprint: List<Float>? = null
+    val fingerprint: List<Float>? = null,
 )

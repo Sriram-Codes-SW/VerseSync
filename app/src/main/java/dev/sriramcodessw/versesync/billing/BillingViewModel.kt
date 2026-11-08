@@ -10,9 +10,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 class BillingViewModel(
     application: Application,
-    private val billingClientWrapper: BillingClientWrapper = BillingClientWrapper(application)
+    private val billingClientWrapper: BillingClientWrapper = BillingClientWrapper(application),
 ) : AndroidViewModel(application) {
-
     val productDetails: StateFlow<List<ProductDetails>> = billingClientWrapper.productDetails
     val isPro: StateFlow<Boolean> = billingClientWrapper.isPro
 
@@ -26,8 +25,10 @@ class BillingViewModel(
     }
 
     /** Returns false when the purchase screen could not be opened. */
-    fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails): Boolean =
-        billingClientWrapper.launchPurchaseFlow(activity, productDetails)
+    fun launchPurchaseFlow(
+        activity: Activity,
+        productDetails: ProductDetails,
+    ): Boolean = billingClientWrapper.launchPurchaseFlow(activity, productDetails)
 
     /** Re-checks subscriptions, so an expired one stops unlocking Pro without a restart. */
     fun refreshPurchases() {
@@ -35,7 +36,9 @@ class BillingViewModel(
     }
 }
 
-class BillingViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+class BillingViewModelFactory(
+    private val application: Application,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(BillingViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
