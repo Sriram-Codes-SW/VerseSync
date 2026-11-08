@@ -69,7 +69,7 @@ We believe in providing core value for free while offering powerful enhancements
 This section outlines the professional standards adopted for the VerseSync project to ensure security, maintainability, and protection of intellectual property.
 
 ### 1. Project & Repository Setup
-*   **Visibility:** The repository will be kept **Private** on GitHub to protect all Intellectual Property (IP).
+*   **Visibility and license:** The repository is public and licensed under the GNU General Public License v3 (see `LICENSE` and `THIRD_PARTY_NOTICES.md`). Release builds are still obfuscated with R8, but the source is open by design; see ADR-13.
 *   **Branching Strategy:** We will use a `GitFlow`-like strategy:
     *   `main`: Contains stable, production-ready code only.
     *   `develop`: The integration branch for features currently in development.
@@ -94,3 +94,10 @@ To protect the app's proprietary logic from reverse engineering, R8 will be enab
 
 ### 6. App Architecture
 The following diagram illustrates the intended offline-first architecture for the VerseSync application.
+
+
+## License
+
+VerseSync is free software under the **GNU General Public License, version 3 only**. See [LICENSE](LICENSE). Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Copyright (C) 2026 Sriram-Codes-SW
