@@ -67,15 +67,18 @@ class AudioFingerprinter(private val audioDispatcher: AudioDispatcher) {
 
         /**
          * Converts a sequence of raw Hz pitch values to normalized semitones,
-         * filtering unvoiced (0 Hz) segments and centering around the mean
-         * to achieve key-independent and transposition-invariant contour matching.
+         * centering voiced frames around their mean to achieve key-independent and
+         * transposition-invariant contour matching.
+         *
+         * Unvoiced frames (silence, 0 Hz) become [Float.NaN] so they cannot be confused with
+         * a voiced frame that happens to sit exactly on the mean. Callers must skip NaN.
          */
         fun toRelativeSemitoneContour(pitches: List<Float>): List<Float> {
             val semitones = pitches.map { hzToSemitone(it) }
             val voiced = semitones.filter { it > 0f }
             if (voiced.isEmpty()) return emptyList()
             val mean = voiced.average().toFloat()
-            return semitones.map { if (it > 0f) it - mean else 0f }
+            return semitones.map { if (it > 0f) it - mean else Float.NaN }
         }
     }
 }

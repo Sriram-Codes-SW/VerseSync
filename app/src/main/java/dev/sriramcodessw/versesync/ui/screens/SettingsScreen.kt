@@ -2,6 +2,7 @@ package dev.sriramcodessw.versesync.ui.screens
 
 import android.content.Intent
 import android.widget.Toast
+import dev.sriramcodessw.versesync.nfc.canUseAppLock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -43,7 +44,7 @@ fun SettingsScreen(
     
     var showLockTypeDialog by remember { mutableStateOf(false) }
     val hasSyncIssues = remember(songs, installedLanguages) {
-        songs.any { !installedLanguages.contains(it.language) }
+        songs.any { languageViewModel.needsSpeechModel(it.language) && !installedLanguages.contains(it.language) }
     }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -126,7 +127,21 @@ fun SettingsScreen(
                     trailingContent = {
                         Switch(
                             checked = isAppLockEnabled,
-                            onCheckedChange = { securityViewModel.setAppLockEnabled(it) }
+                            onCheckedChange = { enable ->
+                                // The lock never opens without a successful system authentication,
+                                // so enabling it on a device with no screen lock or biometrics
+                                // would lock the user out of their own library.
+                                // Same authenticators as the unlock prompt, see appLockAuthenticators.
+                                if (enable && !canUseAppLock(context)) {
+                                    Toast.makeText(
+                                        context,
+                                        "Set a screen lock or biometrics in system settings first",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    securityViewModel.setAppLockEnabled(enable)
+                                }
+                            }
                         )
                     },
                     leadingContent = { Icon(Icons.Default.Security, contentDescription = null) }
@@ -229,13 +244,21 @@ fun SettingsScreen(
                 val isInstalled = installedLanguages.contains(lang.code)
                 ListItem(
                     headlineContent = { Text(lang.name) },
-                    supportingContent = { Text(if (isInstalled) "Ready for offline use" else "Not downloaded") },
+                    supportingContent = {
+                        Text(
+                            when {
+                                isInstalled -> "Ready for offline use"
+                                !lang.hasSpeechModel -> "No speech model exists yet. Lyrics and pitch matching still work."
+                                else -> "Not downloaded"
+                            }
+                        )
+                    },
                     trailingContent = {
                         if (isInstalled) {
                             IconButton(onClick = { languageViewModel.removeLanguage(lang.code) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete model")
                             }
-                        } else {
+                        } else if (lang.hasSpeechModel) {
                             Button(onClick = { languageViewModel.downloadLanguage(lang) }) {
                                 Text("Download")
                             }

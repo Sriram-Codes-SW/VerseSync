@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class OnboardingViewModel(application: Application) : AndroidViewModel(application) {
-    private val prefs = OnboardingPreferences(application)
+class OnboardingViewModel(
+    application: Application,
+    private val prefs: OnboardingPreferences = OnboardingPreferences(application)
+) : AndroidViewModel(application) {
 
     val isMainTourCompleted: StateFlow<Boolean> = prefs.isMainTourCompleted
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)

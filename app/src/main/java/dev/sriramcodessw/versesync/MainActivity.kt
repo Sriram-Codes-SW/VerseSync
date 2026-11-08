@@ -5,8 +5,9 @@ import android.app.DownloadManager
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.IntentFilter
-import android.os.Build
+import android.content.pm.PackageManager
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,13 +15,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -37,7 +41,6 @@ import dev.sriramcodessw.versesync.engine.HybridRecognitionViewModelFactory
 import dev.sriramcodessw.versesync.fingerprinting.FingerprintCreationViewModel
 import dev.sriramcodessw.versesync.fingerprinting.FingerprintCreationViewModelFactory
 import dev.sriramcodessw.versesync.nfc.SecurityManager
-import dev.sriramcodessw.versesync.ui.components.UpgradeDialog
 import dev.sriramcodessw.versesync.ui.screens.*
 import dev.sriramcodessw.versesync.ui.theme.VerseSyncTheme
 import dev.sriramcodessw.versesync.ui.viewmodels.ShareViewModel
@@ -78,39 +81,51 @@ fun AuthWrapper(activity: AppCompatActivity) {
     val securityViewModel: SecurityViewModel = viewModel(factory = SecurityViewModelFactory(application))
     val verseViewModel: VerseViewModel = viewModel(factory = VerseViewModelFactory(application, application.database.songDao()))
     val hybridViewModel: HybridRecognitionViewModel = viewModel(factory = HybridRecognitionViewModelFactory(application))
-    
-    val isAppLockEnabled by securityViewModel.isAppLockEnabled.collectAsState()
-    val lockType by securityViewModel.lockType.collectAsState()
+
+    // Null until the saved lock settings have been read. Treating "not loaded yet" as
+    // "lock disabled" would unlock the app before the real setting arrives.
+    val lockConfig by securityViewModel.lockConfig.collectAsState()
     val songs by verseViewModel.songs.collectAsState()
-    
+
     var isUnlocked by remember { mutableStateOf(false) }
     var failedAttempts by remember { mutableIntStateOf(0) }
     val securityManager = remember { SecurityManager(activity) }
 
-    val syncReadySongs = remember(songs) { 
-        songs.filter { !it.fingerprint.isNullOrEmpty() } 
+    val syncReadySongs = remember(songs) {
+        songs.filter { !it.fingerprint.isNullOrEmpty() }
     }
-    
     val targetSong = remember(syncReadySongs) { syncReadySongs.randomOrNull() }
 
-    LaunchedEffect(isAppLockEnabled, lockType) {
-        if (!isAppLockEnabled) {
+    fun promptDeviceCredential(subtitle: String) {
+        securityManager.showBiometricPrompt(
+            title = "Unlock VerseSync",
+            subtitle = subtitle,
+            onSuccess = { isUnlocked = true },
+            onError = { }
+        )
+    }
+
+    LaunchedEffect(lockConfig) {
+        val config = lockConfig ?: return@LaunchedEffect
+        if (!config.enabled) {
             isUnlocked = true
-        } else if (lockType != LockType.VOCAL && !isUnlocked) {
-            securityManager.showBiometricPrompt(
-                title = "Unlock VerseSync",
-                subtitle = "Access your library",
-                onSuccess = { isUnlocked = true },
-                onError = { }
-            )
+        } else if (config.type != LockType.VOCAL && !isUnlocked) {
+            promptDeviceCredential("Access your library")
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isUnlocked || !isAppLockEnabled) {
-            VerseSyncNavHost(application, securityViewModel, verseViewModel, hybridViewModel)
-        } else {
-            if (lockType == LockType.VOCAL && targetSong != null) {
+        val config = lockConfig
+        when {
+            config == null -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            isUnlocked || !config.enabled -> {
+                VerseSyncNavHost(application, securityViewModel, verseViewModel, hybridViewModel)
+            }
+            config.type == LockType.VOCAL && targetSong != null -> {
                 VocalLockScreen(
                     targetSong = targetSong,
                     hybridViewModel = hybridViewModel,
@@ -119,30 +134,24 @@ fun AuthWrapper(activity: AppCompatActivity) {
                     onFailure = {
                         failedAttempts++
                         if (failedAttempts >= 2) {
-                            securityManager.showBiometricPrompt(
-                                title = "Unlock VerseSync",
-                                subtitle = "Vocal auth failed. Use device lock.",
-                                onSuccess = { isUnlocked = true },
-                                onError = { }
-                            )
+                            promptDeviceCredential("Vocal auth failed. Use device lock.")
                         }
                     }
                 )
-            } else {
-                LaunchedEffect(Unit) {
-                    if (lockType != LockType.VOCAL) {
-                        securityManager.showBiometricPrompt(
-                            title = "Unlock VerseSync",
-                            subtitle = "Access library",
-                            onSuccess = { isUnlocked = true },
-                            onError = { }
-                        )
-                    } else if (songs.isNotEmpty() && targetSong == null) {
-                        isUnlocked = true 
+            }
+            else -> {
+                // Locked, and either the system prompt was dismissed or vocal lock has no
+                // synced song to sing. Never unlock automatically; offer the device credential.
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("VerseSync is locked")
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = { promptDeviceCredential("Access your library") }) {
+                        Text("Unlock")
                     }
-                }
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
                 }
             }
         }
@@ -174,14 +183,28 @@ fun VerseSyncNavHost(
         viewModel(factory = BluetoothViewModelFactory(application, it))
     }
 
+    // Google sends no callback when a subscription expires, so re-check it on every return to the app.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, billingViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) billingViewModel.refreshPurchases()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     // Register Download Receiver
     DisposableEffect(Unit) {
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(languageViewModel.downloader.onDownloadComplete, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            context.registerReceiver(languageViewModel.downloader.onDownloadComplete, filter)
-        }
+        // DownloadManager sends ACTION_DOWNLOAD_COMPLETE from its own process, so a non-exported
+        // receiver never gets it (the model would download but never unpack). The handler
+        // therefore trusts nothing in the intent: it looks the id up in our DownloadManager.
+        ContextCompat.registerReceiver(
+            context,
+            languageViewModel.downloader.onDownloadComplete,
+            filter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
         onDispose {
             context.unregisterReceiver(languageViewModel.downloader.onDownloadComplete)
         }
@@ -189,7 +212,6 @@ fun VerseSyncNavHost(
 
     val songs by verseViewModel.songs.collectAsState()
     val isSetupComplete by languageViewModel.isSetupComplete.collectAsState()
-    var showUpgradeDialog by remember { mutableStateOf(false) }
     var pendingSongIdForSync by remember { mutableIntStateOf(-1) }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -211,14 +233,6 @@ fun VerseSyncNavHost(
         }
     }
 
-    LaunchedEffect(Unit) {
-        locationPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-    }
-
-    if (showUpgradeDialog) {
-        UpgradeDialog(onDismiss = { showUpgradeDialog = false })
-    }
-
     val startDestination = if (isSetupComplete) AppRoutes.MAIN_SCREEN else AppRoutes.LANGUAGE_SELECTION
 
     NavHost(
@@ -230,6 +244,18 @@ fun VerseSyncNavHost(
         popExitTransition = { fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { 300 }, animationSpec = tween(300)) }
     ) {
         composable(AppRoutes.LANGUAGE_SELECTION) {
+            // Approximate location only suggests languages during first-run setup, so ask here
+            // rather than on every app start. Skip the prompt if it was already granted.
+            LaunchedEffect(Unit) {
+                val granted = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+                if (granted) {
+                    languageViewModel.detectRegion()
+                } else {
+                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                }
+            }
             LanguageSelectionScreen(
                 viewModel = languageViewModel,
                 onComplete = { navController.navigate(AppRoutes.MAIN_SCREEN) { popUpTo(AppRoutes.LANGUAGE_SELECTION) { inclusive = true } } }
@@ -238,13 +264,7 @@ fun VerseSyncNavHost(
         composable(AppRoutes.MAIN_SCREEN) {
             MainScreen(
                 songs = songs,
-                onNavigateToAddSong = {
-                    if (songs.size >= 10) {
-                        showUpgradeDialog = true
-                    } else {
-                        navController.navigate(AppRoutes.ADD_SONG_SCREEN)
-                    }
-                },
+                onNavigateToAddSong = { navController.navigate(AppRoutes.ADD_SONG_SCREEN) },
                 onSongClick = { songId -> navController.navigate("song_detail/$songId") },
                 onNavigateToTipJar = { navController.navigate(AppRoutes.TIP_JAR_SCREEN) },
                 onNavigateToRecognition = {

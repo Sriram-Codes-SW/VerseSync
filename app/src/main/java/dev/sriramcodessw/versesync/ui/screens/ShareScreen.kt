@@ -1,6 +1,12 @@
 package dev.sriramcodessw.versesync.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,8 +21,10 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import dev.sriramcodessw.versesync.bluetooth.BluetoothDeviceDomain
 import dev.sriramcodessw.versesync.bluetooth.BluetoothService
 import dev.sriramcodessw.versesync.bluetooth.BluetoothViewModel
@@ -36,6 +44,41 @@ fun ShareScreen(
     val bluetoothState by bluetoothViewModel.state.collectAsState()
 
     var isReceiver by remember { mutableStateOf(false) }
+
+    // Android 12+ requires BLUETOOTH_* permissions at runtime; Android 11 and below need
+    // location for discovery. Without this, scanning or listening throws SecurityException.
+    val context = LocalContext.current
+    var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        if (grants.isNotEmpty() && grants.values.all { it }) {
+            pendingAction?.invoke()
+        } else {
+            Toast.makeText(context, "Bluetooth permission is required to share songs", Toast.LENGTH_SHORT).show()
+        }
+        pendingAction = null
+    }
+    fun withBluetoothPermissions(action: () -> Unit) {
+        val required = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_ADVERTISE
+            )
+        } else {
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        val missing = required.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isEmpty()) {
+            action()
+        } else {
+            pendingAction = action
+            permissionLauncher.launch(missing.toTypedArray())
+        }
+    }
 
     LaunchedEffect(bluetoothState) {
         val received = (bluetoothState as? BluetoothService.BluetoothState.SongsReceived)?.songs
@@ -57,7 +100,7 @@ fun ShareScreen(
                 },
                 actions = {
                     if (!isReceiver && bluetoothState !is BluetoothService.BluetoothState.Discovering && bluetoothState !is BluetoothService.BluetoothState.Connecting) {
-                        Button(onClick = { bluetoothViewModel.startDiscovery() }) {
+                        Button(onClick = { withBluetoothPermissions { bluetoothViewModel.startDiscovery() } }) {
                             Text("Scan")
                         }
                     }
@@ -94,7 +137,7 @@ fun ShareScreen(
                         bluetoothState = state,
                         onDeviceClick = { deviceAddress -> bluetoothViewModel.connectToDevice(deviceAddress) },
                         onStartSending = { songsToShare -> bluetoothViewModel.sendSongs(songsToShare) },
-                        onStartServer = { bluetoothViewModel.startServer() }
+                        onStartServer = { withBluetoothPermissions { bluetoothViewModel.startServer() } }
                     )
                 }
             }

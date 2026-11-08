@@ -19,9 +19,6 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%'")
     fun searchSongs(query: String): Flow<List<Song>>
 
-    @Query("SELECT * FROM songs WHERE lyrics LIKE '%' || :query || '%'")
-    fun searchSongsByLyrics(query: String): Flow<List<Song>>
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(song: Song)
 
@@ -42,7 +39,7 @@ interface SongDao {
     fun getSongsInFolder(folderId: Int): Flow<List<Song>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertFolder(folder: Folder)
+    suspend fun insertFolder(folder: Folder): Long
 
     @Update
     suspend fun updateFolder(folder: Folder)

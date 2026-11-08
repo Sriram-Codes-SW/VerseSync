@@ -36,7 +36,7 @@ class DataTransferServiceTest {
         whenever(socketMock.inputStream).thenReturn(inStream)
 
         val service = DataTransferService(socketMock)
-        val success = service.sendSongs(songsToSend, "transfer-123") { /* progress */ }
+        val success = service.sendSongs(DataTransferService.encode(songsToSend), "transfer-123") { /* progress */ }
 
         assertTrue(success)
     }
@@ -59,10 +59,7 @@ class DataTransferServiceTest {
         whenever(socketMock.inputStream).thenReturn(inputStream)
 
         val service = DataTransferService(socketMock)
-        val receivedSongs = service.receiveSongs(
-            getOffsetForId = { 0 },
-            onProgress = { _, _ -> }
-        )
+        val receivedSongs = service.receiveSongs { _, _ -> }
 
         assertEquals(songsToReceive, receivedSongs)
     }

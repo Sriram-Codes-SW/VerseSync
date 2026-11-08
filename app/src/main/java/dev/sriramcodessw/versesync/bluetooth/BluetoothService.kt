@@ -13,16 +13,14 @@ import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
 import dev.sriramcodessw.versesync.data.Song
-import dev.sriramcodessw.versesync.data.TransferPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.io.IOException
+import java.util.Locale
 
 private const val TAG = "BluetoothService"
 
@@ -50,10 +48,12 @@ class BluetoothService(
     val state = _state.asStateFlow()
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
-    private val transferPrefs = TransferPreferences(context)
     private val serverThreads = mutableListOf<Thread>()
     private var clientSocket: BluetoothSocket? = null
-    private var serverSocket: BluetoothServerSocket? = null
+    // One listening socket per supported UUID. All of them must be tracked and closed,
+    // otherwise the sockets and their accept() threads leak after a connection or a stop.
+    private val serverSockets = mutableListOf<BluetoothServerSocket>()
+    private var serverActive = false
     private var dataTransferService: DataTransferService? = null
 
     private val foundDeviceReceiver = object : BroadcastReceiver() {
@@ -95,7 +95,22 @@ class BluetoothService(
         _state.value = BluetoothState.Idle
     }
 
+    private fun closeServerSockets() {
+        synchronized(serverSockets) {
+            serverActive = false
+            serverSockets.forEach {
+                try {
+                    it.close()
+                } catch (e: IOException) {
+                    Log.w(TAG, "Server socket close error", e)
+                }
+            }
+            serverSockets.clear()
+        }
+    }
+
     fun startServer() {
+        synchronized(serverSockets) { serverActive = true }
         _state.value = BluetoothState.ListeningForConnection
         for (uuid in BluetoothConstants.SUPPORTED_UUIDS) {
             val thread = Thread {
@@ -104,8 +119,19 @@ class BluetoothService(
                         "${BluetoothConstants.SERVICE_NAME}-$uuid",
                         uuid
                     )
-                    serverSocket = localServerSocket
+                    val stillActive = synchronized(serverSockets) {
+                        if (serverActive) serverSockets.add(localServerSocket)
+                        serverActive
+                    }
+                    if (!stillActive) {
+                        // Stopped, or another UUID already accepted, while this socket was opening.
+                        localServerSocket.close()
+                        return@Thread
+                    }
                     val socket = localServerSocket.accept()
+                    // One peer per session: stop listening on every UUID, which also ends the
+                    // other accept() calls instead of leaving them blocked forever.
+                    closeServerSockets()
                     clientSocket = socket
                     mainDispatcher.launch { 
                         _state.value = BluetoothState.Connected(
@@ -151,8 +177,21 @@ class BluetoothService(
 
     fun sendSongs(songs: List<Song>, transferId: String) {
         serviceScope.launch {
+            // Tell the user why, instead of a generic failure after the receiver refuses.
+            val payload = DataTransferService.encode(songs)
+            if (DataTransferService.isTooLarge(payload.size)) {
+                val megabytes = String.format(Locale.US, "%.1f", Math.ceil(payload.size / (1024.0 * 1024.0) * 10) / 10)
+                val limit = MAX_TRANSFER_BYTES / (1024 * 1024)
+                mainDispatcher.launch {
+                    _state.value = BluetoothState.Error(
+                        "This selection is $megabytes MB, more than the $limit MB limit for one transfer. " +
+                            "Send fewer songs at a time."
+                    )
+                }
+                return@launch
+            }
             mainDispatcher.launch { _state.value = BluetoothState.Transferring(0) }
-            val success = dataTransferService?.sendSongs(songs, transferId) { progress ->
+            val success = dataTransferService?.sendSongs(payload, transferId) { progress ->
                 mainDispatcher.launch { _state.value = BluetoothState.Transferring(progress) }
             } ?: false
             mainDispatcher.launch {
@@ -164,21 +203,11 @@ class BluetoothService(
 
     private fun listenForIncomingSongs() {
         serviceScope.launch {
-            val receivedSongs = dataTransferService?.receiveSongs(
-                getOffsetForId = { id ->
-                    runBlocking {
-                        val progress = transferPrefs.transferProgress.first()
-                        if (progress?.transferId == id) progress.bytesReceived else 0
-                    }
-                },
-                onProgress = { id, progress ->
-                    serviceScope.launch { transferPrefs.updateProgress(id, progress) }
-                    mainDispatcher.launch { _state.value = BluetoothState.Transferring(-1) }
-                }
-            )
+            val receivedSongs = dataTransferService?.receiveSongs { _, _ ->
+                mainDispatcher.launch { _state.value = BluetoothState.Transferring(-1) }
+            }
             mainDispatcher.launch {
                 if (receivedSongs != null) {
-                    transferPrefs.clearProgress()
                     _state.value = BluetoothState.SongsReceived(receivedSongs)
                 } else {
                     _state.value = BluetoothState.Error("Reception failed.")
@@ -189,7 +218,7 @@ class BluetoothService(
 
     fun stopServer() {
         try {
-            serverSocket?.close()
+            closeServerSockets()
             clientSocket?.close()
             serverThreads.forEach { it.interrupt() }
             serverThreads.clear()

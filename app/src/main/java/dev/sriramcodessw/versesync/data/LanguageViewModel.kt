@@ -21,15 +21,24 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+/**
+ * A language the app supports. [url] is the Vosk speech model to download, or null when Vosk
+ * publishes no usable model for the language. Those languages still work for lyrics and pitch
+ * matching but cannot use speech recognition.
+ */
 data class LanguageModelInfo(
     val name: String,
     val code: String,
-    val url: String,
+    val url: String?,
     val regions: List<String> = emptyList()
-)
+) {
+    val hasSpeechModel: Boolean get() = url != null
+}
 
-class LanguageViewModel(application: Application) : AndroidViewModel(application) {
-    private val prefs = LanguagePreferences(application)
+class LanguageViewModel(
+    application: Application,
+    private val prefs: LanguagePreferences = LanguagePreferences(application)
+) : AndroidViewModel(application) {
     val downloader = ModelDownloader(application)
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     private var locationCancellationTokenSource = CancellationTokenSource()
@@ -49,14 +58,14 @@ class LanguageViewModel(application: Application) : AndroidViewModel(application
         LanguageModelInfo("English", "en-us", "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip", listOf("US", "GB", "CA", "AU", "IN")),
         LanguageModelInfo("Hindi", "hi", "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip", listOf("IN")),
         LanguageModelInfo("Sanskrit (Beta)", "sa", "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip", listOf("IN")),
-        LanguageModelInfo("Tamil", "ta", "https://alphacephei.com/vosk/models/vosk-model-small-ta-0.42.zip", listOf("IN", "LK", "SG")),
+        LanguageModelInfo("Tamil", "ta", null, listOf("IN", "LK", "SG")),
         LanguageModelInfo("Telugu", "te", "https://alphacephei.com/vosk/models/vosk-model-small-te-0.42.zip", listOf("IN")),
-        LanguageModelInfo("Marathi", "mr", "https://alphacephei.com/vosk/models/vosk-model-small-mr-0.22.zip", listOf("IN")),
-        LanguageModelInfo("Bengali", "bn", "https://alphacephei.com/vosk/models/vosk-model-small-bn-0.22.zip", listOf("IN", "BD")),
-        LanguageModelInfo("Kannada", "kn", "https://alphacephei.com/vosk/models/vosk-model-small-kn-0.42.zip", listOf("IN")),
-        LanguageModelInfo("Malayalam", "ml", "https://alphacephei.com/vosk/models/vosk-model-small-ml-0.22.zip", listOf("IN")),
+        LanguageModelInfo("Marathi", "mr", null, listOf("IN")),
+        LanguageModelInfo("Bengali", "bn", null, listOf("IN", "BD")),
+        LanguageModelInfo("Kannada", "kn", null, listOf("IN")),
+        LanguageModelInfo("Malayalam", "ml", null, listOf("IN")),
         LanguageModelInfo("Gujarati", "gu", "https://alphacephei.com/vosk/models/vosk-model-small-gu-0.42.zip", listOf("IN")),
-        LanguageModelInfo("Punjabi", "pa", "https://alphacephei.com/vosk/models/vosk-model-small-pa-0.22.zip", listOf("IN", "PK")),
+        LanguageModelInfo("Punjabi", "pa", null, listOf("IN", "PK")),
         LanguageModelInfo("Arabic", "ar", "https://alphacephei.com/vosk/models/vosk-model-small-ar-0.3.zip", listOf("SA", "EG", "AE", "JO")),
         LanguageModelInfo("Korean", "ko", "https://alphacephei.com/vosk/models/vosk-model-small-ko-0.22.zip", listOf("KR")),
         LanguageModelInfo("French", "fr", "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip", listOf("FR", "CA", "BE")),
@@ -70,10 +79,10 @@ class LanguageViewModel(application: Application) : AndroidViewModel(application
         LanguageModelInfo("Vietnamese", "vn", "https://alphacephei.com/vosk/models/vosk-model-small-vn-0.4.zip", listOf("VN")),
         LanguageModelInfo("Italian", "it", "https://alphacephei.com/vosk/models/vosk-model-small-it-0.4.zip", listOf("IT")),
         LanguageModelInfo("Dutch", "nl", "https://alphacephei.com/vosk/models/vosk-model-small-nl-0.22.zip", listOf("NL", "BE")),
-        LanguageModelInfo("Greek", "el", "https://alphacephei.com/vosk/models/vosk-model-small-el-0.3.zip", listOf("GR")),
+        LanguageModelInfo("Greek", "el", null, listOf("GR")),
         LanguageModelInfo("Polish", "pl", "https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip", listOf("PL")),
-        LanguageModelInfo("Swedish", "sv", "https://alphacephei.com/vosk/models/vosk-model-small-sv-0.15.zip", listOf("SE")),
-        LanguageModelInfo("Ukrainian", "uk", "https://alphacephei.com/vosk/models/vosk-model-small-uk-0.22.zip", listOf("UA")),
+        LanguageModelInfo("Swedish", "sv", "https://alphacephei.com/vosk/models/vosk-model-small-sv-rhasspy-0.15.zip", listOf("SE")),
+        LanguageModelInfo("Ukrainian", "uk", "https://alphacephei.com/vosk/models/vosk-model-small-uk-v3-nano.zip", listOf("UA")),
         LanguageModelInfo("Farsi", "fa", "https://alphacephei.com/vosk/models/vosk-model-small-fa-0.4.zip", listOf("IR"))
     )
 
@@ -132,9 +141,16 @@ class LanguageViewModel(application: Application) : AndroidViewModel(application
 
     fun downloadLanguage(lang: LanguageModelInfo) {
         viewModelScope.launch {
-            downloader.downloadModel(lang.code, lang.url)
+            downloader.downloadModel(lang.code, lang.url ?: return@launch)
         }
     }
+
+    /**
+     * Whether songs in [languageCode] need a downloaded speech model to be fully usable.
+     * Languages Vosk has no model for never do, so they must not be reported as missing one.
+     */
+    fun needsSpeechModel(languageCode: String): Boolean =
+        availableLanguages.find { it.code == languageCode }?.hasSpeechModel ?: true
 
     fun markSetupComplete() {
         viewModelScope.launch {
