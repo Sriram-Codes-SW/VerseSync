@@ -21,7 +21,7 @@ import androidx.room.migration.Migration
  * 3. Run `VerseDatabaseMigrationTest` on a device or emulator. It opens a database created from the
  *    previous schema file and fails when the migration is missing or wrong.
  */
-@Database(entities = [Song::class, Folder::class], version = 3, exportSchema = true)
+@Database(entities = [Song::class, Folder::class], version = 4, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class VerseDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
