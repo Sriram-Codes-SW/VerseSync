@@ -17,6 +17,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -30,10 +33,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import dev.sriramcodessw.versesync.data.Setlist
 import dev.sriramcodessw.versesync.data.SetlistEntryWithSong
 import dev.sriramcodessw.versesync.data.Song
+import kotlinx.coroutines.flow.Flow
 
 /** The Setlists tab of the main screen (ADR-20). Concert mode is free, so nothing here looks at Pro status. */
 @Composable
@@ -139,19 +148,80 @@ fun DeleteSetlistDialog(
     )
 }
 
-/** Shows a setlist and adds songs to it, at the end. Reordering and removing come next (ADR-20). */
+/** Asks for a new name for a setlist. */
+@Composable
+fun RenameSetlistDialog(
+    currentName: String,
+    onRename: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by rememberSaveable { mutableStateOf(currentName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename setlist") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = { TextButton(onClick = { onRename(name) }) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+/**
+ * Shows a setlist and edits it (ADR-20): add songs at the end, move one up or down (buttons, so a
+ * screen reader can use them), remove one with an undo, and rename the setlist.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetlistEditorScreen(
     name: String,
     entries: List<SetlistEntryWithSong>,
     library: List<Song>,
+    removed: Flow<RemovedEntry>,
     onAddSong: (Int) -> Unit,
+    onMove: (entryId: Int, by: Int) -> Unit,
+    onRemove: (row: SetlistEntryWithSong, index: Int) -> Unit,
+    onUndo: (RemovedEntry) -> Unit,
+    onRename: (String) -> Unit,
     onStart: () -> Unit,
     onBack: () -> Unit,
 ) {
     var showPicker by remember { mutableStateOf(false) }
+    var showRename by rememberSaveable { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+
+    // Each removal offers an undo for a while. Taking it puts the song back where it was.
+    LaunchedEffect(removed) {
+        removed.collect { gone ->
+            val result =
+                snackbar.showSnackbar(
+                    message = "Removed ${gone.title}",
+                    actionLabel = "Undo",
+                    duration = SnackbarDuration.Long,
+                )
+            if (result == SnackbarResult.ActionPerformed) onUndo(gone)
+        }
+    }
+
+    if (showRename) {
+        RenameSetlistDialog(
+            currentName = name,
+            onRename = {
+                showRename = false
+                onRename(it)
+            },
+            onDismiss = { showRename = false },
+        )
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text(name) },
@@ -159,6 +229,9 @@ fun SetlistEditorScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
                 actions = {
+                    IconButton(onClick = { showRename = true }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Rename setlist")
+                    }
                     IconButton(onClick = onStart, enabled = entries.isNotEmpty()) {
                         Icon(Icons.Default.PlayArrow, contentDescription = "Start concert")
                     }
@@ -187,12 +260,31 @@ fun SetlistEditorScreen(
             } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     itemsIndexed(entries, key = { _, row -> row.entry.id }) { position, row ->
-                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            Text("${position + 1}. ${row.song.title}", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                if (row.song.lyrics.isBlank()) "${row.song.artist} - no lyrics" else row.song.artist,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(vertical = 12.dp)) {
+                                Text("${position + 1}. ${row.song.title}", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    if (row.song.lyrics.isBlank()) "${row.song.artist} - no lyrics" else row.song.artist,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            IconButton(
+                                onClick = { onMove(row.entry.id, -1) },
+                                enabled = position > 0,
+                                modifier = Modifier.size(56.dp),
+                            ) { Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move ${row.song.title} up") }
+                            IconButton(
+                                onClick = { onMove(row.entry.id, 1) },
+                                enabled = position < entries.lastIndex,
+                                modifier = Modifier.size(56.dp),
+                            ) { Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move ${row.song.title} down") }
+                            IconButton(
+                                onClick = { onRemove(row, position) },
+                                modifier = Modifier.size(56.dp),
+                            ) { Icon(Icons.Default.Delete, contentDescription = "Remove ${row.song.title}") }
                         }
                         HorizontalDivider()
                     }

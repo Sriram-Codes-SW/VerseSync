@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -299,5 +300,72 @@ class SetlistDaoInstrumentedTest {
             songs.insert(Song(id = a, title = "A again", artist = "A", lyrics = "words"))
 
             assertEquals(emptyList<String>(), titles(list))
+        }
+
+    @Test
+    fun insertAtPutsASongBackWhereItWasAndNeverLeavesItAtTheEnd() =
+        runBlocking {
+            val ids = listOf("A", "B", "C").map { addSong(it) }
+            val list = newSetlist()
+            ids.forEach { setlists.appendSong(list, it) }
+
+            val first = setlists.insertAt(list, ids[2], 0)
+            val middle = setlists.insertAt(list, ids[0], 2)
+            val past = setlists.insertAt(list, ids[1], 99)
+
+            assertEquals(listOf("C", "A", "A", "B", "C", "B"), titles(list))
+            assertEquals(3, setOf(first, middle, past).size)
+            assertEquals(listOf(0, 1, 2, 3, 4, 5), setlists.getEntries(list).map { it.position })
+        }
+
+    @Test
+    fun insertAtOnAnEmptySetlistAndWithANegativeIndexIsFirst() =
+        runBlocking {
+            val a = addSong("A")
+            val b = addSong("B")
+            val list = newSetlist()
+
+            setlists.insertAt(list, a, 5)
+            setlists.insertAt(list, b, -3)
+
+            assertEquals(listOf("B", "A"), titles(list))
+        }
+
+    @Test
+    fun moveEntryMovesOnePlaceAndStopsAtTheEnds() =
+        runBlocking {
+            val ids = listOf("A", "B", "C").map { addSong(it) }
+            val list = newSetlist()
+            val entries = ids.map { setlists.appendSong(list, it) }
+
+            assertTrue(setlists.moveEntry(list, entries[2], -1))
+            assertEquals(listOf("A", "C", "B"), titles(list))
+            assertTrue(setlists.moveEntry(list, entries[0], 1))
+            assertEquals(listOf("C", "A", "B"), titles(list))
+
+            assertFalse(setlists.moveEntry(list, entries[1], 1))
+            assertFalse(setlists.moveEntry(list, entries[2], -1))
+            assertEquals(listOf("C", "A", "B"), titles(list))
+        }
+
+    @Test
+    fun moveEntryIgnoresAnEntryOfAnotherSetlistAndKeepsRepeatedSongsApart() =
+        runBlocking {
+            val a = addSong("A")
+            val b = addSong("B")
+            val one = newSetlist("One")
+            val two = newSetlist("Two")
+            val first = setlists.appendSong(one, a)
+            setlists.appendSong(one, b)
+            val repeat = setlists.appendSong(one, a)
+            val foreign = setlists.appendSong(two, a)
+
+            assertFalse(setlists.moveEntry(one, foreign, -1))
+            assertTrue(setlists.moveEntry(one, repeat, -2))
+
+            assertEquals(listOf("A", "A", "B"), titles(one))
+            assertEquals(repeat, setlists.getEntries(one)[0].id)
+            assertEquals(first, setlists.getEntries(one)[1].id)
+            assertEquals(listOf("A"), titles(two))
         }
 }

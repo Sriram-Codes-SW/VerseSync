@@ -56,6 +56,8 @@ fun MainScreen(
     var showNewSetlistDialog by rememberSaveable { mutableStateOf(false) }
     var setlistToDelete by remember { mutableStateOf<Setlist?>(null) }
     val setlists by setlistsViewModel.setlists.collectAsState()
+    // A new setlist opens in the editor. It arrives as a one-shot event, so a rotation neither repeats nor loses it.
+    LaunchedEffect(setlistsViewModel) { setlistsViewModel.created.collect { onOpenSetlist(it) } }
     val resume by setlistsViewModel.resume.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
@@ -106,6 +108,8 @@ fun MainScreen(
     var micIconSize by remember { mutableStateOf(IntSize.Zero) }
     var addFabAnchor by remember { mutableStateOf(Offset.Zero) }
     var addFabSize by remember { mutableStateOf(IntSize.Zero) }
+    var setlistsTabAnchor by remember { mutableStateOf(Offset.Zero) }
+    var setlistsTabSize by remember { mutableStateOf(IntSize.Zero) }
 
     val tourSteps =
         listOf(
@@ -118,6 +122,12 @@ fun MainScreen(
                 size = micIconSize,
             ),
             TourStep("Add Music", "Create new lyrics.", anchor = addFabAnchor, size = addFabSize),
+            TourStep(
+                "Concerts",
+                "Make a setlist for a show. It works with no network, and the concert screen is free.",
+                anchor = setlistsTabAnchor,
+                size = setlistsTabSize,
+            ),
         )
 
     if (songToDelete != null) {
@@ -209,245 +219,255 @@ fun MainScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            Column {
-                TopAppBar(
-                    title = {
-                        if (isSelectionMode) {
-                            Text("${selectedSongs.size} Selected")
-                        } else {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("VerseSync")
-                                if (!isPro) TrialBadge(remainingTrials)
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        if (isSelectionMode) {
-                            IconButton(onClick = {
-                                isSelectionMode = false
-                                selectedSongs.clear()
-                            }) {
-                                Icon(Icons.Default.Close, contentDescription = "Cancel selection")
-                            }
-                        }
-                    },
-                    actions = {
-                        if (isSelectionMode) {
-                            IconButton(onClick = { showMoveToFolderDialog = true }) {
-                                Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = "Move selected")
-                            }
-                            IconButton(onClick = {
-                                verseViewModel.deleteSongs(selectedSongs.toList())
-                                selectedSongs.clear()
-                                isSelectionMode = false
-                            }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete selected")
-                            }
-                        } else {
-                            IconButton(onClick = { showSortMenu = true }) {
-                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort library")
-                                DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text("Title (A-Z)") },
-                                        onClick = {
-                                            verseViewModel.updateSortOrder(SortOrder.TITLE)
-                                            showSortMenu = false
-                                        },
-                                        leadingIcon = { if (sortOrder == SortOrder.TITLE) Icon(Icons.Default.Check, null) },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Artist") },
-                                        onClick = {
-                                            verseViewModel.updateSortOrder(SortOrder.ARTIST)
-                                            showSortMenu = false
-                                        },
-                                        leadingIcon = { if (sortOrder == SortOrder.ARTIST) Icon(Icons.Default.Check, null) },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Recently Added") },
-                                        onClick = {
-                                            verseViewModel.updateSortOrder(SortOrder.RECENT)
-                                            showSortMenu = false
-                                        },
-                                        leadingIcon = { if (sortOrder == SortOrder.RECENT) Icon(Icons.Default.Check, null) },
-                                    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                Column {
+                    TopAppBar(
+                        title = {
+                            if (isSelectionMode) {
+                                Text("${selectedSongs.size} Selected")
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("VerseSync")
+                                    if (!isPro) TrialBadge(remainingTrials)
                                 }
                             }
-                            IconButton(
-                                onClick = onNavigateToRecognition,
-                                modifier =
-                                    Modifier.onGloballyPositioned {
-                                        micIconAnchor = it.positionInRoot()
-                                        micIconSize = it.size
-                                    },
-                            ) {
-                                Icon(Icons.Filled.Mic, contentDescription = "Recognize Song")
-                            }
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                            }
-                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                DropdownMenuItem(text = { Text("Settings") }, onClick = {
-                                    showMenu = false
-                                    onNavigateToSettings()
-                                })
-                                DropdownMenuItem(text = { Text("Tip Jar") }, onClick = {
-                                    showMenu = false
-                                    onNavigateToTipJar()
-                                })
-                            }
-                        }
-                    },
-                )
-
-                if (!isSelectionMode && selectedTab != 2) {
-                    SearchBar(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        inputField = {
-                            SearchBarDefaults.InputField(
-                                query = searchQuery,
-                                onQueryChange = { verseViewModel.updateSearchQuery(it) },
-                                onSearch = {},
-                                expanded = false,
-                                onExpandedChange = {},
-                                placeholder = { Text("Search songs...") },
-                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                            )
                         },
-                        expanded = false,
-                        onExpandedChange = {},
-                    ) {}
-                }
-
-                TabRow(selectedTabIndex = selectedTab) {
-                    Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
-                        Text("Songs", modifier = Modifier.padding(16.dp))
-                    }
-                    Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-                        Text("Folders", modifier = Modifier.padding(16.dp))
-                    }
-                    Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
-                        Text("Setlists", modifier = Modifier.padding(16.dp))
-                    }
-                }
-            }
-        },
-        floatingActionButton = {
-            if (!isSelectionMode) {
-                FloatingActionButton(
-                    onClick = {
-                        if (selectedTab == 2) {
-                            // Concert mode is free: a new setlist never checks Pro status or uses a trial.
-                            showNewSetlistDialog = true
-                        } else if (selectedTab == 0) {
-                            if (isPro || songs.size < 10) {
-                                onNavigateToAddSong()
-                            } else if (remainingTrials > 0) {
-                                pendingProAction = "Unlimited Library"
-                            } else {
-                                onNavigateToTipJar()
+                        navigationIcon = {
+                            if (isSelectionMode) {
+                                IconButton(onClick = {
+                                    isSelectionMode = false
+                                    selectedSongs.clear()
+                                }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Cancel selection")
+                                }
                             }
-                        } else {
-                            if (isPro) {
-                                showAddFolderDialog = true
-                            } else if (remainingTrials > 0) {
-                                pendingProAction = "Folders"
-                            } else {
-                                onNavigateToTipJar()
-                            }
-                        }
-                    },
-                    modifier =
-                        Modifier.onGloballyPositioned {
-                            addFabAnchor = it.positionInRoot()
-                            addFabSize = it.size
                         },
-                ) {
-                    Icon(
-                        imageVector = if (selectedTab == 1) Icons.Default.CreateNewFolder else Icons.Default.Add,
-                        contentDescription =
-                            when (selectedTab) {
-                                0 -> "Add Song"
-                                1 -> "Add Folder"
-                                else -> "New setlist"
+                        actions = {
+                            if (isSelectionMode) {
+                                IconButton(onClick = { showMoveToFolderDialog = true }) {
+                                    Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = "Move selected")
+                                }
+                                IconButton(onClick = {
+                                    verseViewModel.deleteSongs(selectedSongs.toList())
+                                    selectedSongs.clear()
+                                    isSelectionMode = false
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete selected")
+                                }
+                            } else {
+                                IconButton(onClick = { showSortMenu = true }) {
+                                    Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort library")
+                                    DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                        DropdownMenuItem(
+                                            text = { Text("Title (A-Z)") },
+                                            onClick = {
+                                                verseViewModel.updateSortOrder(SortOrder.TITLE)
+                                                showSortMenu = false
+                                            },
+                                            leadingIcon = { if (sortOrder == SortOrder.TITLE) Icon(Icons.Default.Check, null) },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Artist") },
+                                            onClick = {
+                                                verseViewModel.updateSortOrder(SortOrder.ARTIST)
+                                                showSortMenu = false
+                                            },
+                                            leadingIcon = { if (sortOrder == SortOrder.ARTIST) Icon(Icons.Default.Check, null) },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Recently Added") },
+                                            onClick = {
+                                                verseViewModel.updateSortOrder(SortOrder.RECENT)
+                                                showSortMenu = false
+                                            },
+                                            leadingIcon = { if (sortOrder == SortOrder.RECENT) Icon(Icons.Default.Check, null) },
+                                        )
+                                    }
+                                }
+                                IconButton(
+                                    onClick = onNavigateToRecognition,
+                                    modifier =
+                                        Modifier.onGloballyPositioned {
+                                            micIconAnchor = it.positionInRoot()
+                                            micIconSize = it.size
+                                        },
+                                ) {
+                                    Icon(Icons.Filled.Mic, contentDescription = "Recognize Song")
+                                }
+                                IconButton(onClick = { showMenu = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                                }
+                                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                    DropdownMenuItem(text = { Text("Settings") }, onClick = {
+                                        showMenu = false
+                                        onNavigateToSettings()
+                                    })
+                                    DropdownMenuItem(text = { Text("Tip Jar") }, onClick = {
+                                        showMenu = false
+                                        onNavigateToTipJar()
+                                    })
+                                }
+                            }
+                        },
+                    )
+
+                    if (!isSelectionMode && selectedTab != 2) {
+                        SearchBar(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            inputField = {
+                                SearchBarDefaults.InputField(
+                                    query = searchQuery,
+                                    onQueryChange = { verseViewModel.updateSearchQuery(it) },
+                                    onSearch = {},
+                                    expanded = false,
+                                    onExpandedChange = {},
+                                    placeholder = { Text("Search songs...") },
+                                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                                )
                             },
+                            expanded = false,
+                            onExpandedChange = {},
+                        ) {}
+                    }
+
+                    TabRow(selectedTabIndex = selectedTab) {
+                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                            Text("Songs", modifier = Modifier.padding(16.dp))
+                        }
+                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                            Text("Folders", modifier = Modifier.padding(16.dp))
+                        }
+                        Tab(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            modifier =
+                                Modifier.onGloballyPositioned {
+                                    setlistsTabAnchor = it.positionInRoot()
+                                    setlistsTabSize = it.size
+                                },
+                        ) {
+                            Text("Setlists", modifier = Modifier.padding(16.dp))
+                        }
+                    }
+                }
+            },
+            floatingActionButton = {
+                if (!isSelectionMode) {
+                    FloatingActionButton(
+                        onClick = {
+                            if (selectedTab == 2) {
+                                // Concert mode is free: a new setlist never checks Pro status or uses a trial.
+                                showNewSetlistDialog = true
+                            } else if (selectedTab == 0) {
+                                if (isPro || songs.size < 10) {
+                                    onNavigateToAddSong()
+                                } else if (remainingTrials > 0) {
+                                    pendingProAction = "Unlimited Library"
+                                } else {
+                                    onNavigateToTipJar()
+                                }
+                            } else {
+                                if (isPro) {
+                                    showAddFolderDialog = true
+                                } else if (remainingTrials > 0) {
+                                    pendingProAction = "Folders"
+                                } else {
+                                    onNavigateToTipJar()
+                                }
+                            }
+                        },
+                        modifier =
+                            Modifier.onGloballyPositioned {
+                                addFabAnchor = it.positionInRoot()
+                                addFabSize = it.size
+                            },
+                    ) {
+                        Icon(
+                            imageVector = if (selectedTab == 1) Icons.Default.CreateNewFolder else Icons.Default.Add,
+                            contentDescription =
+                                when (selectedTab) {
+                                    0 -> "Add Song"
+                                    1 -> "Add Folder"
+                                    else -> "New setlist"
+                                },
+                        )
+                    }
+                }
+            },
+        ) { paddingValues ->
+            Box(modifier = Modifier.padding(paddingValues)) {
+                if (selectedTab == 0) {
+                    SongListContent(
+                        songs = songs,
+                        folders = folders,
+                        selectedSongs = selectedSongs,
+                        isSelectionMode = isSelectionMode,
+                        onSongClick = {
+                            if (isSelectionMode) {
+                                if (selectedSongs.contains(it)) selectedSongs.remove(it) else selectedSongs.add(it)
+                                if (selectedSongs.isEmpty()) isSelectionMode = false
+                            } else {
+                                onSongClick(it.id)
+                            }
+                        },
+                        onLongClick = {
+                            isSelectionMode = true
+                            selectedSongs.add(it)
+                        },
+                    )
+                } else if (selectedTab == 1) {
+                    FolderListContent(
+                        folders = folders,
+                        onDelete = { folderToDelete = it },
+                    )
+                } else {
+                    SetlistsTabContent(
+                        setlists = setlists,
+                        resume = resume,
+                        onResume = onStartConcert,
+                        onOpen = onOpenSetlist,
+                        onStart = onStartConcert,
+                        onDelete = { setlistToDelete = it },
+                    )
+                }
+
+                if (showNewSetlistDialog) {
+                    NewSetlistDialog(
+                        onCreate = { name ->
+                            showNewSetlistDialog = false
+                            setlistsViewModel.create(name)
+                        },
+                        onDismiss = { showNewSetlistDialog = false },
+                    )
+                }
+                setlistToDelete?.let { setlist ->
+                    DeleteSetlistDialog(
+                        setlist = setlist,
+                        onConfirm = {
+                            setlistsViewModel.delete(setlist.id)
+                            setlistToDelete = null
+                        },
+                        onDismiss = { setlistToDelete = null },
                     )
                 }
             }
-        },
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
-            if (selectedTab == 0) {
-                SongListContent(
-                    songs = songs,
-                    folders = folders,
-                    selectedSongs = selectedSongs,
-                    isSelectionMode = isSelectionMode,
-                    onSongClick = {
-                        if (isSelectionMode) {
-                            if (selectedSongs.contains(it)) selectedSongs.remove(it) else selectedSongs.add(it)
-                            if (selectedSongs.isEmpty()) isSelectionMode = false
-                        } else {
-                            onSongClick(it.id)
-                        }
-                    },
-                    onLongClick = {
-                        isSelectionMode = true
-                        selectedSongs.add(it)
-                    },
-                )
-            } else if (selectedTab == 1) {
-                FolderListContent(
-                    folders = folders,
-                    onDelete = { folderToDelete = it },
-                )
-            } else {
-                SetlistsTabContent(
-                    setlists = setlists,
-                    resume = resume,
-                    onResume = onStartConcert,
-                    onOpen = onOpenSetlist,
-                    onStart = onStartConcert,
-                    onDelete = { setlistToDelete = it },
-                )
-            }
-
-            if (showNewSetlistDialog) {
-                NewSetlistDialog(
-                    onCreate = { name ->
-                        showNewSetlistDialog = false
-                        setlistsViewModel.create(name) { id -> onOpenSetlist(id) }
-                    },
-                    onDismiss = { showNewSetlistDialog = false },
-                )
-            }
-            setlistToDelete?.let { setlist ->
-                DeleteSetlistDialog(
-                    setlist = setlist,
-                    onConfirm = {
-                        setlistsViewModel.delete(setlist.id)
-                        setlistToDelete = null
-                    },
-                    onDismiss = { setlistToDelete = null },
-                )
-            }
-
-            if (!isMainTourCompleted) {
-                TourOverlay(
-                    steps = tourSteps,
-                    currentStepIndex = currentTourStep,
-                    onNext = {
-                        if (currentTourStep < tourSteps.size - 1) {
-                            currentTourStep++
-                        } else {
-                            onboardingViewModel.completeMainTour()
-                        }
-                    },
-                    onSkip = { onboardingViewModel.completeMainTour() },
-                )
-            }
+        }
+        // Drawn over the whole screen, above the Scaffold's top bar, because the highlighted places are measured from the window.
+        if (!isMainTourCompleted) {
+            TourOverlay(
+                steps = tourSteps,
+                currentStepIndex = currentTourStep,
+                onNext = {
+                    if (currentTourStep < tourSteps.size - 1) {
+                        currentTourStep++
+                    } else {
+                        onboardingViewModel.completeMainTour()
+                    }
+                },
+                onSkip = { onboardingViewModel.completeMainTour() },
+            )
         }
     }
 }

@@ -76,4 +76,39 @@ abstract class SetlistDao {
         }
         orderedEntryIds.forEachIndexed { index, entryId -> setPosition(setlistId, entryId, index) }
     }
+
+    /**
+     * Adds a song at [index] (0 is first, an index past the end means last) in one transaction, so
+     * the setlist never shows the song at the end first. It is how an undo puts a removed song back.
+     * Returns the new entry's id, which is not the old one.
+     */
+    @Transaction
+    open suspend fun insertAt(
+        setlistId: Int,
+        songId: Int,
+        index: Int,
+    ): Int {
+        val newId = appendSong(setlistId, songId)
+        val ids = getEntries(setlistId).map { it.id }
+        reorder(setlistId, SetlistOrder.move(ids, from = ids.lastIndex, to = index))
+        return newId
+    }
+
+    /**
+     * Moves an entry [by] places (-1 is one earlier, 1 is one later), stopping at the ends. An entry
+     * that is not in the setlist changes nothing. Returns true when something moved.
+     */
+    @Transaction
+    open suspend fun moveEntry(
+        setlistId: Int,
+        entryId: Int,
+        by: Int,
+    ): Boolean {
+        val ids = getEntries(setlistId).map { it.id }
+        val from = ids.indexOf(entryId)
+        val moved = SetlistOrder.move(ids, from, from + by)
+        if (moved == ids) return false
+        reorder(setlistId, moved)
+        return true
+    }
 }

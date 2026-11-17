@@ -326,7 +326,12 @@ fun VerseSyncNavHost(
                 name = setlistName,
                 entries = entries,
                 library = songs,
+                removed = setlistsViewModel.removed,
                 onAddSong = { songId -> setlistsViewModel.addSong(setlistId, songId) },
+                onMove = { entryId, by -> setlistsViewModel.move(setlistId, entryId, by) },
+                onRemove = { row, index -> setlistsViewModel.remove(row, index) },
+                onUndo = { gone -> setlistsViewModel.undoRemove(gone) },
+                onRename = { newName -> setlistsViewModel.rename(setlistId, newName) },
                 onStart = { navController.navigate("concert/$setlistId") { launchSingleTop = true } },
                 onBack = { navController.popBackStack() },
             )
