@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.38 |
+| Version | 0.39 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -451,7 +451,7 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   8. *Readability.* A dark high-contrast theme is the default and a light high-contrast theme is an option for a daytime show, with a text size setting. The app does not change the screen's brightness.
   9. *Permissions.* Concert mode requests no permission. It works with no network, so airplane mode may be suggested to save battery.
   10. *Order of work, one PR each:* this decision; the lock fix for a configuration change (#69); the data layer and its tests; the setlist editor and the concert screen. Then the owner uses it at home and at one show and reports what worked, with a note of the battery used.
-  11. *Progress.* Built so far: the lock fix (#69), the data layer (version 4), and the first slice of the screens: a Setlists tab on the main screen (make, open and delete a setlist, add songs at the end), a Resume card, and the concert screen with next, previous, a song list, blank, a song that is not in the setlist, display settings (text size, light or dark) and a place that survives the process being killed. The order of work was changed on a second opinion to build the concert screen first, with a minimal editor. Still to do: rename, move up and down, remove with undo, and the tour step.
+  11. *Progress.* Built: the lock fix (#69), the data layer (version 4), the Setlists tab, the Resume card and the concert screen (#74), and now the editor: rename, move up and down, remove with an undo, and a Concerts step in the tour. The order of work was changed on a second opinion to build the concert screen first. Phase 1 is complete; the owner's trial at home and at one show is next, and its result decides what to change before any recognition is considered.
   **Later phases, proposed and not decided, each needing its own ADR with its own measured pass bar:** suggestions from heard words, restricted to the setlist, with an ordering prior (the same song continues, or the next one follows, with a small share kept for a song not on the list), shown as a question and never switching the song by itself; and a line follower that moves the lyrics by matching heard words to nearby lines, with manual scrolling as the fallback. Any recognition is new, and no concert suggestion ever opens the voice shortcut or the vocal lock (as ADR-19 requires for fingerprints).
   **Measured before any recognition is built:** the harness restricted to libraries the size of a setlist (for example 15, 20 and 30 songs); a simulator of setlist sequences with the ordering prior and its pass bar fixed before the run; and a trial by the owner at home with a live album they own through a speaker, recording only per-trial results (the song, the suggestion, the time to the right song, wrong switches) and never audio. At a concert the owner would tap the true song as ground truth, so no audio is recorded and bystanders are not captured.
 * **Consequences:**
