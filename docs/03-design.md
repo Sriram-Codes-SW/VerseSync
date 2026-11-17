@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.27 |
+| Version | 0.28 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -339,6 +339,41 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   * The only pre-release library left in the release build is the biometric beta. Revisit it when 1.4 reaches a stable release.
   * Room 2.8's migration test helper needs kotlinx.serialization 1.8, while the lifecycle libraries pin 1.7.3 and the helper then fails with `AbstractMethodError`. The newer version is added for debug and test builds only. The release classpath is unchanged.
   * Checked: the database of the previous build opens and keeps its songs after an upgrade install, `VerseDatabaseMigrationTest` passes, the exported schema is unchanged, and the app lock enables, prompts and unlocks on an Android 16 (API 36) emulator with a screen lock. The same app lock steps pass on Android 9 and 10 emulators (TC-M-14).
+
+
+### ADR-18: A Speech Decision Layer for the Vocal Lock
+
+* **Status:** Proposed. This ADR does not authorize code changes. Nothing in the app changes until the conditions below are met and the owner approves.
+* **Context:**
+  Recognition builds a list of candidate songs and a person chooses one, so a wrong candidate is harmless (ADR-03, ADR-05). The vocal lock decides without a person choosing (ADR-10). Its words path today uses the candidate rule's evidence: at least three different heard words, and a rarity-weighted score at least 25 percent above the strongest other candidate.
+  The evidence below is from read speech, not singing, with an evaluation library of 80 songs (docs/09, section 12; earlier sections used libraries of 92, 110 and 155 songs). On 707 fresh recordings of songs that are not in the library, the current lock words rule decided on some song for 32 percent (29 to 35) and the current speech rule for 46 percent (42 to 50). "Decided on some song" means naming any of the 80 songs. These were measured with the rival taken from every song that has a heard word; the app as built takes it among candidates only (`combineCandidates`), which is laxer, so the app itself was not measured exactly. On 105 recordings of songs in the library the lock words rule named a wrong song for 1.0 percent (0.2 to 5.2). The lock opens for one target, and its rate per pair of recording and target song was measured only for earlier corpora and the current rules: 57 of 32,344 (0.2 percent, section 8) and 83 of 93,685 (0.1 percent, section 10).
+  A rule chosen on other recordings and reported once on these 812 (section 12) decided on a song not in the library for 0 of 707 (upper end of the 95 percent interval 0.5 percent), so it opened for no target song, and named a wrong song for 0 of 105 (upper end 3.5 percent). It named the right song for 70 percent (60 to 78) of recordings in the library, against 85 percent (77 to 90) for the lock words rule, and for 51 percent (36 to 67) of the 3 second snippets. It acted at a median of 2.6 seconds, against 2.1.
+* **Considered Options:**
+  1. *Keep the lock's rule:* The measured permissiveness stays in a feature people may read as secure.
+  2. *Tighten the candidate rule (share and minimum words):* Changes the recognition list, where a wrong candidate is harmless, and removes right candidates for no gain there. A sweep showed the trade (docs/09, section 9). Rejected.
+  3. *A decision rule separate from the candidate rule, used only where the app acts without a person choosing (the lock):* The candidate list stays as it is. This is the proposal.
+  4. *Wait before acting (a hold):* Evaluated and not adopted. On the selection corpora, at the chosen thresholds, a hold of 0.5 seconds lowered right answers from 74 to 67 percent for no measurable gain in false decisions (0.6 to 0.5 percent, within noise).
+  5. *Use pitch as decision evidence:* On read speech pitch gave a candidate for 53 percent of recordings of songs not in the library, and found only 16 percent of pieces of their own reference (docs/09, section 8). Not usable for a decision until the pitch matching is rebuilt (roadmap item 4).
+* **Decision (proposed):**
+  The words path of the lock opens only if the rule below names the target song.
+  * *Words.* Heard words are the tokens of the recognizer's text after dropping words under 3 letters (Chinese and Japanese tokens are character pairs and are kept); lyrics are tokenized the same way (ADR-14).
+  * *Evidence, per song with at least one heard word in its lyrics.* `words`: the number of different heard words found in its lyrics. `share`: the heard words found, repeats counted, divided by the heard words. `weight`: the sum over the different found words of `ln(1 + N / df)`, where `N` is the number of songs in the library, including songs with no lyrics, and `df` is the number of songs whose lyrics contain the word.
+  * *Rule.* The target must be the song with the highest weight, with `words` at least 4, `share` at least 0.8, and its weight above the strongest other song's weight by MORE than `1.0 * ln(1 + N)`. The strongest other song is taken over every song with a heard word, not only candidates, and is 0 if there is none. A tie never decides. The measured rule let a song whose lyrics have fewer than 4 different words open on all of them; for the lock that exception is removed, so a target whose lyrics have fewer than 4 different words does not open on the words path. That is stricter than what was measured, and what it costs was not measured.
+  * *Evidence over time.* The measured rule used evidence that can be taken back: for each song, the best result among finished utterances plus only the current partial result, so a later partial replaces an earlier one. A result the app has only because the recognizer was stopped does not count. The app keeps evidence that only grows (`speechEvidence`). The growing kind was measured only on the selection corpora (196 against 197 right and 5 against 5 false decisions of 810, at the chosen settings), not on the fresh corpus, so an implementation must pick one and measure it.
+  * *Timing.* The rule acts the first time it holds, with no hold.
+  The candidate list, the recognition screen, the pitch path of the lock and the two-attempts fallback to the device lock are unchanged. The rule would live in the main sources as its own class beside `VocalLockPolicy`, and the evaluation harness would run that same class.
+* **Consequences:**
+  * The lock opens less often for the right voice: 70 percent against 85 percent of read recordings, later (median 2.6 seconds), and for about half of 3 second snippets. Each failed attempt counts toward the fallback, so more people reach the device lock.
+  * The lock asks for more words that the recognizer heard correctly. A garbled transcript, which the small models often give, lowers the share of heard words found and stops the rule from deciding. Speech that the recognizer handles badly, which includes some accents, children's voices and speech impairments, will reach the device lock more often. This was not measured.
+  * Not measured, and each is a condition below: singing; real lyrics, which repeat words in choruses (a word counts once toward the minimum and each time toward the share); libraries other than 80 songs, since the gap is scaled by `ln(1 + N)` and a library of fewer than about 15 songs, where a target with no rival and 4 found words (each weighs at least `ln 2`, so at least 2.7 together) always passes the gap test because `ln(1 + N)` is below 2.7, behaves differently; Chinese and Japanese; any language except English, Hindi, Spanish, German and French; the live recognizer, whose timing and partial results differ from the replay; the speakers, who were not checked to be different between the selection and report corpora; and the app's own way of gathering evidence.
+  * 0 of 105 wrong songs has an upper end of 3.5 percent, so a wrong-song rate under 1 percent is not shown, only that none occurred.
+  * The vocal lock still checks the words, not the speaker. The decision rule does not change that, and the lock's name and copy are a separate item (#48).
+* **Conditions before it ships:**
+  1. The pass bar is met on real recordings of singing and of speaking from the evaluation set (#43), not only on read speech: the upper end of the interval for deciding on a song not in the library is at most 5 percent, and a wrong song is named for at most 1 percent with an upper bound shown, which needs about 300 recordings of songs in the library with none named wrongly.
+  2. The rate at which the lock opens for a wrong target is measured per pair of recording and target song, with libraries of the sizes real users have (for example 1, 5, 20 and 200 songs), and for languages written with character pairs. A library too small for the rule to mean anything is refused on the words path.
+  3. A check on a real phone, with the live recognizer, of the time to open and of how often the lock opens for the right voice, including children and accented speech.
+  4. The rule is moved into the main sources with tests, one way of gathering evidence is chosen and measured, `VocalLockPolicy` uses it, and ADR-10 is amended.
+  5. The owner approves the change in what the lock asks of a person.
 
 ---
 
