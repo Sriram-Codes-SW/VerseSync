@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.7 |
+| Version | 0.8 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -281,7 +281,25 @@ What it does not show:
 - **Singing, real lyrics, or the live app.** These are read sentences, four-sentence "songs" that share vocabulary the way Wikipedia text does, an 80-song library, and transcripts fed to Vosk faster than real time on an emulator. Real lyrics repeat words in choruses (a word counts once), sung speech is recognized worse and its partial results flicker more, and a live recognizer's timing differs from this replay.
 - **Anything about the app.** Nothing is adopted. A decision rule, if it ships, is its own layer on top of the unchanged candidate list, with an ADR and a check on real singing, and the lock would use it for its one target song.
 
-## 13. Not verified
+## 13. Recorded-music fingerprints: the plan, fixed before the run
+
+ADR-19 (Proposed). This section was written and committed before the matcher was run on any generated corpus. It is a different input from everything above: a recording playing near the phone, matched against fingerprints made from the same recording, with no speech and no pitch. Nothing here uses or stores copyrighted audio. The test music is generated from a seed at test time and is never committed.
+
+**What is built (phase 1, no app change).** A pure-Kotlin landmark matcher in `fingerprinting/landmarks`, written from the published method (Wang 2003): framing and a Hann window, a radix-2 FFT, spectral peaks from 250 to 4000 Hz (the band a phone speaker can reproduce), pairs of peaks as 22-bit hashes, and offset voting. It starts from these fixed parameters, which are not tuned on any corpus: 16 kHz mono; FFT 1024 (15.6 Hz bins); hop 256 (62.5 frames per second); a peak is a local maximum within 10 bins and 8 frames, at most 30 per second; each anchor pairs with its 5 strongest peaks 2 to 63 frames ahead and within 64 bins; hash = anchor bin (9 bits), bin difference (7 bits), frame difference (6 bits); stored per hash: the hash and the anchor frame (6 bytes packed). A match needs a count of votes at one offset (summed over three adjacent frames) of at least `minVotes`, and at least `ratio` times the votes of the best other song.
+
+**Generated corpora.** Two seeds (A, for choosing, and B, for reporting once), each with 60 library songs of 90 seconds and 40 songs of 90 seconds that are not in the library. A song is made of harmonic notes in a key, a chord progression, a melody, a bass line and noise percussion, in sections that repeat (a chorus returns), and songs share tempo (90, 110 or 128), key and progression families, so wrong songs look alike. Each library song is fingerprinted from its clean audio. Queries are 3, 5 or 10 seconds from random starts: 5 per library song (300) and 1,000 from songs not in the library, the same query set for every condition.
+
+**Conditions** (each damages the same queries): clean; white noise at 20, 10, 5, 0 and −5 dB signal to noise; pink noise and speech-shaped noise at 5 dB; level +20 dB with clipping and −20 dB; a speaker band of 250 to 4000 Hz; a made-up room echo (24 taps over 0.4 s, decay about 0.45 s); speed +1 and −1 percent; and a **headline condition**: 5 second queries through the speaker band, the echo and pink noise at 5 dB together.
+
+**Choosing (seed A only).** A grid of `minVotes` 8, 10, 12, 15, 20, 25 and `ratio` 1.5, 2, 3 (18 rules). A rule is eligible if, pooled over every condition, it accepts a song for at most 0.1% of recordings of songs not in the library with the upper end of the 95% interval at most 0.5%. Of the eligible rules the one with the best pooled top-1 on library queries is chosen; ties go to more votes, then the larger ratio. If none is eligible, none is chosen and the report says so.
+
+**Pass bar (seed B, reported once).** The chosen rule accepts a wrong song for pooled upper end at most 1%, and its top-1 at the headline condition is at least 80%. Everything else is reported with 95% Wilson intervals and no bar: top-1 and false accepts for every condition, by snippet length.
+
+**Cost of a bigger library, reported with no bar.** Bytes per song, and, on seed B with a library of 60 songs and again with 600 songs of 45 seconds, the median lookup time per query and the false-accept rate, because offline recognition is limited by the fingerprints that fit on the phone.
+
+**What it will not show.** Real recordings, real speakers and rooms, the phone's own audio processing, any cover, live version or edit, or the person singing. Generated music repeats less than real music and overstates accuracy, so a pass here is not a claim about real songs.
+
+## 14. Not verified
 
 - That the transcripts captured by feeding frames into Vosk match what the app hears from a live microphone. Both use the same recognizer and model, but the buffer sizes differ.
 - Anything on singing, children, or real phones: nothing of that has been recorded yet.
