@@ -88,7 +88,8 @@ fun AuthWrapper(activity: AppCompatActivity) {
     val lockConfig by securityViewModel.lockConfig.collectAsState()
     val songs by verseViewModel.songs.collectAsState()
 
-    var isUnlocked by remember { mutableStateOf(false) }
+    // Held in the view model so a rotation does not ask for the lock again (issue #69). It is not saved state, so a cold start still locks.
+    val isUnlocked by securityViewModel.isUnlocked.collectAsState()
     // Where the person is in the voice shortcut. Saved across a rotation, as the count of failed attempts must not reset.
     var attempts by rememberSaveable(stateSaver = VoiceShortcutAttempts.Saver) { mutableStateOf(VoiceShortcutAttempts()) }
     val securityManager = remember { SecurityManager(activity) }
@@ -103,7 +104,7 @@ fun AuthWrapper(activity: AppCompatActivity) {
         securityManager.showBiometricPrompt(
             title = "Unlock VerseSync",
             subtitle = subtitle,
-            onSuccess = { isUnlocked = true },
+            onSuccess = { securityViewModel.markUnlocked() },
             onError = { },
         )
     }
@@ -116,13 +117,13 @@ fun AuthWrapper(activity: AppCompatActivity) {
             stopListening = { hybridViewModel.stopRecognition() },
             promptDevice = { promptDeviceCredential(LockCopy.DEVICE_PROMPT_SUBTITLE) },
         )
-        if (step.next.state == VoiceShortcutAttempts.State.Open) isUnlocked = true
+        if (step.next.state == VoiceShortcutAttempts.State.Open) securityViewModel.markUnlocked()
     }
 
     LaunchedEffect(lockConfig) {
         val config = lockConfig ?: return@LaunchedEffect
         if (!config.enabled) {
-            isUnlocked = true
+            securityViewModel.markUnlocked()
         } else if (config.type != LockType.VOCAL && !isUnlocked) {
             promptDeviceCredential("Access your library")
         }

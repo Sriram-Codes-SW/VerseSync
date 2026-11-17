@@ -13,6 +13,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -85,6 +87,30 @@ class SecurityViewModelTest {
 
             assertEquals(true, awaitReal { prefs.isAppLockEnabled.first { it } })
         }
+
+    @Test
+    fun isUnlocked_startsLocked() {
+        // The app must never start unlocked, whatever is saved (ADR-10).
+        assertFalse(newViewModel().isUnlocked.value)
+    }
+
+    @Test
+    fun markUnlocked_staysUnlockedForTheSameViewModel() {
+        // The same instance is what the activity gets back after a rotation, so no second prompt.
+        val viewModel = newViewModel()
+
+        viewModel.markUnlocked()
+
+        assertTrue(viewModel.isUnlocked.value)
+    }
+
+    @Test
+    fun isUnlocked_isLockedAgainForANewViewModel() {
+        // A new instance stands in for a cold start or the process being killed.
+        newViewModel().markUnlocked()
+
+        assertFalse(newViewModel().isUnlocked.value)
+    }
 
     @Test
     fun setLockType_persistsTheSetting() =
