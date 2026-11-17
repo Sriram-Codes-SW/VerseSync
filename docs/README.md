@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.38 |
+| Version | 0.39 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,8 +14,8 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.36 | Active |
-| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.33 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.37 | Active |
+| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.34 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
@@ -65,3 +65,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.36 | 2026-11-17 | Claude Code | ADR-20 (Proposed): a concert mode for a closed setlist, manual first. Phase 1 has no recognition and no microphone; later phases are proposed only, would only suggest, and need their own ADR and measured pass bar. The assumption that a setlist is known and mostly played in order is not measured. Authorizes no code. Roadmap progress note added. Refs #66.
 | 0.37 | 2026-11-17 | Claude Code | ADR-20 Phase 1 decisions put to the owner (Proposed): two Room tables and the first migration (3 to 4); setlists are not in the library export; concert mode is free and checks no Pro status, while the free library limit and Pro are unchanged; the app lock is kept across a configuration change first (#69); the place is saved; large targets, a reorderable editor, light and dark high-contrast themes, no permissions. Order of work: lock fix, data layer, editor and concert screen. Docs only. Refs #66.
 | 0.38 | 2026-11-17 | Claude Code | ADR-20 Phase 1 accepted by the owner. The app lock is no longer asked for again after a rotation (issues #63 and #69): the unlocked flag lives in `SecurityViewModel`, not in the composition and not in saved state, so a cold start still locks. Reproduced and verified on an Android 16 emulator. ADR-10 amendment, TC-U-51 and TC-M-25. The voice shortcut still picks another song to say after a rotation (rest of #63).
+| 0.39 | 2026-11-18 | Claude Code | ADR-20 Phase 1, the data layer: the database goes to version 4 with the first migration, which adds `setlists` and `setlist_entries` (cascade on setlist and song delete, position not unique, ordered by position then id, a reorder numbers entries in one transaction and is refused unless it lists every entry once). Not wired into any screen and not in the library export. ADR-12 amendment, TC-M-10 updated, TC-M-26 added; the CI emulator job now also runs the setlist storage tests. Not run on a physical device (#8).

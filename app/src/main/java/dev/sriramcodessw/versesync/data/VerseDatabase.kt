@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 
 /**
- * The song library.
+ * Songs, folders and setlists.
  *
  * ### Changing the schema
  * Bumping [version] without a matching entry in [MIGRATIONS] makes Room throw an
@@ -17,20 +17,28 @@ import androidx.room.migration.Migration
  *
  * When changing an entity:
  * 1. Raise `version` and build once, which writes the new schema file to `app/schemas`.
- * 2. Add a `Migration(old, new)` to [MIGRATIONS].
+ * 2. Add a `Migration(old, new)` to `Migrations.kt` and list it in [MIGRATIONS], with the SQL copied
+ *    from the new schema file.
  * 3. Run `VerseDatabaseMigrationTest` on a device or emulator. It opens a database created from the
- *    previous schema file and fails when the migration is missing or wrong.
+ *    previous schema file and fails when the migration is missing or wrong, and
+ *    `runMigrationsAndValidate` checks the migrated database against the new schema file.
  */
-@Database(entities = [Song::class, Folder::class], version = 3, exportSchema = true)
+@Database(
+    entities = [Song::class, Folder::class, Setlist::class, SetlistEntry::class],
+    version = 4,
+    exportSchema = true,
+)
 @TypeConverters(Converters::class)
 abstract class VerseDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
 
+    abstract fun setlistDao(): SetlistDao
+
     companion object {
         const val NAME = "verse_database"
 
-        /** Every migration between released versions. Empty while version 3 is the first release. */
-        val MIGRATIONS: Array<Migration> = emptyArray()
+        /** Every migration between released versions. Version 3 was the first release. */
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_3_4)
 
         @Volatile
         @Suppress("ktlint:standard:property-naming") // conventional name for the singleton holder

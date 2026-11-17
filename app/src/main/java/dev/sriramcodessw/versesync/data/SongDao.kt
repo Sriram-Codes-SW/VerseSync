@@ -19,6 +19,11 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%'")
     fun searchSongs(query: String): Flow<List<Song>>
 
+    /**
+     * Adds a song. Pass id 0, which makes a new row. With `REPLACE`, a song with an id that already
+     * exists is deleted first and then written, and the foreign key then deletes that song's setlist
+     * entries (ADR-20). To change a song use [update], never this.
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(song: Song)
 
