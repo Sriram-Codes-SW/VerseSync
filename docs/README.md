@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.17 |
+| Version | 0.18 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,8 +14,8 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.16 | Active |
-| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.17 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.18 | Active |
+| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.18 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
@@ -41,3 +41,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.15 | 2026-11-08 | Claude Code | The `Protect main` ruleset now also requires branches to be up to date before merging. RELEASING.md updated. |
 | 0.16 | 2026-11-08 | Claude Code | Fixed the level meter (it showed pitch confidence, now loudness), removed the unused FingerprintingViewModel, and offered pitch-only languages on the recognition screen (issues #14, #15, #5). Test cases TC-U-28 to TC-U-30 and TC-M-12. Three open items removed. |
 | 0.17 | 2026-11-08 | Claude Code | Phase 0 of the pitch design is done: characterization tests for the current detector (TC-U-31) and a progress note in 07-pitch-detection-design.md. |
+| 0.18 | 2026-11-08 | Claude Code | Real-audio end-to-end test of lyric sync, recognition and the vocal lock (TC-M-13, issue #9), the vocal lock attempt rule extracted and tested (TC-U-32), and a new open item for background noise being fingerprinted (#33). |
