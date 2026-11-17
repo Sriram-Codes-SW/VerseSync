@@ -34,7 +34,7 @@ class ModelDownloader(
 ) {
     private val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val activeDownloads = mutableMapOf<Long, String>()
-    val downloadStatus = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val downloadStatus = ModelDownloadStatus.flow
 
     fun downloadModel(
         languageCode: String,
@@ -58,15 +58,10 @@ class ModelDownloader(
         }
     }
 
-    @Synchronized
     private fun updateStatus(
         lang: String,
         progress: Int,
-    ) {
-        val current = downloadStatus.value.toMutableMap()
-        current[lang] = progress
-        downloadStatus.value = current
-    }
+    ) = ModelDownloadStatus.update(lang, progress)
 
     val onDownloadComplete =
         object : BroadcastReceiver() {
@@ -75,8 +70,9 @@ class ModelDownloader(
                 intent: Intent,
             ) {
                 val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-                // Unpacking a model can take seconds. Doing it on the main thread risks an ANR,
-                // so keep the broadcast alive and finish it from a worker thread.
+                // Looking up the download is a quick system call, but not one for the main thread.
+                // The slow part, unpacking the model, is handed to WorkManager (see ModelUnpackWorker),
+                // which is not cut off like a broadcast receiver is.
                 val pending = goAsync()
                 Thread {
                     try {
@@ -102,28 +98,10 @@ class ModelDownloader(
             if (description?.startsWith("VerseSyncModel:") != true) return
             val lang = description.substringAfter("VerseSyncModel:")
             if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                unpackModel(lang)
+                ModelUnpackWorker.enqueue(context, lang)
             } else if (status == DownloadManager.STATUS_FAILED) {
                 updateStatus(lang, -1)
             }
-        }
-    }
-
-    private fun unpackModel(languageCode: String) {
-        val externalDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: return
-        val zipFile = File(externalDir, "model-$languageCode.zip")
-        val targetDir = File(context.filesDir, "models/model-$languageCode")
-
-        try {
-            installModelArchive(zipFile, targetDir)
-            zipFile.delete()
-            updateStatus(languageCode, 100)
-            Log.d("ModelDownloader", "Successfully unpacked and flattened $languageCode")
-        } catch (e: Exception) {
-            Log.e("ModelDownloader", "Failed to unpack $languageCode", e)
-            // A model that was already installed is left as it was.
-            zipFile.delete()
-            updateStatus(languageCode, -1)
         }
     }
 }

@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.19 |
+| Version | 0.20 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,8 +14,8 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.19 | Active |
-| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.19 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.20 | Active |
+| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.20 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
@@ -43,3 +43,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.17 | 2026-11-08 | Claude Code | Phase 0 of the pitch design is done: characterization tests for the current detector (TC-U-31) and a progress note in 07-pitch-detection-design.md. |
 | 0.18 | 2026-11-08 | Claude Code | Real-audio end-to-end test of lyric sync, recognition and the vocal lock (TC-M-13, issue #9), the vocal lock attempt rule extracted and tested (TC-U-32), and a new open item for background noise being fingerprinted (#33). |
 | 0.19 | 2026-11-08 | Claude Code | ADR-17: Room 2.8.5 and biometric 1.4.0-beta01 replace the alpha versions. The app lock was run on Android 9, 10 and 16 emulators (TC-M-14, issue #7). Open items for Android 9 and 10 and for the pre-release dependencies replaced by one for the biometric beta. |
+| 0.20 | 2026-11-08 | Claude Code | Model unpacking moved from a broadcast receiver thread to a WorkManager job (issue #6), with TC-U-33 and TC-M-15. New open item for downloads that finish while the app is closed (#36). |

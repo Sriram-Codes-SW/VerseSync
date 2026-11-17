@@ -81,6 +81,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.work.testing)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.glance.appwidget)
 
     implementation(libs.androidx.core.ktx)
