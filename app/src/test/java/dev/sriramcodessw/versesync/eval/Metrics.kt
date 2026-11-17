@@ -1,6 +1,7 @@
 package dev.sriramcodessw.versesync.eval
 
 import dev.sriramcodessw.versesync.engine.MatchEvidence
+import dev.sriramcodessw.versesync.engine.SpeechMatcher
 import dev.sriramcodessw.versesync.ui.screens.VocalLockPolicy
 
 /*
@@ -56,6 +57,7 @@ object Metrics {
         results: List<QueryResult>,
         path: Path,
         library: List<LibrarySong>,
+        leadMargin: Float = SpeechMatcher.LEAD_MARGIN,
     ): Slice {
         var inLibrary = 0
         var outOfLibrary = 0
@@ -80,12 +82,12 @@ object Metrics {
                     outcome.firstSeenMs[target]?.let { latencies += it }
                 }
                 if (isTop1(target, outcome)) top1++
-                if (VocalLockPolicy.opens(outcome.evidence[target])) lockOpens++
+                if (VocalLockPolicy.opens(outcome.evidence[target], leadMargin)) lockOpens++
             }
             for (song in library) {
                 if (song.id == target) continue
                 lockFalseTrials++
-                if (VocalLockPolicy.opens(outcome.evidence[song.id])) lockFalseOpens++
+                if (VocalLockPolicy.opens(outcome.evidence[song.id], leadMargin)) lockFalseOpens++
             }
         }
         return Slice(
@@ -110,9 +112,9 @@ object Metrics {
         return outcome.evidence.all { (id, other) -> id == target || stronger(mine, other) }
     }
 
-    /** More heard words win; with equal words, a closer pitch wins. */
+    /** Rarer heard words win (more of them, and less common in the library); with equal words, a closer pitch wins. */
     private fun stronger(
         a: MatchEvidence,
         b: MatchEvidence,
-    ): Boolean = if (a.speechWords != b.speechWords) a.speechWords > b.speechWords else a.pitchScore < b.pitchScore
+    ): Boolean = if (a.speechWeight != b.speechWeight) a.speechWeight > b.speechWeight else a.pitchScore < b.pitchScore
 }

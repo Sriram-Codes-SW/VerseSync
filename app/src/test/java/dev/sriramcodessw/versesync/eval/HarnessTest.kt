@@ -1,5 +1,6 @@
 package dev.sriramcodessw.versesync.eval
 
+import dev.sriramcodessw.versesync.engine.SpeechRules
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -179,6 +180,23 @@ class HarnessTest {
         val error = runCatching { Corpus.load(dir) }.exceptionOrNull()
         assertTrue(error is IllegalArgumentException)
         assertNull(runCatching { Corpus.load(dir) }.getOrNull())
+    }
+
+    @Test
+    fun sweep_coversEverySetting_andItsDefaultRowIsTheNormalRun() {
+        val (corpus, all) = results()
+        val rows = Sweep.run(corpus)
+
+        assertEquals(Sweep.minWords.size * Sweep.shareThresholds.size * Sweep.fuzzy.size * Sweep.leadMargins.size, rows.size)
+        val normal = Metrics.slice("all", all, Path.SPEECH, corpus.library)
+        val default = rows.single { it.rules == SpeechRules() }
+        assertEquals(normal.found.toString(), default.slice.found.toString())
+        assertEquals(normal.falseAccept.toString(), default.slice.falseAccept.toString())
+        // Asking for more words can only find fewer songs.
+        val oneWord = rows.first { it.rules.minWords == 1 && !it.rules.fuzzy && it.rules.shareThreshold == 0.35f }
+        val threeWords = rows.first { it.rules.minWords == 3 && !it.rules.fuzzy && it.rules.shareThreshold == 0.35f }
+        assertTrue(oneWord.slice.found.hits >= threeWords.slice.found.hits)
+        assertTrue("(default)" in Sweep.markdown(corpus, rows, "synthetic"))
     }
 
     @Test

@@ -3,7 +3,10 @@ package dev.sriramcodessw.versesync.eval
 import dev.sriramcodessw.versesync.engine.MatchEvidence
 import dev.sriramcodessw.versesync.engine.PitchMatch
 import dev.sriramcodessw.versesync.engine.PitchMatcher
+import dev.sriramcodessw.versesync.engine.SpeechLibrary
 import dev.sriramcodessw.versesync.engine.SpeechMatcher
+import dev.sriramcodessw.versesync.engine.SpeechRules
+import dev.sriramcodessw.versesync.engine.SpeechScore
 import dev.sriramcodessw.versesync.engine.lyricTokenSet
 import dev.sriramcodessw.versesync.engine.spokenMatchTokens
 import dev.sriramcodessw.versesync.fingerprinting.PitchTrack
@@ -25,8 +28,10 @@ import dev.sriramcodessw.versesync.fingerprinting.PitchTrack
 /** Which evidence a result is built from. */
 enum class Path { SPEECH, PITCH, COMBINED }
 
-class EvalConfig(
+internal class EvalConfig(
     val pitchIntervalMs: Long = 5000L,
+    /** The speech rules to replay with. The default is what the app runs; the sweep varies it. */
+    val rules: SpeechRules = SpeechRules(),
 )
 
 /** The songs found for one recording by one [Path], strongest first, and when each first appeared. */
@@ -43,11 +48,11 @@ class QueryResult(
     val notes: List<String>,
 )
 
-class Replay(
+internal class Replay(
     private val corpus: Corpus,
     private val config: EvalConfig = EvalConfig(),
 ) {
-    private val lyricTokens: Map<String, Set<String>> = corpus.library.associate { it.id to lyricTokenSet(it.lyricText) }
+    private val speechLibrary = SpeechLibrary(corpus.library.associate { it.id to lyricTokenSet(it.lyricText) }, config.rules)
 
     // The stored contour of each song, made from its reference recording as when a user syncs.
     private val contours: Map<String, List<Float>?> =
@@ -74,7 +79,7 @@ class Replay(
     }
 
     private class SpeechOutcome(
-        val words: Map<String, Int>,
+        val words: Map<String, SpeechScore>,
         val seen: Map<String, Long>,
     )
 
@@ -93,17 +98,16 @@ class Replay(
             notes += "no transcript, speech not replayed"
             return SpeechOutcome(emptyMap(), emptyMap())
         }
-        val words = HashMap<String, Int>()
+        val words = HashMap<String, SpeechScore>()
         val seen = HashMap<String, Long>()
         for (entry in heard.sortedBy { it.frame }) {
             val text = SpeechMatcher.normalize(entry.text, query.languageCode)
             if (text.isBlank()) continue
             val spoken = spokenMatchTokens(text)
             if (spoken.isEmpty()) continue
-            for (song in corpus.library) {
-                val matched = SpeechMatcher.matchedWords(spoken, lyricTokens.getValue(song.id)) ?: continue
-                words.merge(song.id, matched) { old, new -> maxOf(old, new) }
-                seen.putIfAbsent(song.id, entry.frame * FRAME_MS)
+            for ((id, score) in speechLibrary.scoreAll(spoken)) {
+                words.merge(id, score) { old, new -> SpeechScore(maxOf(old.words, new.words), maxOf(old.weight, new.weight)) }
+                seen.putIfAbsent(id, entry.frame * FRAME_MS)
             }
         }
         return SpeechOutcome(words, seen)
@@ -157,23 +161,26 @@ class Replay(
 
     /** Candidates are the songs heard in speech plus the pitch matches, ordered by evidence. */
     private fun rank(
-        words: Map<String, Int>,
+        words: Map<String, SpeechScore>,
         pitch: Map<String, PitchMatch>,
         seen: Map<String, Long>,
     ): PathResult {
         val ids = (words.keys + pitch.keys)
+        val rivals = SpeechMatcher.rivalWeights(words.mapValues { it.value.weight })
         val evidence =
             ids.associateWith { id ->
                 val match = pitch[id]
                 MatchEvidence(
-                    speechWords = words[id] ?: 0,
+                    speechWords = words[id]?.words ?: 0,
                     pitchScore = match?.score ?: Float.MAX_VALUE,
                     pitchOverlap = match?.overlap ?: 0,
+                    speechWeight = words[id]?.weight ?: 0f,
+                    rivalWeight = rivals[id] ?: 0f,
                 )
             }
         val ranked =
             ids.sortedWith(
-                compareByDescending<String> { evidence.getValue(it).speechWords }
+                compareByDescending<String> { evidence.getValue(it).speechWeight }
                     .thenBy { evidence.getValue(it).pitchScore }
                     .thenBy { it },
             )

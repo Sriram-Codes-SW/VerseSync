@@ -65,7 +65,7 @@ android {
             // The evaluation run (docs/09-evaluation-harness.md) reads a corpus from disk:
             //   ./gradlew :app:testDebugUnitTest --tests "*EvaluationRun*" -Pversesync.eval.corpus=<dir>
             all { test ->
-                listOf("versesync.eval.corpus", "versesync.eval.out", "versesync.eval.label").forEach { key ->
+                listOf("versesync.eval.corpus", "versesync.eval.out", "versesync.eval.label", "versesync.eval.sweep").forEach { key ->
                     providers.gradleProperty(key).orNull?.let { test.systemProperty(key, it) }
                 }
                 // Reads from outside the build, so the result must not be reused from the cache.

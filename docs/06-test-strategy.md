@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.24 |
+| Version | 0.25 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -78,6 +78,7 @@ Notes:
 | **TC-U-34** | Audio / Pitch detector adapter | Nine signals (tones, quiet tone, silence, noise, glide, vibrato, voice-like, tone in noise) through the adapter and through the library's own pitch processor | Every frame gives the same pitch and confidence | ADR-01 |
 | **TC-U-35** | Architecture / Library use | Scan the main sources for TarsosDSP imports, and the interface file for imports | Only the adapter uses TarsosDSP, and the interfaces import neither Android nor a library | ADR-13 |
 | **TC-U-40** | Evaluation / Harness | A generated corpus of three songs and five recordings with known answers, replayed through the real pitch and speech rules; a missing transcript; a recording of an unknown song; the report written twice | Found, top-1, false-accept, vocal-lock and latency counts equal the known answers; pitch is not scored before 5 seconds; a missing transcript is reported; the two reports are identical and hold no date | docs/09 |
+| **TC-U-41** | Engine / Speech scoring | Libraries of three or four songs with shared and rare words, heard words one letter off, short words, two songs tied and one clearly ahead, through the scorer, the engine and the lock rule | A rare word weighs more than one in every song; only candidates are kept; a near miss counts only with fuzzy matching on and only for words of five letters or more; tied or close songs keep the lock closed on the words path, a song clearly ahead opens it, and the pitch path is unaffected | ADR-03, ADR-10 |
 | **TC-M-10** | Database / Migration | Run `VerseDatabaseMigrationTest` on a device or emulator, and again after raising the version without a migration | Passes at version 3; fails with a missing-migration error when the version is raised alone | ADR-12 |
 | **TC-M-11** | Build / Application id | Install a build with the old id and a build with the new id on one device, and look at their data | Both install side by side and keep separate data; nothing from the old app appears in the new one | ADR-16 |
 | **TC-M-12** | Recognition / Pitch only | On a fresh install with no models, open Recognize Song, choose a language marked pitch only, and start recognition | The list offers the pitch-only languages, the screen says no speech model exists and pitch matching is active, and recognition starts and stops without a crash | ADR-15 |

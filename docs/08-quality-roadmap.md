@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Recognition Quality Roadmap |
-| Version | 0.1 |
+| Version | 0.2 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Proposed |
@@ -87,3 +87,8 @@ Smooth the contour and fix octave jumps, search over key shifts instead of cente
 - **GPL-3.0.** Anyone may rebuild Pro for free. Sell convenience and support, not a license check. Every release needs its matching source.
 - **Lyrics are copyrighted.** Do not bundle or scrape them. Store pitch contours, not raw audio.
 - **False comfort.** A false accept on the lock gives a false sense of security.
+
+## 8. Progress
+
+- **Item 1, evaluation set and harness ([#43](https://github.com/Sriram-Codes-SW/VerseSync/issues/43)):** the harness is built and a seed baseline is recorded (docs/09). The real recordings are still to be made.
+- **Item 2, scoring and margin ([#44](https://github.com/Sriram-Codes-SW/VerseSync/issues/44)):** partly done. Words are weighted by rarity in the library, each match carries the strongest other song's score, and the vocal lock no longer opens on words when another song is tied or within 25 percent. Fuzzy word matching is built but off, and the margin and minimum evidence are not yet chosen from data, because the seed corpus cannot tell any setting from another (docs/09, section 8). It stays open for that.
