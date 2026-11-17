@@ -1,5 +1,6 @@
 param(
     [string]$Wav,
+    [switch]$NoNormalize,
     [string]$Device = "Line 1",
     [switch]$List
 )
@@ -47,7 +48,7 @@ public static class WavePlayer {
     }
 
     // Reads a 16-bit PCM WAV and returns 48 kHz stereo samples with one second of silence on each side.
-    static short[] Load(string path) {
+    static short[] Load(string path, bool normalize) {
         byte[] b = File.ReadAllBytes(path);
         int pos = 12, channels = 1, rate = 16000, bits = 16, dataOff = 0, dataLen = 0;
         while (pos + 8 <= b.Length) {
@@ -79,7 +80,7 @@ public static class WavePlayer {
         // quieter than the recording, and a quiet clip is not recognized reliably.
         double peak = 0;
         for (int i = 0; i < frames; i++) peak = Math.Max(peak, Math.Abs(mono[i]));
-        double gain = peak > 0 ? Math.Min(0.8 * 32767.0 / peak, 40.0) : 1.0;
+        double gain = (normalize && peak > 0) ? Math.Min(0.8 * 32767.0 / peak, 40.0) : 1.0;
         for (int i = 0; i < frames; i++) mono[i] *= gain;
         int outRate = 48000;
         int pad = outRate;
@@ -95,12 +96,12 @@ public static class WavePlayer {
         return o;
     }
 
-    public static void Play(string path, string deviceContains) {
+    public static void Play(string path, string deviceContains, bool normalize) {
         string[] names = Devices();
         int dev = -1;
         for (int i = 0; i < names.Length; i++) if (names[i].IndexOf(deviceContains, StringComparison.OrdinalIgnoreCase) >= 0) { dev = i; break; }
         if (dev < 0) throw new Exception("Output device not found: " + deviceContains);
-        short[] samples = Load(path);
+        short[] samples = Load(path, normalize);
         WAVEFORMATEX f = new WAVEFORMATEX();
         f.wFormatTag = 1; f.nChannels = 2; f.nSamplesPerSec = 48000; f.wBitsPerSample = 16;
         f.nBlockAlign = 4; f.nAvgBytesPerSec = 48000 * 4; f.cbSize = 0;
@@ -122,5 +123,5 @@ public static class WavePlayer {
 "@
 
 if ($List) { [WavePlayer]::Devices() | ForEach-Object { $i = 0 } { "{0}: {1}" -f $i++, $_ }; return }
-[WavePlayer]::Play($Wav, $Device)
+[WavePlayer]::Play($Wav, $Device, -not $NoNormalize)
 "played $Wav to '$Device'"

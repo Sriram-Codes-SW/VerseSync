@@ -53,6 +53,21 @@ done
 
 $ADB shell pm grant $APP android.permission.RECORD_AUDIO
 $ADB emu avd hostmicon >/dev/null 2>&1
+
+# HUM=1 plays a faint steady 470 Hz tone (about -73 dB) for the whole run, like the hum the
+# emulator's microphone sometimes has (issue 33). The player must not raise its level.
+HUM_PID=""
+if [ "$HUM" = "1" ]; then
+  if [ ! -f "$HERE/fleurs/hum/sample.wav" ]; then
+    mkdir -p "$HERE/fleurs/hum"
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(win "$HERE/make_hum.ps1")" -Out "$(win "$HERE/fleurs/hum/sample.wav")" >/dev/null 2>&1
+  fi
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(win "$HERE/playwav.ps1")" \
+    -Wav "$(win "$HERE/fleurs/hum/sample.wav")" -NoNormalize >/dev/null 2>&1 &
+  HUM_PID=$!
+  echo "playing a faint hum during the whole run"
+  sleep 3
+fi
 $ADB logcat -c
 $ADB shell am instrument -w -e class $APP.engine.RealAudioEndToEndInstrumentedTest -e e2e 1 -e a "$A" -e b "$B" $STRICT_ARGS \
   $TEST/androidx.test.runner.AndroidJUnitRunner > "$HERE/out-e2e.txt" 2>&1 &
@@ -74,6 +89,10 @@ for step in $(seq 1 $STEPS); do
 done
 
 wait $INSTR 2>/dev/null
+if [ -n "$HUM_PID" ]; then
+  kill $HUM_PID 2>/dev/null
+  powershell.exe -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { \$_.CommandLine -like '*playwav.ps1*hum*' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force }" >/dev/null 2>&1
+fi
 $ADB logcat -d -s E2E:I AndroidRuntime:E > "$HERE/log-e2e.txt" 2>&1
 grep -E "step=|RESULT" "$HERE/log-e2e.txt" | sed 's/^.*E2E *: //'
 $ADB shell "run-as $APP rm -rf files/models/model-$A"

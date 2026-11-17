@@ -65,5 +65,7 @@ fingerprinted (issue 33). By default the run reports that as `FALSE ACCEPT` and 
 argument to play nothing in that step. The test adds songs titled `E2E ...` to the app's real
 database and removes them when it ends.
 
+`HUM=1` plays a faint 470 Hz hum, about -73 dB, for the whole run, like the hum the emulator microphone sometimes has. It is a separate player process, so it can disturb the clips: some runs then record almost no speech.
+
 The player raises each clip so its loudest sample is about 80 percent of full scale. Through the
 virtual cable the unscaled clips can arrive quieter than the hum of the emulator's microphone.
