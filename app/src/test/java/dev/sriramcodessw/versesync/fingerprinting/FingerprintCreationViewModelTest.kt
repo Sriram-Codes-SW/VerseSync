@@ -17,7 +17,8 @@ class FingerprintCreationViewModelTest {
     private lateinit var detector: FixedPitchDetector
     private lateinit var viewModel: FingerprintCreationViewModel
 
-    private val frame = FloatArray(AudioFormat.FRAME_SAMPLES)
+    // A loud frame. Frames that are nearly silent never reach the pitch detector (issue #33).
+    private val frame = FloatArray(AudioFormat.FRAME_SAMPLES) { if (it % 2 == 0) 0.3f else -0.3f }
 
     @BeforeEach
     fun setup() {

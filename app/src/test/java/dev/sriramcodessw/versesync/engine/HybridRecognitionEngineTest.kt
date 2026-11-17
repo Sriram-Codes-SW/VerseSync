@@ -25,7 +25,8 @@ class HybridRecognitionEngineTest {
     private lateinit var detector: FixedPitchDetector
     private lateinit var hybridEngine: HybridRecognitionEngine
 
-    private val silence = FloatArray(AudioFormat.FRAME_SAMPLES)
+    // A loud frame. Frames that are nearly silent never reach the pitch detector (issue #33).
+    private val voice = FloatArray(AudioFormat.FRAME_SAMPLES) { if (it % 2 == 0) 0.3f else -0.3f }
 
     @BeforeEach
     fun setup() {
@@ -50,7 +51,7 @@ class HybridRecognitionEngineTest {
     @Test
     fun startRecognition_forProUser_shouldStartBothSttAndPitch() {
         hybridEngine.startRecognition(isPro = true)
-        audioSource.emit(silence)
+        audioSource.emit(voice)
 
         verify(voskMock).startListening()
         assertTrue(audioSource.isRunning)
@@ -60,7 +61,7 @@ class HybridRecognitionEngineTest {
     @Test
     fun startRecognition_forFreeUser_shouldStartOnlyStt() {
         hybridEngine.startRecognition(isPro = false)
-        audioSource.emit(silence)
+        audioSource.emit(voice)
 
         verify(voskMock).startListening()
         assertEquals(0, detector.frames, "A free user's audio must not be run through the pitch detector")
@@ -73,7 +74,7 @@ class HybridRecognitionEngineTest {
 
         // When
         hybridEngine.startRecognition(isPro = true)
-        audioSource.emit(silence)
+        audioSource.emit(voice)
 
         // Then
         verify(voskMock, never()).startListening()
