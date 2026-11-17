@@ -26,7 +26,9 @@ class AudioFingerprinter(
 
     /** Processes one frame. Called on the audio source's thread. */
     fun onFrame(frame: AudioFrame) {
-        val processedPitch = detector.detect(frame).hz
+        // A frame this quiet has no pitch worth recording, whatever the detector would say about it.
+        // Without this, a faint steady hum was recorded as a voiced tone (issue #33).
+        val processedPitch = if (AudioLevel.isSilent(frame.samples)) 0f else detector.detect(frame).hz
 
         _instantPitch.value = processedPitch
 
