@@ -66,7 +66,7 @@ fun SettingsScreen(
     if (showLockTypeDialog) {
         AlertDialog(
             onDismissRequest = { showLockTypeDialog = false },
-            title = { Text("Select App Gatekeeper") },
+            title = { Text(LockCopy.LOCK_TYPE_DIALOG_TITLE) },
             text = {
                 Column {
                     LockOption(
@@ -88,8 +88,8 @@ fun SettingsScreen(
                         },
                     )
                     LockOption(
-                        title = "Vocal Lock",
-                        description = "Unlock by singing",
+                        title = LockCopy.NAME,
+                        description = LockCopy.DESCRIPTION,
                         selected = currentLockType == LockType.VOCAL,
                         enabled = songs.any { !it.fingerprint.isNullOrEmpty() },
                         onSelect = {
@@ -123,7 +123,7 @@ fun SettingsScreen(
                     .padding(16.dp),
         ) {
             item {
-                Text("Security", style = MaterialTheme.typography.titleLarge)
+                Text(LockCopy.SETTINGS_SECTION, style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(8.dp))
                 ListItem(
                     headlineContent = { Text("Enable App Lock") },
@@ -154,7 +154,7 @@ fun SettingsScreen(
                 if (isAppLockEnabled) {
                     ListItem(
                         headlineContent = { Text("Gatekeeper Type") },
-                        supportingContent = { Text(currentLockType.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                        supportingContent = { Text(LockCopy.typeName(currentLockType)) },
                         leadingContent = { Icon(Icons.Default.Lock, contentDescription = null) },
                         modifier = Modifier.clickable { showLockTypeDialog = true },
                         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },

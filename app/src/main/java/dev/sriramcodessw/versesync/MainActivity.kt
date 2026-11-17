@@ -137,7 +137,7 @@ fun AuthWrapper(activity: AppCompatActivity) {
                     onFailure = {
                         failedAttempts++
                         if (VocalLockPolicy.fallsBackToDeviceLock(failedAttempts)) {
-                            promptDeviceCredential("Vocal auth failed. Use device lock.")
+                            promptDeviceCredential(LockCopy.DEVICE_PROMPT_SUBTITLE)
                         }
                     },
                 )
