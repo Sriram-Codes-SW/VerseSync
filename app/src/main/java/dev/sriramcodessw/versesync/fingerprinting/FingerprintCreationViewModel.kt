@@ -6,8 +6,8 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.sriramcodessw.versesync.audio.AudioFrameSource
+import dev.sriramcodessw.versesync.audio.AudioRecordSource
 import dev.sriramcodessw.versesync.audio.PitchDetector
-import dev.sriramcodessw.versesync.audio.tarsos.TarsosMicrophoneSource
 import dev.sriramcodessw.versesync.audio.tarsos.TarsosPitchDetector
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +28,7 @@ class FingerprintCreationViewModel
     @JvmOverloads
     constructor(
         application: Application,
-        private val audioSourceFactory: () -> AudioFrameSource = { TarsosMicrophoneSource() },
+        private val audioSourceFactory: () -> AudioFrameSource = { AudioRecordSource() },
         private val pitchDetectorFactory: () -> PitchDetector = { TarsosPitchDetector() },
     ) : AndroidViewModel(application) {
         private var audioSource: AudioFrameSource? = null
