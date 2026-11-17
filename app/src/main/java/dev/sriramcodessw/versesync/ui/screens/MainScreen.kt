@@ -53,10 +53,12 @@ fun MainScreen(
     setlistsViewModel: SetlistsViewModel,
     onOpenSetlist: (Int) -> Unit,
     onStartConcert: (Int) -> Unit,
+    onOpenFolder: (Int) -> Unit,
 ) {
     var showNewSetlistDialog by rememberSaveable { mutableStateOf(false) }
     var setlistToDelete by remember { mutableStateOf<Setlist?>(null) }
     val setlists by setlistsViewModel.setlists.collectAsState()
+    val folderSongCounts by verseViewModel.folderSongCounts.collectAsState()
     // A new setlist opens in the editor. It arrives as a one-shot event, so a rotation neither repeats nor loses it.
     LaunchedEffect(setlistsViewModel) { setlistsViewModel.created.collect { onOpenSetlist(it) } }
     val resume by setlistsViewModel.resume.collectAsState()
@@ -411,6 +413,8 @@ fun MainScreen(
                     FoldersTabContent(
                         folders = folders,
                         onDeleteFolder = { folderToDelete = it },
+                        onOpenFolder = onOpenFolder,
+                        folderSongCounts = folderSongCounts,
                         setlists = setlists,
                         resume = resume,
                         onResume = onStartConcert,
@@ -534,6 +538,8 @@ fun SongListContent(
 fun FoldersTabContent(
     folders: List<Folder>,
     onDeleteFolder: (Folder) -> Unit,
+    onOpenFolder: (Int) -> Unit,
+    folderSongCounts: Map<Int, Int>,
     setlists: List<Setlist>,
     resume: ResumeInfo?,
     onResume: (Int) -> Unit,
@@ -564,12 +570,13 @@ fun FoldersTabContent(
             ListItem(
                 headlineContent = { Text(folder.name) },
                 leadingContent = { Icon(Icons.Default.Folder, contentDescription = null) },
+                supportingContent = { Text(songCountText(folderSongCounts[folder.id] ?: 0)) },
                 trailingContent = {
                     IconButton(onClick = { onDeleteFolder(folder) }) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete")
                     }
                 },
-                modifier = Modifier.clickable { },
+                modifier = Modifier.clickable { onOpenFolder(folder.id) },
             )
         }
         setlistsSection(
@@ -590,3 +597,11 @@ fun EmptyState(message: String) {
         Text(text = message, style = MaterialTheme.typography.bodyLarge)
     }
 }
+
+/** "No songs", "1 song" or "3 songs", for a folder row. */
+internal fun songCountText(count: Int): String =
+    when (count) {
+        0 -> "No songs"
+        1 -> "1 song"
+        else -> "$count songs"
+    }

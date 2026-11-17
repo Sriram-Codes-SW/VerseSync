@@ -13,6 +13,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/** The number of songs in each folder. Songs in no folder are not counted, and a folder with none is absent. */
+internal fun countByFolder(songs: List<Song>): Map<Int, Int> = songs.mapNotNull { it.folderId }.groupingBy { it }.eachCount()
+
 enum class SortOrder {
     TITLE,
     ARTIST,
@@ -58,6 +61,20 @@ class VerseViewModel(
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = emptyList(),
             )
+
+    /** How many songs each folder holds, over the whole library: the search box does not change it. */
+    val folderSongCounts: StateFlow<Map<Int, Int>> =
+        songDao
+            .getAllSongs()
+            .map { countByFolder(it) }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyMap(),
+            )
+
+    /** The songs in one folder, by title, so a folder shows where its songs are. */
+    fun songsInFolder(folderId: Int): Flow<List<Song>> = songDao.getSongsInFolder(folderId).map { list -> list.sortedBy { it.title.lowercase() } }
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query

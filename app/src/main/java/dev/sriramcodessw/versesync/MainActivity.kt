@@ -68,6 +68,7 @@ object AppRoutes {
     const val SYNC_HEALTH = "sync_health"
     const val SETLIST_EDITOR = "setlist/{setlistId}"
     const val CONCERT = "concert/{setlistId}"
+    const val FOLDER = "folder/{folderId}"
 }
 
 class MainActivity : AppCompatActivity() {
@@ -311,6 +312,7 @@ fun VerseSyncNavHost(
                 setlistsViewModel = setlistsViewModel,
                 onOpenSetlist = { id -> navController.navigate("setlist/$id") { launchSingleTop = true } },
                 onStartConcert = { id -> navController.navigate("concert/$id") { launchSingleTop = true } },
+                onOpenFolder = { id -> navController.navigate("folder/$id") { launchSingleTop = true } },
             )
         }
         composable(
@@ -353,6 +355,21 @@ fun VerseSyncNavHost(
                         ),
                 )
             ConcertScreen(viewModel = concertViewModel, onLeave = { if (navController.currentBackStackEntry == backStackEntry) navController.popBackStack() })
+        }
+        composable(
+            route = AppRoutes.FOLDER,
+            arguments = listOf(navArgument("folderId") { type = NavType.IntType }),
+        ) { backStackEntry ->
+            val folderId = backStackEntry.arguments?.getInt("folderId") ?: 0
+            val folderSongsFlow = remember(folderId) { verseViewModel.songsInFolder(folderId) }
+            val folderSongs by folderSongsFlow.collectAsState(initial = emptyList())
+            val allFolders by verseViewModel.folders.collectAsState()
+            FolderScreen(
+                name = allFolders.firstOrNull { it.id == folderId }?.name.orEmpty(),
+                songs = folderSongs,
+                onSongClick = { songId -> navController.navigate("song_detail/$songId") },
+                onBack = { navController.popBackStack() },
+            )
         }
         composable(AppRoutes.SETTINGS) {
             SettingsScreen(
