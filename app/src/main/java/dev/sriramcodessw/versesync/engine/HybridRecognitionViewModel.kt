@@ -28,6 +28,12 @@ class HybridRecognitionViewModel(
     fun stopRecognition() {
         hybridRecognitionEngine.stopRecognition()
     }
+
+    // Nothing else stops the microphone and the recognizer when the activity goes (issue #62).
+    override fun onCleared() {
+        hybridRecognitionEngine.release()
+        super.onCleared()
+    }
 }
 
 class HybridRecognitionViewModelFactory(

@@ -46,4 +46,15 @@ class HybridRecognitionViewModelTest {
         viewModel.stopRecognition()
         verify(engineMock).stopRecognition()
     }
+
+    @Test
+    fun clearingTheViewModelReleasesTheEngine() {
+        // onCleared is protected, so it is reached the way the framework reaches it.
+        val onCleared = HybridRecognitionViewModel::class.java.getDeclaredMethod("onCleared")
+        onCleared.isAccessible = true
+
+        onCleared.invoke(viewModel)
+
+        verify(engineMock).release()
+    }
 }

@@ -166,4 +166,23 @@ class HybridRecognitionEngineTest {
         // Then: Relative contour distance should be very low (close to 0) despite key change
         assertTrue(score < 1.0f, "Expected transposition invariant score < 1.0 semitone, was $score")
     }
+
+    @Test
+    fun release_stopsTheMicrophoneAndTheSpeechServiceAndFreesTheModel() {
+        hybridEngine.startRecognition(isPro = true)
+
+        hybridEngine.release()
+
+        assertFalse(audioSource.isRunning)
+        assertEquals(1, audioSource.stopCount)
+        verify(voskMock).stopListening()
+        verify(voskMock).release()
+    }
+
+    @Test
+    fun release_whenNothingWasStartedIsSafe() {
+        hybridEngine.release()
+
+        verify(voskMock).release()
+    }
 }

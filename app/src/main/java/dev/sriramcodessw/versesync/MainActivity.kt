@@ -129,6 +129,18 @@ fun AuthWrapper(activity: AppCompatActivity) {
         if (step.next.state == VoiceShortcutAttempts.State.Open) securityViewModel.markUnlocked()
     }
 
+    // The microphone must not keep listening in the background. Going to the background is not a failed attempt (issue #62).
+    val currentAttempts by rememberUpdatedState(attempts)
+    val activityLifecycle = LocalLifecycleOwner.current
+    DisposableEffect(activityLifecycle) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_STOP) carryOut(currentAttempts.interrupted())
+            }
+        activityLifecycle.lifecycle.addObserver(observer)
+        onDispose { activityLifecycle.lifecycle.removeObserver(observer) }
+    }
+
     LaunchedEffect(lockConfig) {
         val config = lockConfig ?: return@LaunchedEffect
         if (!config.enabled) {

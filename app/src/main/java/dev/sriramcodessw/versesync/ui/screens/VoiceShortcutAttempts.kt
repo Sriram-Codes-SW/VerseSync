@@ -52,6 +52,12 @@ data class VoiceShortcutAttempts(
 
     fun timedOut(): Step = if (state == State.Listening) attemptEnded() else Step(this)
 
+    /**
+     * The app went to the background while listening (issue #62). The microphone stops and the shortcut is idle
+     * again, but it is not a failed attempt: the person did not run out of time or say the wrong words.
+     */
+    fun interrupted(): Step = if (state == State.Listening) Step(copy(state = State.Idle), listOf(Effect.StopListening)) else Step(this)
+
     fun matched(): Step = if (state == State.Listening) Step(copy(state = State.Open), listOf(Effect.StopListening)) else Step(this)
 
     fun fallbackTapped(): Step =

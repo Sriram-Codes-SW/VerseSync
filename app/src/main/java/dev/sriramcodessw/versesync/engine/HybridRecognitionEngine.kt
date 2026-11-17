@@ -281,6 +281,16 @@ class HybridRecognitionEngine(
         }
     }
 
+    /**
+     * Stops the microphone and the speech service and frees what the engine holds, for good (issue #62). It is
+     * called when the view model is cleared; nothing may start the engine again after this.
+     */
+    fun release() {
+        stopRecognition()
+        vosk.release()
+        engineScope.cancel()
+    }
+
     fun stopRecognition() {
         vosk.stopListening()
         _instantPitch.value = 0f

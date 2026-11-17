@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.45 |
+| Version | 0.46 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,8 +14,8 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.40 | Active |
-| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.39 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.41 | Active |
+| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.40 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
@@ -72,3 +72,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.43 | 2026-11-18 | Claude Code | The leave dialog of the concert screen said to resume from the Setlists tab, which no longer exists since setlists moved under Folders (0.42). It now says "Setlists, under the Folders tab". Found while testing the app on an emulator with real songs.
 | 0.44 | 2026-11-18 | Claude Code | Tapping a folder on the Folders tab now opens a screen with the songs in it (it did nothing before, so a folder never showed where its songs were). The folder row shows how many songs it holds, counted over the whole library so the search box does not change it. Found by testing the app on an emulator with real song titles. TC-U-56 and TC-M-31; the CI emulator job also runs the folder screen test. Not run on a physical device (#8).
 | 0.45 | 2026-11-18 | Claude Code | The tour on the Recognize Song screen is drawn above the whole screen, as on the main screen (0.41): it sat inside the padded content, under the top bar, so the top bar was not dimmed and highlights were measured from the wrong place. The Lyric Sync screen has no top bar and was already right. TC-M-30 extended. Found while testing on an emulator. Not run on a physical device (#8).
+| 0.46 | 2026-11-18 | Claude Code | The microphone now stops with the screen (issue #62): the engine and speech wrapper can be released and the shared view model does so when cleared, the Recognize Song screen stops listening when it is left or the app goes to the background, and the voice shortcut stops without counting a failed attempt. ADR-10 amendment, TC-U-57 and TC-M-32. Not run on a physical device (#8).

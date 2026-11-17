@@ -14,10 +14,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import dev.sriramcodessw.versesync.billing.BillingViewModel
 import dev.sriramcodessw.versesync.data.LanguageModelInfo
 import dev.sriramcodessw.versesync.data.LanguageViewModel
@@ -50,6 +53,24 @@ fun RecognitionScreen(
     val installedLanguages by languageViewModel.installedLanguages.collectAsState()
     val remainingTrials by trialViewModel.remainingTrials.collectAsState()
     val isTourCompleted by onboardingViewModel.isRecognitionTourCompleted.collectAsState()
+
+    // Listening stops when the screen is left and when the app goes to the background, because nothing else would
+    // stop the microphone (issue #62).
+    val screenLifecycle = LocalLifecycleOwner.current
+    DisposableEffect(screenLifecycle) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_STOP) {
+                    isRecognizing = false
+                    hybridViewModel.stopRecognition()
+                }
+            }
+        screenLifecycle.lifecycle.addObserver(observer)
+        onDispose {
+            screenLifecycle.lifecycle.removeObserver(observer)
+            hybridViewModel.stopRecognition()
+        }
+    }
 
     // Installed languages plus those no speech model exists for, which can only use pitch matching.
     val availableLanguages = recognitionLanguages(languageViewModel.availableLanguages, installedLanguages)

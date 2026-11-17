@@ -109,6 +109,19 @@ class VoskVoiceRecognition(
         Log.d(TAG, "Stopped Vosk listening and cleared results.")
     }
 
+    /**
+     * Stops listening, stops any model still loading, and frees the model, whose native memory the GC cannot.
+     * The object is not used after this (issue #62).
+     */
+    @Synchronized
+    fun release() {
+        stopListening()
+        scope.cancel()
+        _isModelReady.value = false
+        currentModel?.close()
+        currentModel = null
+    }
+
     override fun onPartialResult(hypothesis: String?) {
         hypothesis?.let { parseAndEmit(it) }
     }
