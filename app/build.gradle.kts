@@ -77,12 +77,10 @@ ksp {
 }
 
 dependencies {
-    val roomVersion = "2.7.0-alpha11"
-
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
-    androidTestImplementation("androidx.room:room-testing:$roomVersion")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    androidTestImplementation(libs.androidx.room.testing)
     implementation(libs.androidx.glance.appwidget)
 
     implementation(libs.androidx.core.ktx)
@@ -126,4 +124,9 @@ dependencies {
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Room 2.8's test helper reads schema files with kotlinx.serialization 1.8. The lifecycle libraries
+    // pin 1.7.3, which fails at runtime with AbstractMethodError. Debug and test builds only: the
+    // release classpath is unchanged.
+    debugImplementation(libs.kotlinx.serialization.core)
 }
