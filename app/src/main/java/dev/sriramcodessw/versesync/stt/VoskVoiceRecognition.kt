@@ -4,25 +4,31 @@ import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import dev.sriramcodessw.versesync.audio.AudioFormat
+import dev.sriramcodessw.versesync.audio.AudioFrame
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.vosk.Model
 import org.vosk.Recognizer
-import org.vosk.android.RecognitionListener
-import org.vosk.android.SpeechService
 import java.io.File
 import java.io.IOException
 
 private const val TAG = "VoskVoiceRecognition"
 
+/**
+ * Offline speech recognition with Vosk.
+ *
+ * It does not record. The recognition engine reads the microphone once and hands every frame to
+ * [acceptFrame], as it does for the pitch detector, so only one capture runs (ADR-01).
+ */
 class VoskVoiceRecognition(
     private val context: Context,
-) : RecognitionListener {
+) {
     private var currentModel: Model? = null
     private var currentLanguage: String? = null
-    private var speechService: SpeechService? = null
+    private var decoder: SpeechDecoder? = null
     private var recognizer: Recognizer? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val gson = Gson()
@@ -68,6 +74,7 @@ class VoskVoiceRecognition(
         }
     }
 
+    /** Starts recognizing the frames given to [acceptFrame]. */
     @Synchronized
     fun startListening() {
         val model = currentModel
@@ -77,12 +84,11 @@ class VoskVoiceRecognition(
         }
 
         try {
-            stopListening() // never leave a previous service holding the microphone
+            stopListening() // never leave a previous decoder running
             _recognitionResult.value = "" // Clear previous results
-            val rec = Recognizer(model, 16000.0f)
+            val rec = Recognizer(model, AudioFormat.SAMPLE_RATE.toFloat())
             recognizer = rec
-            speechService = SpeechService(rec, 16000.0f)
-            speechService?.startListening(this)
+            decoder = SpeechDecoder(VoskWaveformRecognizer(rec), ::parseAndEmit)
             Log.d(TAG, "Started Vosk listening.")
         } catch (e: IOException) {
             Log.e(TAG, "Failed to initialize recognizer", e)
@@ -90,31 +96,31 @@ class VoskVoiceRecognition(
     }
 
     /**
-     * Safe to call from any thread, and more than once. Vosk reports the final result on the main
-     * thread after [SpeechService.stop], and that callback calls this again. Without taking
-     * ownership of the objects first, two overlapping calls freed the native recognizer twice and
-     * crashed the process.
+     * Gives one frame of microphone audio to the recognizer. Called on the audio thread, so it only
+     * queues the frame. It does nothing when [startListening] has not been called.
+     */
+    fun acceptFrame(frame: AudioFrame) {
+        decoder?.offer(frame.samples)
+    }
+
+    /**
+     * Safe to call from any thread, and more than once. It takes ownership of the decoder and
+     * recognizer first, so two overlapping calls cannot free the native recognizer twice, which
+     * crashed the process before. The recognizer is only closed once the decoder thread has
+     * finished with it.
      */
     @Synchronized
     fun stopListening() {
-        val service = speechService
+        val activeDecoder = decoder
         val rec = recognizer
-        speechService = null
+        decoder = null
         recognizer = null
-        service?.stop()
-        service?.shutdown()
-        // The recognizer owns native memory and is not closed by SpeechService.
-        rec?.close()
+        val decoderFinished = activeDecoder?.stop() ?: true
+        // The recognizer owns native memory. If the decoder thread is somehow still inside it,
+        // leaking the recognizer is safer than freeing memory that is in use.
+        if (decoderFinished) rec?.close() else Log.e(TAG, "The decoder did not stop, so the recognizer was not closed")
         _recognitionResult.value = "" // Clear results on stop to prevent state leaks
         Log.d(TAG, "Stopped Vosk listening and cleared results.")
-    }
-
-    override fun onPartialResult(hypothesis: String?) {
-        hypothesis?.let { parseAndEmit(it) }
-    }
-
-    override fun onResult(hypothesis: String?) {
-        hypothesis?.let { parseAndEmit(it) }
     }
 
     private fun parseAndEmit(json: String) {
@@ -136,16 +142,17 @@ class VoskVoiceRecognition(
             Log.e(TAG, "Failed to parse Vosk JSON", e)
         }
     }
+}
 
-    override fun onFinalResult(hypothesis: String?) {
-        stopListening()
-    }
+private class VoskWaveformRecognizer(
+    private val recognizer: Recognizer,
+) : WaveformRecognizer {
+    override fun acceptWaveForm(
+        samples: ShortArray,
+        length: Int,
+    ) = recognizer.acceptWaveForm(samples, length)
 
-    override fun onError(e: Exception?) {
-        Log.e(TAG, "Recognition error", e)
-    }
+    override fun result(): String = recognizer.result
 
-    override fun onTimeout() {
-        stopListening()
-    }
+    override fun partialResult(): String = recognizer.partialResult
 }

@@ -4,8 +4,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import dev.sriramcodessw.versesync.audio.AudioFrameSource
+import dev.sriramcodessw.versesync.audio.AudioRecordSource
 import dev.sriramcodessw.versesync.audio.PitchDetector
-import dev.sriramcodessw.versesync.audio.tarsos.TarsosMicrophoneSource
 import dev.sriramcodessw.versesync.audio.tarsos.TarsosPitchDetector
 import dev.sriramcodessw.versesync.data.Song
 import dev.sriramcodessw.versesync.data.SongDao
@@ -39,7 +39,7 @@ class HybridRecognitionEngine(
     private val vosk: VoskVoiceRecognition = VoskVoiceRecognition(context),
     private val pitchIntervalMs: Long = PITCH_INTERVAL_MS,
     // Where audio comes from and which detector finds its pitch. Tests supply fakes.
-    private val audioSourceFactory: () -> AudioFrameSource = { TarsosMicrophoneSource() },
+    private val audioSourceFactory: () -> AudioFrameSource = { AudioRecordSource() },
     private val pitchDetectorFactory: () -> PitchDetector = { TarsosPitchDetector() },
 ) {
     private var audioSource: AudioFrameSource? = null
@@ -270,9 +270,13 @@ class HybridRecognitionEngine(
                 vosk.startListening()
             }
 
-            // Pitch is found for Pro users only. The source starts delivering frames on its own thread.
+            // One microphone capture feeds everything. Pitch is found for Pro users only, and the speech
+            // recognizer queues each frame for its own thread. The source delivers frames on its own thread.
             val pitchFingerprinter = if (isPro) fingerprinter else null
-            audioSource?.start { frame -> pitchFingerprinter?.onFrame(frame) }
+            audioSource?.start { frame ->
+                pitchFingerprinter?.onFrame(frame)
+                vosk.acceptFrame(frame)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start recognition", e)
             _error.value = "Failed to start recognition."

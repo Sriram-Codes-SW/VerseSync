@@ -10,6 +10,7 @@ import dev.sriramcodessw.versesync.stt.VoskVoiceRecognition
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -53,6 +54,7 @@ class HybridRecognitionEngineTest {
         audioSource.emit(silence)
 
         verify(voskMock).startListening()
+        verify(voskMock).acceptFrame(any())
         assertTrue(audioSource.isRunning)
         assertEquals(1, detector.frames, "A Pro user's audio must be run through the pitch detector")
     }
@@ -63,6 +65,7 @@ class HybridRecognitionEngineTest {
         audioSource.emit(silence)
 
         verify(voskMock).startListening()
+        verify(voskMock).acceptFrame(any())
         assertEquals(0, detector.frames, "A free user's audio must not be run through the pitch detector")
     }
 
