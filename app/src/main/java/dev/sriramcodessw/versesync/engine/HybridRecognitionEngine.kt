@@ -13,31 +13,11 @@ import dev.sriramcodessw.versesync.fingerprinting.AudioFingerprinter
 import dev.sriramcodessw.versesync.stt.VoskVoiceRecognition
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlin.math.abs
 
 private const val TAG = "HybridRecognitionEngine"
 
-/** Minimum frames voiced in both contours before a pitch distance is trusted. */
-private const val MIN_VOICED_OVERLAP = 8
-
-/** A pitch match scores below this many semitones. It was 3.0, which let a different spoken clip through. */
-private const val PITCH_MATCH_THRESHOLD = 2.5f
-
-/** Sanskrit is heard through a Hindi model and sung more freely, so it gets a little more room. */
-private const val PITCH_MATCH_THRESHOLD_SANSKRIT = 3.0f
-
 /** How often the pitch contour is re-scored against the library. */
 private const val PITCH_INTERVAL_MS = 5000L
-
-/** Share of the spoken words that must appear in a song's lyrics for it to be a candidate. */
-private const val SPEECH_MATCH_THRESHOLD = 0.35f
-
-/**
- * Different words that must be heard and found in a song's lyrics. Before, one word was enough: the
- * score is the share of heard words found in the lyrics, so a single heard word in the lyrics scored 1.0.
- * A song with fewer different words than this needs all of them.
- */
-private const val SPEECH_MIN_MATCHED_WORDS = 2
 
 /**
  * How strongly a song matched, for callers that need more than "it is a candidate", such as the
@@ -53,12 +33,6 @@ data class MatchEvidence(
 data class RecognitionResult(
     val candidates: List<Song>,
     val evidence: Map<Int, MatchEvidence> = emptyMap(),
-)
-
-/** A pitch distance and how many frames it was measured over. */
-internal data class PitchMatch(
-    val score: Float,
-    val overlap: Int,
 )
 
 @SuppressLint("MissingPermission")
@@ -190,10 +164,7 @@ class HybridRecognitionEngine(
             val cached =
                 cache[song.id]?.takeIf { it.lyrics == song.lyrics }
                     ?: CachedLyricTokens(song.lyrics, lyricTokenSet(song.lyrics)).also { cache[song.id] = it }
-            if (tokenMatchScore(spoken, cached.tokens) < SPEECH_MATCH_THRESHOLD) continue
-            // The share alone is not enough evidence: one heard word that is in the lyrics scores 1.0.
-            val words = matchedTokenCount(spoken, cached.tokens)
-            if (words >= minOf(SPEECH_MIN_MATCHED_WORDS, cached.tokens.size)) found += song to words
+            SpeechMatcher.matchedWords(spoken, cached.tokens)?.let { words -> found += song to words }
         }
         synchronized(accumulatedSttCandidates) {
             found.forEach { (candidate, words) ->
@@ -210,7 +181,7 @@ class HybridRecognitionEngine(
         val currentLiveFingerprint = fingerprinter?.fingerprint?.value ?: emptyList()
         if (currentLiveFingerprint.size < 10) return emptyList()
         // Threshold in relative musical semitones
-        val threshold = if (currentLanguage == "sa") PITCH_MATCH_THRESHOLD_SANSKRIT else PITCH_MATCH_THRESHOLD
+        val threshold = PitchMatcher.threshold(currentLanguage)
         return library
             .mapNotNull { song ->
                 val match = calculatePitchMatch(song.fingerprint, currentLiveFingerprint)
@@ -265,49 +236,7 @@ class HybridRecognitionEngine(
     internal fun calculatePitchMatch(
         reference: List<Float>?,
         live: List<Float>,
-    ): PitchMatch {
-        val none = PitchMatch(Float.MAX_VALUE, 0)
-        if (reference == null || reference.isEmpty() || live.isEmpty()) return none
-
-        val refContour = AudioFingerprinter.toRelativeSemitoneContour(reference)
-        val liveContour = AudioFingerprinter.toRelativeSemitoneContour(live)
-        if (refContour.isEmpty() || liveContour.isEmpty()) return none
-
-        var best = none
-        val windowSize = liveContour.size.coerceAtMost(refContour.size)
-        if (windowSize < 8) return none
-        val liveSegment = liveContour.takeLast(windowSize)
-
-        val step = 5.coerceAtMost((refContour.size - windowSize).coerceAtLeast(1))
-        for (i in 0..(refContour.size - windowSize) step step) {
-            val subRef = refContour.subList(i, i + windowSize)
-            val match = calculateDistance(subRef, liveSegment)
-            if (match.score < best.score) best = match
-        }
-        return best
-    }
-
-    /**
-     * Mean absolute semitone difference over frames that are voiced in BOTH contours (ADR-04).
-     * A frame that is silent in only one contour is skipped rather than compared against 0,
-     * and too little shared voiced material is treated as no match.
-     */
-    private fun calculateDistance(
-        list1: List<Float>,
-        list2: List<Float>,
-    ): PitchMatch {
-        var count = 0
-        var sum = 0.0
-        for (i in list1.indices) {
-            val a = list1[i]
-            val b = list2[i]
-            if (!a.isNaN() && !b.isNaN()) {
-                sum += abs(a - b)
-                count++
-            }
-        }
-        return if (count >= MIN_VOICED_OVERLAP) PitchMatch((sum / count).toFloat(), count) else PitchMatch(Float.MAX_VALUE, count)
-    }
+    ): PitchMatch = PitchMatcher.match(reference, live)
 
     fun loadLanguageModel(languageCode: String) {
         currentLanguage = languageCode
