@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.21 |
+| Version | 0.22 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -361,6 +361,7 @@ These corrections bring the records in line with the code as built.
 * **ADR-11 (transfer and unpacking):** The sender checks the payload size and tells the user how large the selection is and what the limit is. The unused resume code and the stored transfer progress were removed. A model archive is unpacked into a staging folder and swapped in only when every entry succeeded, so a failed re-download keeps a working model. A file that is not a zip reads as an archive with no entries, so an archive with no files now counts as a failure. Unpacking now runs in a WorkManager job (`ModelUnpackWorker`) that the completion receiver queues, because `goAsync` does not lift the time limit that broadcast receivers have. The job is stored, so it continues if the process is killed (it restarts by itself) and is safe to run twice. A 1.6 GB test model finished installing after the app process was killed halfway (TC-M-15).
 * **ADR-08 (refresh):** Google sends no callback when a subscription expires, so purchases are re-checked each time the app returns to the foreground. `launchPurchaseFlow` returns false when the purchase screen cannot open, and the Tip Jar says so. The Tip Jar shows the subscription's price.
 * **ADR-05 (search cost):** Searching on every speech change cost about 76 ms for 1,000 songs on a fast PC, because each search re-read the list and re-tokenized every lyric. The song list is now read once and follows Room changes, each song's tokens are cached while its lyrics are unchanged (about 0.11 ms per search), and pitch is re-scored only on its own tick. The speech recognizer and pitch interval are constructor parameters, so tests need neither reflection nor long waits.
+* **ADR-04 (silence threshold):** A frame whose level is below -55 dB (RMS, relative to full scale) is given no pitch, whatever the detector would say, and is not run through it (`AudioFingerprinter`, `AudioLevel.SILENCE_DB`). Before, a faint steady hum, about -73 dB on the emulator microphone, was reported as a voiced 470 Hz tone and made up most of the voiced frames in a fingerprint. Speech is about -40 dB or louder, and on a real recording the threshold removed 1 of 51 voiced frames. Fingerprints saved earlier keep any hum they recorded, and re-syncing a song gives a clean one. The threshold has only been tried on an emulator.
 
 ---
 
@@ -376,6 +377,6 @@ These corrections bring the records in line with the code as built.
 * **Real devices:** Bluetooth sharing between two phones and the biometric prompt have never run, because the emulator has neither ([#8](https://github.com/Sriram-Codes-SW/VerseSync/issues/8)).
 * **Matching enhancements, not yet needed:** Elastic (DTW) pitch matching for tempo variation ([#16](https://github.com/Sriram-Codes-SW/VerseSync/issues/16)) and an FTS5 index for very large libraries ([#17](https://github.com/Sriram-Codes-SW/VerseSync/issues/17)).
 * **First-release checklist:** Play Console setup, the license decision, the privacy policy and release signing ([#18](https://github.com/Sriram-Codes-SW/VerseSync/issues/18)).
-* **Background noise is fingerprinted:** The pitch detector reports a faint steady hum as a voiced tone, so a fingerprint recorded with that hum matches the hum later. In the end-to-end test the vocal lock opened with nothing playing. A level threshold in `AudioFingerprinter` would fix it and needs a decision because it changes what fingerprints contain ([#33](https://github.com/Sriram-Codes-SW/VerseSync/issues/33)).
+* **The vocal lock can still open on the wrong audio:** Frames quieter than -55 dB no longer get a pitch, so a faint steady hum is not recorded into fingerprints any more (ADR-04 amendment). In the real-audio end-to-end test the lock still sometimes opened with only the hum playing. The cause was not found. A single word that the speech model hears in noise and that is in the lyrics may be enough to match, and two different spoken clips can also match by pitch ([#33](/33), [#16](/16)).
 * **Biometric library is a beta:** The release build uses `androidx.biometric` 1.4.0-beta01, because there is no stable version newer than 1.1.0 from 2020 (ADR-17). Revisit when 1.4 reaches a stable release.
 * **Downloads that finish while the app is closed:** The receiver that notices a finished download only exists while the app is open, so a model that finishes downloading with the app closed is never unpacked ([#36](https://github.com/Sriram-Codes-SW/VerseSync/issues/36)).
