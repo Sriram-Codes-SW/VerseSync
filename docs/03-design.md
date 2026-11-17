@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.31 |
+| Version | 0.32 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -376,7 +376,7 @@ VerseSync is an offline-first Android application designed for musicians, worshi
 
 ### ADR-19: Landmark Fingerprints for Recorded Music, Offline
 
-* **Status:** Proposed. Only the matcher and its generated test set (phase 1) are being built. This ADR does not authorize storing prints, a screen to learn songs, a catalog, or any change to what the app recognizes.
+* **Status:** Proposed, and narrowed. This covers recorded playback near the phone (a backing track, a lip-synced number, music playing in a room), and it is NOT the concert path: a live band is a different performance, which this method is not expected to match. Only the matcher and its generated test set (phase 1), including a test of how far a re-performance can drift, are being built, and later phases are parked. This ADR does not authorize storing prints, a screen to learn songs, a catalog, or any change to what the app recognizes.
 * **Context:**
   The app recognizes a person singing or saying a song's lyrics: Vosk for the words and a monophonic pitch matcher (ADR-03, ADR-04). A recording playing near the phone is a different input. In a trial with two library songs and a commercial recording played into the emulator microphone, the speech model barely transcribed the sung vocals over the instruments, one of two songs was found, and songs not in the library were offered as candidates (ADR-03 amendment for issue #44). A monophonic pitch tracker cannot follow a full mix.
   The owner wants a Shazam-style app that works offline. Offline means no network for recognition: the fingerprints of the songs it can recognize must already be on the phone. That fixes what the app can promise. A service such as Shazam holds a licensed catalog of tens of millions of songs on servers. This project has no such catalog and cannot ship one, so **it can recognize only songs whose fingerprints it has, and it cannot recognize "any song" offline.** Where the fingerprints come from, and how many fit on a phone, are the open questions below.

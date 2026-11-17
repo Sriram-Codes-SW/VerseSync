@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.8 |
+| Version | 0.9 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -296,6 +296,10 @@ ADR-19 (Proposed). This section was written and committed before the matcher was
 **Pass bar (seed B, reported once).** The chosen rule accepts a wrong song for pooled upper end at most 1%, and its top-1 at the headline condition is at least 80%. Everything else is reported with 95% Wilson intervals and no bar: top-1 and false accepts for every condition, by snippet length.
 
 **Cost of a bigger library, reported with no bar.** Bytes per song, and, on seed B with a library of 60 songs and again with 600 songs of 45 seconds, the median lookup time per query and the false-accept rate, because offline recognition is limited by the fingerprints that fit on the phone.
+
+**Addendum, committed before any run: re-performance conditions, and what this is for.** The owner's use is a live concert, where the band plays the song live and does not replay the recording. Landmark fingerprints of a recording are not expected to match that, and this run measures how far from the recording a performance can drift before they stop matching. It does not make the fingerprints the concert path; ADR-19 covers recorded playback (a backing track, a lip-synced number, walk-in music), and a separate proposal covers the concert.
+
+The same generated song is played again as a different performance of the same score, and a snippet of that performance is matched against the print of the original. Five conditions, none with added noise, all with 3, 5 and 10 second snippets, on the same query starts: **different sound** (new instrument sounds, a new percussion part, the same tempo and timing); **tempo +3%**, **+5%** and **+8%** (the whole performance faster, with the same sounds as the original); and **a live-like performance** (new sounds and percussion, tempo +5% with a drift of up to ±2% over the song, and each note starting up to 30 ms early or late). They are reported with 95% Wilson intervals and no bar, in the same table as the other conditions and not pooled with them, and they play no part in choosing the thresholds. What is expected, and not measured, is that matches fall to near zero as soon as the sounds and the timing change, and that this is a limit of the method and not a defect of this matcher.
 
 **What it will not show.** Real recordings, real speakers and rooms, the phone's own audio processing, any cover, live version or edit, or the person singing. Generated music repeats less than real music and overstates accuracy, so a pass here is not a claim about real songs.
 
