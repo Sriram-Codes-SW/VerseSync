@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.6 |
+| Version | 0.7 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -247,11 +247,39 @@ This section was written and committed before any rule that waits had been evalu
 
 **What is run next, not in this change.**
 
-1. **Corpora.** Rebuild the dev and test corpora with five recorded and fifteen unrecorded songs per language (100 songs in all) and recapture their transcripts with the final marks. Together they are the selection corpus; test is no longer clean after section 10. The fresh report corpus is a prefix of the FLEURS train split, about 90 MB per language for en-us, hi, es, de and fr, built the same way, with at least 600 recordings of songs not in the library. Before it is used, check that its sentences are not in dev or test.
-2. **Grid (64 rules).** At least 4 different words found; share 0.65 or 0.8; gap 0.4, 0.6, 0.8 or 1.0 times `ln(1 + songs)` (about 1.8, 2.8, 3.7 or 4.6 for 100 songs); hold 0, 0.5, 1 or 2 s; evidence sticky or retractable.
+1. **Corpora.** Rebuild the dev and test corpora with five recorded and eleven unrecorded songs per language (80 songs in all; fifteen was planned, but the Hindi dev split has only 46 spare sentences, enough for eleven songs, so eleven is used in every corpus, decided before any evaluation) and recapture their transcripts with the final marks. Together they are the selection corpus; test is no longer clean after section 10. The fresh report corpus is a prefix of the FLEURS train split, about 90 MB per language for en-us, hi, es, de and fr, built the same way, with at least 600 recordings of songs not in the library. Before it is used, check that its sentences are not in dev or test.
+2. **Grid (64 rules).** At least 4 different words found; share 0.65 or 0.8; gap 0.4, 0.6, 0.8 or 1.0 times `ln(1 + songs)` (about 1.8, 2.6, 3.5 or 4.4 for 80 songs); hold 0, 0.5, 1 or 2 s; evidence sticky or retractable.
 3. **Criterion.** On the selection corpus, acting the first time the rule fires, a rule is eligible if it decides on a song not in the library for at most 1% of those recordings with the upper end of the 95% interval at most 3%, and names a different song than the one sung for at most 1% of recordings of songs in the library. Of the eligible rules, the one that names the right song most often is chosen. A tie goes to the shorter hold, then sticky evidence, then the lower share, then the smaller gap. If no rule is eligible, none is chosen and the report says so.
 4. **Pass on the report corpus,** reported once: the chosen rule decides on a song not in the library with the upper end of the interval at most 5%, and names a different song than the one sung for at most 1%. The right-song rate and the median and 90th percentile time to the first right answer are reported with it, by snippet length, because a hold costs the short snippets most, and a recording on which the rule never acts is a cost and not a success. A leave-one-language-out table is reported with it.
 5. **Not claimed.** One rate under 1% needs about a thousand recordings of unknown songs to show, which this corpus does not have. These are read sentences, so nothing here says how Vosk's partial results flicker on singing, where a hold may fail safe and never decide. The lock opens for one target, so its rate per target is measured per pair of recording and target song and not by "decides on any of the songs". The app is not changed by any of this, and if a rule is ever adopted it is its own layer, with an ADR amendment and a check on singing.
+
+### Result of the run
+
+Run once, after the plan above was committed. The corpora were built with the same seed and the fixed library of 80 songs, with finished results marked in every transcript. Selection: the dev and test corpora together, 1,076 recordings (266 of songs in the library, 810 of songs not). Report: the FLEURS train corpus, 812 recordings (105 of songs in the library, 707 not). The train corpus's sentences and clip files do not occur in dev or test (checked for all five languages). Whether its speakers are disjoint from theirs was not checked, because FLEURS does not give speaker ids in the file lists. Read speech, not singing. Updates at the last reported frame are not counted.
+
+**The rule chosen on the selection corpora** is `words>=4 share>=0.8 gap>1.0·ln(1+N) hold 0 ms, retractable` (gap about 4.4 for 80 songs). Acting the first time it fires:
+
+| Rule | Corpus | right song | wrong song | decides on a song not in the library | median / 90th percentile seconds to the right answer |
+|---|---|---|---|---|---|
+| chosen | selection | 197/266 = 74% (68 to 79) | 0/266 (0 to 1.4) | 5/810 = 0.6% (0.3 to 1.4) | 2.6 / 4.3 |
+| chosen | **fresh (train)** | 73/105 = 70% (60 to 78) | 0/105 (0 to 3.5) | **0/707 = 0% (0 to 0.5)** | 2.6 / 4.0 |
+| current speech rule | fresh | 94/105 = 90% (82 to 94) | 2/105 = 1.9% (0.5 to 6.7) | 326/707 = 46% (42 to 50) | 1.6 / 2.8 |
+| current lock words rule | fresh | 89/105 = 85% (77 to 90) | 1/105 = 1.0% (0.2 to 5.2) | 226/707 = 32% (29 to 35) | 2.1 / 3.5 |
+
+**The pre-registered pass bar was met:** the upper end of the interval for deciding on a song not in the library is 0.5%, at most 5%, and a wrong song was named for 0 of 105, at most 1%. The selection estimate (0.6%) and the fresh one (0%) agree, which last time they did not.
+
+What it shows:
+
+- **The difference came from stricter thresholds, not from waiting.** The chosen rule has no hold. At the chosen share and gap, a hold of 0.5 s lowered right answers from 74% to 67% and moved false decisions from 0.6% to 0.5%, which is within noise; 1 s took right answers to 56% and 2 s to 37%. Evidence that can be taken back made no measurable difference to either (197 against 196 right, 5 against 5 false). The rule chosen last time had a share of 0.65 and a gap of about 0.64·ln(1+N), which was too lax; the stricter share and gap leave almost no false firings at all (5 of 810 on the selection corpora). The idea that early firing was the main problem, and that waiting would fix it, was not what the data supported.
+- **It costs right answers.** The chosen rule names the right song for 70% (60 to 78) of recordings in the library, against 90% for the current speech rule, and 32 of the 105 never reached a decision. By snippet length it is 51% (36 to 67) at 3 s, 84% (68 to 93) at 5 s and 75% (59 to 86) at 10 s, and by language 65% to 77%. It acts at a median of 2.6 s, against 1.6 s. In every language and at every snippet length it decided on no unknown song (upper ends 1.4% to 2.9%).
+- **The settings carry over, roughly.** Leaving one language out and choosing without it gave rules that differ (share 0.8 mostly, gap 0.6 to 1.0, hold 0 or 0.5 s), and on the language left out the rule decided on an unknown song for 0% to 1.3% of recordings (de 0.7%, es 1.3%, en-us, fr and hi 0%) and named the right song for 62% to 73%.
+- **A decision on a song not in the library also means no target song opens.** The lock opens for one target, and the chosen rule named no song at all for any of the 707 unknown recordings, so it opened none.
+
+What it does not show:
+
+- **Wrong songs.** 0 of 105 has an upper end of 3.5%, so a wrong-song rate under 1% is not shown, only that none occurred. The pre-registered bar was a point estimate for this.
+- **Singing, real lyrics, or the live app.** These are read sentences, four-sentence "songs" that share vocabulary the way Wikipedia text does, an 80-song library, and transcripts fed to Vosk faster than real time on an emulator. Real lyrics repeat words in choruses (a word counts once), sung speech is recognized worse and its partial results flicker more, and a live recognizer's timing differs from this replay.
+- **Anything about the app.** Nothing is adopted. A decision rule, if it ships, is its own layer on top of the unchanged candidate list, with an ADR and a check on real singing, and the lock would use it for its one target song.
 
 ## 13. Not verified
 
