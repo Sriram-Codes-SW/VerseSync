@@ -87,6 +87,21 @@ internal object SpeechMatcher {
     const val MIN_MATCHED_WORDS = 2
 
     /**
+     * Normalizes Devanagari text to improve Sanskrit matching accuracy when using the Hindi model.
+     * Other languages are returned as heard.
+     */
+    fun normalize(
+        text: String,
+        languageCode: String,
+    ): String {
+        if (languageCode != "sa") return text
+        return text
+            .replace("़", "") // Remove Nukta (Hindi specific)
+            .replace("v", "b") // Sanskrit 'v' often heard as 'b' by Hindi models
+            .trim()
+    }
+
+    /**
      * How many different heard words ([spoken], from [spokenMatchTokens]) are found in the lyrics
      * ([lyricTokens]), or null if the song is not a candidate for this speech.
      */

@@ -154,7 +154,7 @@ class HybridRecognitionEngine(
         library: List<Song>,
         cache: HashMap<Int, CachedLyricTokens>,
     ) {
-        val sttQuery = normalizeForSanskrit(vosk.recognitionResult.value)
+        val sttQuery = SpeechMatcher.normalize(vosk.recognitionResult.value, currentLanguage)
         if (sttQuery.isBlank()) return
 
         val spoken = spokenMatchTokens(sttQuery)
@@ -215,17 +215,6 @@ class HybridRecognitionEngine(
         spokenQuery: String,
         lyrics: String,
     ): Float = lyricMatchScore(spokenQuery, lyrics)
-
-    /**
-     * Normalizes Devanagari text to improve Sanskrit matching accuracy when using Hindi model.
-     */
-    private fun normalizeForSanskrit(text: String): String {
-        if (currentLanguage != "sa") return text
-        return text
-            .replace("़", "") // Remove Nukta (Hindi specific)
-            .replace("v", "b") // Sanskrit 'v' often heard as 'b' by Hindi models
-            .trim()
-    }
 
     fun calculateMatchScore(
         reference: List<Float>?,
