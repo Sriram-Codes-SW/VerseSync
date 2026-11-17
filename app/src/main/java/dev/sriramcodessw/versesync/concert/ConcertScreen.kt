@@ -276,7 +276,7 @@ fun ConcertScreen(
                 AlertDialog(
                     onDismissRequest = { confirmLeave = false },
                     title = { Text("Leave the concert?", fontSize = 24.sp) },
-                    text = { Text("Your place is saved. You can resume from the Setlists tab.", fontSize = 18.sp) },
+                    text = { Text("Your place is saved. You can resume from Setlists, under the Folders tab.", fontSize = 18.sp) },
                     confirmButton = {
                         Button(
                             onClick = {
