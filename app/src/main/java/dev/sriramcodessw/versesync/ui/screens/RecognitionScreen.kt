@@ -19,9 +19,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dev.sriramcodessw.versesync.billing.BillingViewModel
+import dev.sriramcodessw.versesync.data.LanguageModelInfo
 import dev.sriramcodessw.versesync.data.LanguageViewModel
 import dev.sriramcodessw.versesync.data.OnboardingViewModel
 import dev.sriramcodessw.versesync.data.TrialViewModel
+import dev.sriramcodessw.versesync.data.defaultRecognitionLanguage
+import dev.sriramcodessw.versesync.data.recognitionLanguages
 import dev.sriramcodessw.versesync.engine.HybridRecognitionViewModel
 import dev.sriramcodessw.versesync.ui.components.PitchVisualizer
 import dev.sriramcodessw.versesync.ui.components.TourOverlay
@@ -48,14 +51,12 @@ fun RecognitionScreen(
     val remainingTrials by trialViewModel.remainingTrials.collectAsState()
     val isTourCompleted by onboardingViewModel.isRecognitionTourCompleted.collectAsState()
 
-    val availableLanguages =
-        languageViewModel.availableLanguages.filter { lang ->
-            installedLanguages.contains(lang.code)
-        }
+    // Installed languages plus those no speech model exists for, which can only use pitch matching.
+    val availableLanguages = recognitionLanguages(languageViewModel.availableLanguages, installedLanguages)
 
     var expanded by remember { mutableStateOf(false) }
     var selectedLanguage by remember {
-        mutableStateOf(availableLanguages.firstOrNull() ?: languageViewModel.availableLanguages[0])
+        mutableStateOf(defaultRecognitionLanguage(languageViewModel.availableLanguages, installedLanguages))
     }
 
     // Tour State
@@ -111,6 +112,14 @@ fun RecognitionScreen(
                 if (availableLanguages.isEmpty()) {
                     Text("No language models installed. Please go to Settings to download one.")
                 } else {
+                    if (installedLanguages.isEmpty()) {
+                        Text(
+                            text = "No speech models installed. Download one in Settings for speech matching. Pitch matching works without one.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
+                    }
                     if (!isPro) {
                         Text(
                             text = "Trial Usage: $remainingTrials/3 daily hybrid attempts remaining",
@@ -132,7 +141,7 @@ fun RecognitionScreen(
                                 },
                     ) {
                         OutlinedTextField(
-                            value = selectedLanguage.name,
+                            value = selectedLanguage.recognitionLabel(),
                             onValueChange = {},
                             readOnly = true,
                             enabled = !isRecognizing,
@@ -146,7 +155,7 @@ fun RecognitionScreen(
                         ) {
                             availableLanguages.forEach { language ->
                                 DropdownMenuItem(
-                                    text = { Text(language.name) },
+                                    text = { Text(language.recognitionLabel()) },
                                     onClick = {
                                         selectedLanguage = language
                                         expanded = false
@@ -179,7 +188,12 @@ fun RecognitionScreen(
 
                     if (!isModelReady) {
                         Text(
-                            text = "Offline speech model for ${selectedLanguage.name} not downloaded. Pitch matching is active.",
+                            text =
+                                if (selectedLanguage.hasSpeechModel) {
+                                    "Offline speech model for ${selectedLanguage.name} not downloaded. Pitch matching is active."
+                                } else {
+                                    "No speech model exists for ${selectedLanguage.name}. Pitch matching is active."
+                                },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.padding(bottom = 8.dp),
@@ -259,3 +273,6 @@ fun RecognitionScreen(
         }
     }
 }
+
+/** The name shown in the language list, marking languages that can only use pitch matching. */
+private fun LanguageModelInfo.recognitionLabel(): String = if (hasSpeechModel) name else "$name (pitch only)"
