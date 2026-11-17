@@ -86,190 +86,192 @@ fun RecognitionScreen(
         hybridViewModel.loadLanguageModel(selectedLanguage.code)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Recognize Song") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
-            )
-        },
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).systemBarsPadding()) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                if (availableLanguages.isEmpty()) {
-                    Text("No language models installed. Please go to Settings to download one.")
-                } else {
-                    if (installedLanguages.isEmpty()) {
-                        Text(
-                            text = "No speech models installed. Download one in Settings for speech matching. Pitch matching works without one.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                    }
-                    if (!isPro) {
-                        Text(
-                            text = "Trial Usage: $remainingTrials/3 daily hybrid attempts remaining",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                    }
-
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { if (!isRecognizing) expanded = !expanded },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .onGloballyPositioned {
-                                    langSelectorAnchor = it.positionInRoot()
-                                    langSelectorSize = it.size
-                                },
-                    ) {
-                        OutlinedTextField(
-                            value = selectedLanguage.recognitionLabel(),
-                            onValueChange = {},
-                            readOnly = true,
-                            enabled = !isRecognizing,
-                            label = { Text("Listening Language") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = !isRecognizing).fillMaxWidth(),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                        ) {
-                            availableLanguages.forEach { language ->
-                                DropdownMenuItem(
-                                    text = { Text(language.recognitionLabel()) },
-                                    onClick = {
-                                        selectedLanguage = language
-                                        expanded = false
-                                    },
-                                )
-                            }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Recognize Song") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                            )
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (isRecognizing) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                        ) {
+                    },
+                )
+            },
+        ) { paddingValues ->
+            Box(modifier = Modifier.padding(paddingValues).systemBarsPadding()) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (availableLanguages.isEmpty()) {
+                        Text("No language models installed. Please go to Settings to download one.")
+                    } else {
+                        if (installedLanguages.isEmpty()) {
                             Text(
-                                text = "Heard: ${sttText.ifBlank { "..." }}",
-                                modifier = Modifier.padding(16.dp),
-                                style = MaterialTheme.typography.bodyLarge,
+                                text = "No speech models installed. Download one in Settings for speech matching. Pitch matching works without one.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                        }
+                        if (!isPro) {
+                            Text(
+                                text = "Trial Usage: $remainingTrials/3 daily hybrid attempts remaining",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(bottom = 8.dp),
                             )
                         }
 
-                        PitchVisualizer(
-                            pitch = instantPitch,
-                            modifier = Modifier.padding(vertical = 8.dp),
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    if (!isModelReady) {
-                        Text(
-                            text =
-                                if (selectedLanguage.hasSpeechModel) {
-                                    "Offline speech model for ${selectedLanguage.name} not downloaded. Pitch matching is active."
-                                } else {
-                                    "No speech model exists for ${selectedLanguage.name}. Pitch matching is active."
-                                },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                    }
-
-                    Button(
-                        onClick = {
-                            if (!isRecognizing) {
-                                if (isPro || remainingTrials > 0) {
-                                    if (!isPro) trialViewModel.useTrial()
-                                    isRecognizing = true
-                                    // Inside the entitlement check above, so pitch matching is allowed here.
-                                    hybridViewModel.startRecognition(true)
-                                }
-                            } else {
-                                isRecognizing = false
-                                hybridViewModel.stopRecognition()
-                            }
-                        },
-                        modifier =
-                            Modifier
-                                .onGloballyPositioned {
-                                    startBtnAnchor = it.positionInRoot()
-                                    startBtnSize = it.size
-                                }.semantics {
-                                    contentDescription = if (isRecognizing) "Stop recognition" else "Start recognition"
-                                },
-                    ) {
-                        Text(text = if (isRecognizing) "Stop Recognizing" else "Start Recognizing")
-                    }
-                }
-
-                error?.let {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = it, color = MaterialTheme.colorScheme.error)
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (isRecognizing || (recognitionResult?.candidates?.isNotEmpty() == true)) {
-                    recognitionResult?.let {
-                        if (it.candidates.isEmpty()) {
-                            Text(text = "Listening...")
-                        } else {
-                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                                items(it.candidates) { song ->
-                                    ListItem(
-                                        headlineContent = { Text(song.title) },
-                                        supportingContent = { Text("${song.artist} (${song.language})") },
-                                        modifier =
-                                            Modifier.background(
-                                                if (it.candidates.size == 1) Color.Green else Color.Transparent,
-                                            ),
+                        ExposedDropdownMenuBox(
+                            expanded = expanded,
+                            onExpandedChange = { if (!isRecognizing) expanded = !expanded },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .onGloballyPositioned {
+                                        langSelectorAnchor = it.positionInRoot()
+                                        langSelectorSize = it.size
+                                    },
+                        ) {
+                            OutlinedTextField(
+                                value = selectedLanguage.recognitionLabel(),
+                                onValueChange = {},
+                                readOnly = true,
+                                enabled = !isRecognizing,
+                                label = { Text("Listening Language") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = !isRecognizing).fillMaxWidth(),
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                            ) {
+                                availableLanguages.forEach { language ->
+                                    DropdownMenuItem(
+                                        text = { Text(language.recognitionLabel()) },
+                                        onClick = {
+                                            selectedLanguage = language
+                                            expanded = false
+                                        },
                                     )
                                 }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (isRecognizing) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                            ) {
+                                Text(
+                                    text = "Heard: ${sttText.ifBlank { "..." }}",
+                                    modifier = Modifier.padding(16.dp),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                            }
+
+                            PitchVisualizer(
+                                pitch = instantPitch,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        if (!isModelReady) {
+                            Text(
+                                text =
+                                    if (selectedLanguage.hasSpeechModel) {
+                                        "Offline speech model for ${selectedLanguage.name} not downloaded. Pitch matching is active."
+                                    } else {
+                                        "No speech model exists for ${selectedLanguage.name}. Pitch matching is active."
+                                    },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                if (!isRecognizing) {
+                                    if (isPro || remainingTrials > 0) {
+                                        if (!isPro) trialViewModel.useTrial()
+                                        isRecognizing = true
+                                        // Inside the entitlement check above, so pitch matching is allowed here.
+                                        hybridViewModel.startRecognition(true)
+                                    }
+                                } else {
+                                    isRecognizing = false
+                                    hybridViewModel.stopRecognition()
+                                }
+                            },
+                            modifier =
+                                Modifier
+                                    .onGloballyPositioned {
+                                        startBtnAnchor = it.positionInRoot()
+                                        startBtnSize = it.size
+                                    }.semantics {
+                                        contentDescription = if (isRecognizing) "Stop recognition" else "Start recognition"
+                                    },
+                        ) {
+                            Text(text = if (isRecognizing) "Stop Recognizing" else "Start Recognizing")
+                        }
+                    }
+
+                    error?.let {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = it, color = MaterialTheme.colorScheme.error)
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (isRecognizing || (recognitionResult?.candidates?.isNotEmpty() == true)) {
+                        recognitionResult?.let {
+                            if (it.candidates.isEmpty()) {
+                                Text(text = "Listening...")
+                            } else {
+                                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                    items(it.candidates) { song ->
+                                        ListItem(
+                                            headlineContent = { Text(song.title) },
+                                            supportingContent = { Text("${song.artist} (${song.language})") },
+                                            modifier =
+                                                Modifier.background(
+                                                    if (it.candidates.size == 1) Color.Green else Color.Transparent,
+                                                ),
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-
-            if (!isTourCompleted && availableLanguages.isNotEmpty()) {
-                TourOverlay(
-                    steps = tourSteps,
-                    currentStepIndex = currentTourStep,
-                    onNext = {
-                        if (currentTourStep < tourSteps.size - 1) {
-                            currentTourStep++
-                        } else {
-                            onboardingViewModel.completeRecognitionTour()
-                        }
-                    },
-                    onSkip = { onboardingViewModel.completeRecognitionTour() },
-                )
-            }
+        }
+        // Drawn over the whole screen, above the top bar, because the highlighted places are measured from the window.
+        if (!isTourCompleted && availableLanguages.isNotEmpty()) {
+            TourOverlay(
+                steps = tourSteps,
+                currentStepIndex = currentTourStep,
+                onNext = {
+                    if (currentTourStep < tourSteps.size - 1) {
+                        currentTourStep++
+                    } else {
+                        onboardingViewModel.completeRecognitionTour()
+                    }
+                },
+                onSkip = { onboardingViewModel.completeRecognitionTour() },
+            )
         }
     }
 }
