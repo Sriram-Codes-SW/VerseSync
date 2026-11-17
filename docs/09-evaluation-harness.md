@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.9 |
+| Version | 0.10 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -300,6 +300,8 @@ ADR-19 (Proposed). This section was written and committed before the matcher was
 **Addendum, committed before any run: re-performance conditions, and what this is for.** The owner's use is a live concert, where the band plays the song live and does not replay the recording. Landmark fingerprints of a recording are not expected to match that, and this run measures how far from the recording a performance can drift before they stop matching. It does not make the fingerprints the concert path; ADR-19 covers recorded playback (a backing track, a lip-synced number, walk-in music), and a separate proposal covers the concert.
 
 The same generated song is played again as a different performance of the same score, and a snippet of that performance is matched against the print of the original. Five conditions, none with added noise, all with 3, 5 and 10 second snippets, on the same query starts: **different sound** (new instrument sounds, a new percussion part, the same tempo and timing); **tempo +3%**, **+5%** and **+8%** (the whole performance faster, with the same sounds as the original); and **a live-like performance** (new sounds and percussion, tempo +5% with a drift of up to ±2% over the song, and each note starting up to 30 ms early or late). They are reported with 95% Wilson intervals and no bar, in the same table as the other conditions and not pooled with them, and they play no part in choosing the thresholds. What is expected, and not measured, is that matches fall to near zero as soon as the sounds and the timing change, and that this is a limit of the method and not a defect of this matcher.
+
+**Correction to the generated songs, committed before any evaluation run.** Two defects in the generated music were found by a small test on 6 songs, before any corpus was run. First, the random seeds of different songs collided (a melody seed was a sum, so song 7 reused pieces of song 5's melody); seeds are now mixed with a hash. Second, songs in one family shared their tempo exactly (90, 110 or 128 BPM) and their tuning exactly, so their bars and chord tones lined up frame for frame, and 4 of 20 queries for songs not in the library were accepted at the rule 15 votes and ratio 2. Real songs in one style do not share a tempo to a fraction of a percent or the same tuning. So within a family each song's tempo now differs by up to ±4% and its tuning by up to ±25 cents. The key and progression families, the repeating sections, the sounds, and every parameter of the matcher are unchanged. **The exact-family variant is kept as a stress test:** its clean-condition false accepts are reported for it separately, for the same library size, so the cost of identical tempo and tuning is visible and not hidden by the change.
 
 **What it will not show.** Real recordings, real speakers and rooms, the phone's own audio processing, any cover, live version or edit, or the person singing. Generated music repeats less than real music and overstates accuracy, so a pass here is not a claim about real songs.
 

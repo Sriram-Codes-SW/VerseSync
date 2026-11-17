@@ -20,7 +20,7 @@ This directory contains the system architecture, security, design records (ADRs)
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
 | [docs/08-quality-roadmap.md](08-quality-roadmap.md) | Recognition Quality Roadmap: where it stands and what to build next | 0.9 | Proposed |
-| [docs/09-evaluation-harness.md](09-evaluation-harness.md) | Evaluation Harness: replay recordings, measure accuracy and false accepts, recording protocol | 0.9 | Active |
+| [docs/09-evaluation-harness.md](09-evaluation-harness.md) | Evaluation Harness: replay recordings, measure accuracy and false accepts, recording protocol | 0.10 | Active |
 | [docs/10-voice-shortcut-threat-model.md](10-voice-shortcut-threat-model.md) | Voice Shortcut Threat Model: what it protects, what it does not, what is measured | 0.2 | Active |
 
 ## Revision History
