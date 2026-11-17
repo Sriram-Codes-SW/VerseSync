@@ -136,4 +136,37 @@ class VoiceShortcutAttemptsTest {
         // The proposed rule acted at a median of 2.6 s and a 90th percentile of 4.0 s on read speech (docs/09, section 12).
         assertTrue(VoiceShortcutAttempts.LISTEN_MS in 8_000L..15_000L)
     }
+
+    @Test
+    fun goingToTheBackgroundWhileListening_stopsTheMicrophone_andIsNotAFailedAttempt() {
+        val step = listening().interrupted()
+
+        assertEquals(listOf(Effect.StopListening), step.effects)
+        assertEquals(State.Idle, step.next.state)
+        assertEquals(0, step.next.failed)
+    }
+
+    @Test
+    fun goingToTheBackgroundKeepsEarlierFailedAttempts() {
+        val afterOneFailure = listening().timedOut().next
+
+        val step = afterOneFailure.micTapped().next.interrupted()
+
+        assertEquals(1, step.next.failed)
+        assertEquals(State.Idle, step.next.state)
+    }
+
+    @Test
+    fun goingToTheBackgroundWhileNotListeningChangesNothing() {
+        val idle = start.interrupted()
+        val deviceLock = start.fallbackTapped().next.interrupted()
+        val open = listening().matched().next.interrupted()
+
+        assertEquals(emptyList<Effect>(), idle.effects)
+        assertEquals(start, idle.next)
+        assertEquals(emptyList<Effect>(), deviceLock.effects)
+        assertEquals(State.DeviceLock, deviceLock.next.state)
+        assertEquals(emptyList<Effect>(), open.effects)
+        assertEquals(State.Open, open.next.state)
+    }
 }
