@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.23 |
+| Version | 0.24 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -77,9 +77,11 @@ Notes:
 | **TC-U-33** | Models / Unpack job | A good archive, the job run twice, no archive and no model, a corrupt archive over a working model, and a newer archive over an old one | The model is installed and the archive deleted, a second run changes nothing, a missing everything fails, a corrupt archive leaves the working model alone, and the newer one replaces the old | ADR-11 |
 | **TC-U-34** | Audio / Pitch detector adapter | Nine signals (tones, quiet tone, silence, noise, glide, vibrato, voice-like, tone in noise) through the adapter and through the library's own pitch processor | Every frame gives the same pitch and confidence | ADR-01 |
 | **TC-U-35** | Architecture / Library use | Scan the main sources for TarsosDSP imports, and the interface file for imports | Only the adapter uses TarsosDSP, and the interfaces import neither Android nor a library | ADR-13 |
+| **TC-U-40** | Evaluation / Harness | A generated corpus of three songs and five recordings with known answers, replayed through the real pitch and speech rules; a missing transcript; a recording of an unknown song; the report written twice | Found, top-1, false-accept, vocal-lock and latency counts equal the known answers; pitch is not scored before 5 seconds; a missing transcript is reported; the two reports are identical and hold no date | docs/09 |
 | **TC-M-10** | Database / Migration | Run `VerseDatabaseMigrationTest` on a device or emulator, and again after raising the version without a migration | Passes at version 3; fails with a missing-migration error when the version is raised alone | ADR-12 |
 | **TC-M-11** | Build / Application id | Install a build with the old id and a build with the new id on one device, and look at their data | Both install side by side and keep separate data; nothing from the old app appears in the new one | ADR-16 |
 | **TC-M-12** | Recognition / Pitch only | On a fresh install with no models, open Recognize Song, choose a language marked pitch only, and start recognition | The list offers the pitch-only languages, the screen says no speech model exists and pitch matching is active, and recognition starts and stops without a crash | ADR-15 |
 | **TC-M-13** | Sync, recognition and vocal lock / Real audio | Run `tools/audio-test/run_e2e.sh en-us hi` on an emulator: record two clips as songs, recognize the first, open the vocal lock with it, and play the second against it | Sync records fingerprints with voiced frames, the synced song is recognized, and the lock opens for the right clip. The lock staying closed for the wrong audio is known to fail while background noise is fingerprinted (issue 33) | ADR-01, ADR-10 |
 | **TC-M-14** | App lock / Android versions | On emulators for Android 9 (API 28), Android 10 (API 29) and Android 16 (API 36), set a device PIN, turn on the app lock in Settings, restart the app, and enter the PIN | The switch is accepted, the system unlock prompt appears with no crash, and the PIN opens the app. Create the Android 9 and 10 emulators from the `google_apis` x86_64 images | ADR-10, ADR-17 |
 | **TC-M-15** | Models / Unpack survives the process | Run `ModelUnpackWorkerInstrumentedTest` on a device, then queue a 1.6 GB unpack with `-e bigmodel 1600` (it needs the app launched once afterwards, because ending the test stops the app), watch the staging folder grow, and kill the app process halfway | The system starts a new process, the job restarts and finishes, the model is installed and the archive is deleted | ADR-11 |
+| **TC-M-17** | Evaluation / Transcript capture | Run `tools/audio-test/capture_transcripts.sh <corpus> <codes>` on an emulator or phone, then `./gradlew :app:testDebugUnitTest --tests "*EvaluationRun*" -Pversesync.eval.corpus=<corpus>` | A transcript file is written per recording, and the report is produced; rerunning the replay gives an identical report | docs/09 |

@@ -58,6 +58,8 @@ class Corpus(
     val root: File,
     val library: List<LibrarySong>,
     val queries: List<Query>,
+    /** Optional text from corpus.json that the report prints at the top, such as a warning that this is only a seed. */
+    val caution: String? = null,
 ) {
     fun recording(path: String): File = File(root, path)
 
@@ -80,7 +82,9 @@ class Corpus(
             queries.forEach { q ->
                 require(q.song == null || q.song in ids) { "Query ${q.id} names song ${q.song}, which is not in library.json" }
             }
-            return Corpus(root, library, queries)
+            val meta = File(root, "corpus.json")
+            val caution = if (meta.isFile) gson.fromJson(meta.readText(), com.google.gson.JsonObject::class.java).get("caution")?.asString else null
+            return Corpus(root, library, queries, caution)
         }
     }
 }

@@ -34,6 +34,7 @@ object Report {
         val sb = StringBuilder()
         sb.appendLine("# Recognition evaluation: $label")
         sb.appendLine()
+        corpus.caution?.let { sb.appendLine("> **$it**").also { sb.appendLine() } }
         sb.appendLine("${results.size} recordings ($inLibrary of songs in the library, $outOfLibrary of songs that are not), ${corpus.library.size} songs in the library.")
         sb.appendLine("Intervals are 95 percent Wilson intervals. How the rules are replayed, and where that differs from the app, is in docs/09-evaluation-harness.md.")
         sb.appendLine()
