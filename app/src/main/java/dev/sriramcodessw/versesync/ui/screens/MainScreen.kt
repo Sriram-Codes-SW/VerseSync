@@ -25,8 +25,9 @@ import androidx.compose.ui.unit.dp
 import dev.sriramcodessw.versesync.billing.BillingViewModel
 import dev.sriramcodessw.versesync.concert.DeleteSetlistDialog
 import dev.sriramcodessw.versesync.concert.NewSetlistDialog
-import dev.sriramcodessw.versesync.concert.SetlistsTabContent
+import dev.sriramcodessw.versesync.concert.ResumeInfo
 import dev.sriramcodessw.versesync.concert.SetlistsViewModel
+import dev.sriramcodessw.versesync.concert.setlistsSection
 import dev.sriramcodessw.versesync.data.Folder
 import dev.sriramcodessw.versesync.data.OnboardingViewModel
 import dev.sriramcodessw.versesync.data.Setlist
@@ -108,8 +109,8 @@ fun MainScreen(
     var micIconSize by remember { mutableStateOf(IntSize.Zero) }
     var addFabAnchor by remember { mutableStateOf(Offset.Zero) }
     var addFabSize by remember { mutableStateOf(IntSize.Zero) }
-    var setlistsTabAnchor by remember { mutableStateOf(Offset.Zero) }
-    var setlistsTabSize by remember { mutableStateOf(IntSize.Zero) }
+    var foldersTabAnchor by remember { mutableStateOf(Offset.Zero) }
+    var foldersTabSize by remember { mutableStateOf(IntSize.Zero) }
 
     val tourSteps =
         listOf(
@@ -123,10 +124,10 @@ fun MainScreen(
             ),
             TourStep("Add Music", "Create new lyrics.", anchor = addFabAnchor, size = addFabSize),
             TourStep(
-                "Concerts",
-                "Make a setlist for a show. It works with no network, and the concert screen is free.",
-                anchor = setlistsTabAnchor,
-                size = setlistsTabSize,
+                "Folders and setlists",
+                "Folders also holds your setlists: an ordered list of songs for a show, with a big-text screen to sing along.",
+                anchor = foldersTabAnchor,
+                size = foldersTabSize,
             ),
         )
 
@@ -313,7 +314,7 @@ fun MainScreen(
                         },
                     )
 
-                    if (!isSelectionMode && selectedTab != 2) {
+                    if (!isSelectionMode) {
                         SearchBar(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                             inputField = {
@@ -336,19 +337,16 @@ fun MainScreen(
                         Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
                             Text("Songs", modifier = Modifier.padding(16.dp))
                         }
-                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-                            Text("Folders", modifier = Modifier.padding(16.dp))
-                        }
                         Tab(
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 },
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
                             modifier =
                                 Modifier.onGloballyPositioned {
-                                    setlistsTabAnchor = it.positionInRoot()
-                                    setlistsTabSize = it.size
+                                    foldersTabAnchor = it.positionInRoot()
+                                    foldersTabSize = it.size
                                 },
                         ) {
-                            Text("Setlists", modifier = Modifier.padding(16.dp))
+                            Text("Folders", modifier = Modifier.padding(16.dp))
                         }
                     }
                 }
@@ -357,10 +355,7 @@ fun MainScreen(
                 if (!isSelectionMode) {
                     FloatingActionButton(
                         onClick = {
-                            if (selectedTab == 2) {
-                                // Concert mode is free: a new setlist never checks Pro status or uses a trial.
-                                showNewSetlistDialog = true
-                            } else if (selectedTab == 0) {
+                            if (selectedTab == 0) {
                                 if (isPro || songs.size < 10) {
                                     onNavigateToAddSong()
                                 } else if (remainingTrials > 0) {
@@ -385,13 +380,8 @@ fun MainScreen(
                             },
                     ) {
                         Icon(
-                            imageVector = if (selectedTab == 1) Icons.Default.CreateNewFolder else Icons.Default.Add,
-                            contentDescription =
-                                when (selectedTab) {
-                                    0 -> "Add Song"
-                                    1 -> "Add Folder"
-                                    else -> "New setlist"
-                                },
+                            imageVector = if (selectedTab == 0) Icons.Default.Add else Icons.Default.CreateNewFolder,
+                            contentDescription = if (selectedTab == 0) "Add Song" else "Add Folder",
                         )
                     }
                 }
@@ -417,19 +407,18 @@ fun MainScreen(
                             selectedSongs.add(it)
                         },
                     )
-                } else if (selectedTab == 1) {
-                    FolderListContent(
-                        folders = folders,
-                        onDelete = { folderToDelete = it },
-                    )
                 } else {
-                    SetlistsTabContent(
+                    FoldersTabContent(
+                        folders = folders,
+                        onDeleteFolder = { folderToDelete = it },
                         setlists = setlists,
                         resume = resume,
                         onResume = onStartConcert,
-                        onOpen = onOpenSetlist,
-                        onStart = onStartConcert,
-                        onDelete = { setlistToDelete = it },
+                        onOpenSetlist = onOpenSetlist,
+                        onStartSetlist = onStartConcert,
+                        onDeleteSetlist = { setlistToDelete = it },
+                        // Concert mode is free: a new setlist never checks Pro status or uses a trial.
+                        onNewSetlist = { showNewSetlistDialog = true },
                     )
                 }
 
@@ -537,28 +526,61 @@ fun SongListContent(
     }
 }
 
+/**
+ * The Folders tab: the folders, then the setlists (ADR-20), in one scrolling list, so the main screen
+ * has only two tabs, Songs and Folders.
+ */
 @Composable
-fun FolderListContent(
+fun FoldersTabContent(
     folders: List<Folder>,
-    onDelete: (Folder) -> Unit,
+    onDeleteFolder: (Folder) -> Unit,
+    setlists: List<Setlist>,
+    resume: ResumeInfo?,
+    onResume: (Int) -> Unit,
+    onOpenSetlist: (Int) -> Unit,
+    onStartSetlist: (Int) -> Unit,
+    onDeleteSetlist: (Setlist) -> Unit,
+    onNewSetlist: () -> Unit,
 ) {
-    if (folders.isEmpty()) {
-        EmptyState("No folders yet.")
-    } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(folders) { folder ->
-                ListItem(
-                    headlineContent = { Text(folder.name) },
-                    leadingContent = { Icon(Icons.Default.Folder, contentDescription = null) },
-                    trailingContent = {
-                        IconButton(onClick = { onDelete(folder) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
-                        }
-                    },
-                    modifier = Modifier.clickable { },
+    // Room at the bottom, so the add button never covers the last row.
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
+        item(key = "folders-header") {
+            Text(
+                "Folders",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+            )
+        }
+        if (folders.isEmpty()) {
+            item(key = "folders-empty") {
+                Text(
+                    "No folders yet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
         }
+        items(folders, key = { "folder-${it.id}" }) { folder ->
+            ListItem(
+                headlineContent = { Text(folder.name) },
+                leadingContent = { Icon(Icons.Default.Folder, contentDescription = null) },
+                trailingContent = {
+                    IconButton(onClick = { onDeleteFolder(folder) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    }
+                },
+                modifier = Modifier.clickable { },
+            )
+        }
+        setlistsSection(
+            setlists = setlists,
+            resume = resume,
+            onResume = onResume,
+            onOpen = onOpenSetlist,
+            onStart = onStartSetlist,
+            onDelete = onDeleteSetlist,
+            onNew = onNewSetlist,
+        )
     }
 }
 
