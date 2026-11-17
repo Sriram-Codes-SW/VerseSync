@@ -114,6 +114,12 @@ internal fun spokenMatchTokens(spoken: String): List<String> = tokenizeLyrics(sp
  */
 internal fun lyricTokenSet(lyrics: String): Set<String> = tokenizeLyrics(lyrics).map { it.text }.toSet()
 
+/** How many different spoken tokens are found in [lyricTokens]. One word heard in noise counts as one. */
+internal fun matchedTokenCount(
+    spokenTokens: List<String>,
+    lyricTokens: Set<String>,
+): Int = spokenTokens.distinct().count { it in lyricTokens }
+
 /** Fraction of [spokenTokens] found in [lyricTokens], from 0 to 1. */
 internal fun tokenMatchScore(
     spokenTokens: List<String>,

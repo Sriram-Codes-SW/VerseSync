@@ -20,14 +20,45 @@ private const val TAG = "HybridRecognitionEngine"
 /** Minimum frames voiced in both contours before a pitch distance is trusted. */
 private const val MIN_VOICED_OVERLAP = 8
 
+/** A pitch match scores below this many semitones. It was 3.0, which let a different spoken clip through. */
+private const val PITCH_MATCH_THRESHOLD = 2.5f
+
+/** Sanskrit is heard through a Hindi model and sung more freely, so it gets a little more room. */
+private const val PITCH_MATCH_THRESHOLD_SANSKRIT = 3.0f
+
 /** How often the pitch contour is re-scored against the library. */
 private const val PITCH_INTERVAL_MS = 5000L
 
 /** Share of the spoken words that must appear in a song's lyrics for it to be a candidate. */
 private const val SPEECH_MATCH_THRESHOLD = 0.35f
 
+/**
+ * Different words that must be heard and found in a song's lyrics. Before, one word was enough: the
+ * score is the share of heard words found in the lyrics, so a single heard word in the lyrics scored 1.0.
+ * A song with fewer different words than this needs all of them.
+ */
+private const val SPEECH_MIN_MATCHED_WORDS = 2
+
+/**
+ * How strongly a song matched, for callers that need more than "it is a candidate", such as the
+ * vocal lock. [speechWords] is the most different heard words found in the lyrics in one piece of
+ * speech. [pitchScore] and [pitchOverlap] are the best pitch distance and the voiced frames it used.
+ */
+data class MatchEvidence(
+    val speechWords: Int = 0,
+    val pitchScore: Float = Float.MAX_VALUE,
+    val pitchOverlap: Int = 0,
+)
+
 data class RecognitionResult(
     val candidates: List<Song>,
+    val evidence: Map<Int, MatchEvidence> = emptyMap(),
+)
+
+/** A pitch distance and how many frames it was measured over. */
+internal data class PitchMatch(
+    val score: Float,
+    val overlap: Int,
 )
 
 @SuppressLint("MissingPermission")
@@ -59,6 +90,10 @@ class HybridRecognitionEngine(
 
     // Persistent candidate accumulator to prevent state flickering
     private val accumulatedSttCandidates = mutableListOf<Song>()
+
+    // Most different words heard and found in a song's lyrics in one piece of speech, per song id.
+    // Guarded by the same lock as the candidates.
+    private val speechEvidence = HashMap<Int, Int>()
 
     // The pitch contour grows continuously and only needs re-scoring now and then.
     private val pitchHeartbeat =
@@ -106,7 +141,7 @@ class HybridRecognitionEngine(
         flow {
             val songs = MutableStateFlow<List<Song>?>(null)
             val lyricTokens = HashMap<Int, CachedLyricTokens>()
-            var pitchCandidates: List<Song> = emptyList()
+            var pitchMatches: List<Pair<Song, PitchMatch>> = emptyList()
 
             coroutineScope {
                 launch { songDao.getAllSongs().collect { songs.value = it } }
@@ -121,11 +156,14 @@ class HybridRecognitionEngine(
                         val ids = library.mapTo(HashSet()) { it.id }
                         lyricTokens.keys.retainAll(ids)
                         // A deleted song must not stay a candidate.
-                        synchronized(accumulatedSttCandidates) { accumulatedSttCandidates.removeAll { it.id !in ids } }
+                        synchronized(accumulatedSttCandidates) {
+                            accumulatedSttCandidates.removeAll { it.id !in ids }
+                            speechEvidence.keys.retainAll(ids)
+                        }
                     }
-                    if (trigger != SearchTrigger.SPEECH) pitchCandidates = scorePitch(library)
+                    if (trigger != SearchTrigger.SPEECH) pitchMatches = scorePitch(library)
                     matchSpeech(library, lyricTokens)
-                    emit(combineCandidates(pitchCandidates))
+                    emit(combineCandidates(pitchMatches))
                 }
             }
         }.flowOn(Dispatchers.Default)
@@ -147,40 +185,55 @@ class HybridRecognitionEngine(
 
         val spoken = spokenMatchTokens(sttQuery)
         if (spoken.isEmpty()) return
-        val newlyFound =
-            library.filter { song ->
-                val cached =
-                    cache[song.id]?.takeIf { it.lyrics == song.lyrics }
-                        ?: CachedLyricTokens(song.lyrics, lyricTokenSet(song.lyrics)).also { cache[song.id] = it }
-                tokenMatchScore(spoken, cached.tokens) >= SPEECH_MATCH_THRESHOLD
-            }
+        val found = mutableListOf<Pair<Song, Int>>()
+        for (song in library) {
+            val cached =
+                cache[song.id]?.takeIf { it.lyrics == song.lyrics }
+                    ?: CachedLyricTokens(song.lyrics, lyricTokenSet(song.lyrics)).also { cache[song.id] = it }
+            if (tokenMatchScore(spoken, cached.tokens) < SPEECH_MATCH_THRESHOLD) continue
+            // The share alone is not enough evidence: one heard word that is in the lyrics scores 1.0.
+            val words = matchedTokenCount(spoken, cached.tokens)
+            if (words >= minOf(SPEECH_MIN_MATCHED_WORDS, cached.tokens.size)) found += song to words
+        }
         synchronized(accumulatedSttCandidates) {
-            newlyFound.forEach { candidate ->
+            found.forEach { (candidate, words) ->
                 if (accumulatedSttCandidates.none { it.id == candidate.id }) {
                     accumulatedSttCandidates.add(candidate)
                 }
+                speechEvidence.merge(candidate.id, words) { old, new -> maxOf(old, new) }
             }
         }
     }
 
     /** ADR-04: musical semitone pitch matching of the live contour. */
-    private fun scorePitch(library: List<Song>): List<Song> {
+    private fun scorePitch(library: List<Song>): List<Pair<Song, PitchMatch>> {
         val currentLiveFingerprint = fingerprinter?.fingerprint?.value ?: emptyList()
         if (currentLiveFingerprint.size < 10) return emptyList()
+        // Threshold in relative musical semitones
+        val threshold = if (currentLanguage == "sa") PITCH_MATCH_THRESHOLD_SANSKRIT else PITCH_MATCH_THRESHOLD
         return library
             .mapNotNull { song ->
-                val score = calculateMatchScore(song.fingerprint, currentLiveFingerprint)
-                // Threshold in relative musical semitones
-                val threshold = if (currentLanguage == "sa") 3.5f else 3.0f
-                if (score < threshold) song to score else null
-            }.sortedBy { it.second }
-            .map { it.first }
+                val match = calculatePitchMatch(song.fingerprint, currentLiveFingerprint)
+                if (match.score < threshold) song to match else null
+            }.sortedBy { it.second.score }
             .take(3)
     }
 
-    private fun combineCandidates(pitchCandidates: List<Song>): RecognitionResult {
-        val retained = synchronized(accumulatedSttCandidates) { accumulatedSttCandidates.toList() }
-        return RecognitionResult((retained + pitchCandidates).distinctBy { it.id })
+    private fun combineCandidates(pitchMatches: List<Pair<Song, PitchMatch>>): RecognitionResult {
+        val (retained, words) = synchronized(accumulatedSttCandidates) { accumulatedSttCandidates.toList() to HashMap(speechEvidence) }
+        val candidates = (retained + pitchMatches.map { it.first }).distinctBy { it.id }
+        val pitchById = pitchMatches.associate { it.first.id to it.second }
+        val evidence =
+            candidates.associate { song ->
+                val pitch = pitchById[song.id]
+                song.id to
+                    MatchEvidence(
+                        speechWords = words[song.id] ?: 0,
+                        pitchScore = pitch?.score ?: Float.MAX_VALUE,
+                        pitchOverlap = pitch?.overlap ?: 0,
+                    )
+            }
+        return RecognitionResult(candidates, evidence)
     }
 
     /**
@@ -206,25 +259,32 @@ class HybridRecognitionEngine(
     fun calculateMatchScore(
         reference: List<Float>?,
         live: List<Float>,
-    ): Float {
-        if (reference == null || reference.isEmpty() || live.isEmpty()) return Float.MAX_VALUE
+    ): Float = calculatePitchMatch(reference, live).score
+
+    /** The best pitch distance of [live] against [reference], and the voiced frames it was measured over. */
+    internal fun calculatePitchMatch(
+        reference: List<Float>?,
+        live: List<Float>,
+    ): PitchMatch {
+        val none = PitchMatch(Float.MAX_VALUE, 0)
+        if (reference == null || reference.isEmpty() || live.isEmpty()) return none
 
         val refContour = AudioFingerprinter.toRelativeSemitoneContour(reference)
         val liveContour = AudioFingerprinter.toRelativeSemitoneContour(live)
-        if (refContour.isEmpty() || liveContour.isEmpty()) return Float.MAX_VALUE
+        if (refContour.isEmpty() || liveContour.isEmpty()) return none
 
-        var minDistance = Float.MAX_VALUE
+        var best = none
         val windowSize = liveContour.size.coerceAtMost(refContour.size)
-        if (windowSize < 8) return Float.MAX_VALUE
+        if (windowSize < 8) return none
         val liveSegment = liveContour.takeLast(windowSize)
 
         val step = 5.coerceAtMost((refContour.size - windowSize).coerceAtLeast(1))
         for (i in 0..(refContour.size - windowSize) step step) {
             val subRef = refContour.subList(i, i + windowSize)
-            val dist = calculateDistance(subRef, liveSegment)
-            if (dist < minDistance) minDistance = dist
+            val match = calculateDistance(subRef, liveSegment)
+            if (match.score < best.score) best = match
         }
-        return minDistance
+        return best
     }
 
     /**
@@ -235,7 +295,7 @@ class HybridRecognitionEngine(
     private fun calculateDistance(
         list1: List<Float>,
         list2: List<Float>,
-    ): Float {
+    ): PitchMatch {
         var count = 0
         var sum = 0.0
         for (i in list1.indices) {
@@ -246,7 +306,7 @@ class HybridRecognitionEngine(
                 count++
             }
         }
-        return if (count >= MIN_VOICED_OVERLAP) (sum / count).toFloat() else Float.MAX_VALUE
+        return if (count >= MIN_VOICED_OVERLAP) PitchMatch((sum / count).toFloat(), count) else PitchMatch(Float.MAX_VALUE, count)
     }
 
     fun loadLanguageModel(languageCode: String) {
@@ -284,6 +344,7 @@ class HybridRecognitionEngine(
         _instantPitch.value = 0f
         synchronized(accumulatedSttCandidates) {
             accumulatedSttCandidates.clear()
+            speechEvidence.clear()
         }
         audioSource?.stop()
         audioSource = null
