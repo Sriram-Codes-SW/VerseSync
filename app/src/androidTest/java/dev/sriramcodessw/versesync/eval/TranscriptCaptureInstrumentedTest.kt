@@ -75,6 +75,7 @@ class TranscriptCaptureInstrumentedTest {
         fun note(
             json: String,
             frames: Int,
+            isFinal: Boolean,
         ) {
             val parsed = Gson().fromJson(json, JsonObject::class.java)
             val text =
@@ -83,12 +84,14 @@ class TranscriptCaptureInstrumentedTest {
                     parsed.has("text") -> parsed.get("text").asString
                     else -> ""
                 }
-            if (text.isNotBlank() && text != last) {
+            // A finished result is kept even when its text equals the last partial, because it marks the end of an utterance.
+            if (text.isNotBlank() && (text != last || isFinal)) {
                 last = text
                 heard +=
                     JsonObject().apply {
                         addProperty("frame", frames)
                         addProperty("text", text)
+                        if (isFinal) addProperty("final", true)
                     }
             }
         }
@@ -101,10 +104,10 @@ class TranscriptCaptureInstrumentedTest {
                 val chunk = pcm.copyOfRange(at, at + frameBytes)
                 val isFinal = recognizer.acceptWaveForm(chunk, chunk.size)
                 frames++
-                note(if (isFinal) recognizer.result else recognizer.partialResult, frames)
+                note(if (isFinal) recognizer.result else recognizer.partialResult, frames, isFinal)
                 at += frameBytes
             }
-            note(recognizer.finalResult, frames)
+            note(recognizer.finalResult, frames, true)
         }
         return heard
     }

@@ -55,6 +55,8 @@ class Query(
 class HeardText(
     val frame: Int,
     val text: String,
+    /** The recognizer marked this as a finished result, not a partial one that may still change. Absent in older transcripts. */
+    val final: Boolean = false,
 )
 
 class Corpus(

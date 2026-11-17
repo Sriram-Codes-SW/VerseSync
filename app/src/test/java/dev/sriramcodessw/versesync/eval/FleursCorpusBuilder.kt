@@ -40,6 +40,10 @@ internal object FleursCorpusBuilder {
         out: File,
         codes: List<String>,
         seed: Long = 43L,
+        /** If set, exactly this many songs per language have recordings, so libraries are the same size in every corpus. */
+        recordedSongs: Int? = null,
+        /** If set, exactly this many songs per language have no recording. Otherwise twice as many as recorded sentences allow. */
+        distractorSongs: Int? = null,
     ): Corpus {
         val recordings = File(out, "recordings").also { it.mkdirs() }
         val library = mutableListOf<Map<String, Any?>>()
@@ -72,7 +76,12 @@ internal object FleursCorpusBuilder {
             val byName = inLibrary.sortedBy { it.file.name }
             val referenceOf = LinkedHashMap<String, Clip>()
             byName.forEach { referenceOf.putIfAbsent(it.sentence, it) }
-            val songSentences = referenceOf.keys.sorted().chunked(SENTENCES_PER_SONG)
+            val songSentences =
+                referenceOf.keys
+                    .sorted()
+                    .let { if (recordedSongs != null) it.shuffled(rng) else it }
+                    .chunked(SENTENCES_PER_SONG)
+                    .let { if (recordedSongs != null) it.take(recordedSongs) else it }
 
             val songIdBySentence = HashMap<String, String>()
             songSentences.forEachIndexed { n, group ->
@@ -93,7 +102,7 @@ internal object FleursCorpusBuilder {
                     .sorted()
                     .filter { it !in recorded }
                     .shuffled(rng)
-            unrecorded.take(referenceOf.size * 2).chunked(SENTENCES_PER_SONG).forEachIndexed { n, group ->
+            unrecorded.take(if (distractorSongs != null) distractorSongs * SENTENCES_PER_SONG else referenceOf.size * 2).chunked(SENTENCES_PER_SONG).forEachIndexed { n, group ->
                 library += mapOf("id" to "$code-d$n", "title" to "$code-d$n", "language" to code, "lyrics" to group.joinToString(" "), "reference" to null)
             }
 
@@ -128,7 +137,9 @@ internal object FleursCorpusBuilder {
 
             inLibrary.sortedBy { it.file.name }.forEach { clip ->
                 val isReference = referenceOf[clip.sentence] === clip
-                query(clip, songIdBySentence.getValue(clip.sentence), if (isReference) "same recording as reference" else "other speaker")
+                // With a fixed number of songs, some library sentences are in no song, and their recordings are of songs not in the library.
+                val song = songIdBySentence[clip.sentence]
+                if (song == null) query(clip, null, "read speech") else query(clip, song, if (isReference) "same recording as reference" else "other speaker")
             }
             outside.sortedBy { it.file.name }.forEach { clip -> query(clip, null, "read speech") }
         }

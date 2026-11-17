@@ -55,6 +55,12 @@ internal class QueryResult(
      * so words, share and weight come from one update and not from a mix. Empty without a transcript.
      */
     val speechSteps: List<SpeechStep> = emptyList(),
+    /**
+     * The same, but the evidence can be taken back: per song, the best of the finished utterances (a result the recognizer
+     * marked final) and of the current partial only, so a later partial replaces an earlier one. A transcript captured
+     * before final results were recorded has none marked, so each update then stands alone.
+     */
+    val retractableSteps: List<SpeechStep> = emptyList(),
 )
 
 internal class Replay(
@@ -89,6 +95,7 @@ internal class Replay(
             ),
             notes,
             speech.steps,
+            speech.retractable,
         )
     }
 
@@ -96,6 +103,7 @@ internal class Replay(
         val words: Map<String, SpeechScore>,
         val seen: Map<String, Long>,
         val steps: List<SpeechStep> = emptyList(),
+        val retractable: List<SpeechStep> = emptyList(),
     )
 
     private class PitchOutcome(
@@ -117,10 +125,27 @@ internal class Replay(
         val seen = HashMap<String, Long>()
         val best = HashMap<String, SpeechDetail>()
         val steps = mutableListOf<SpeechStep>()
+        val retractable = mutableListOf<SpeechStep>()
+        val completed = HashMap<String, SpeechDetail>()
         for (entry in heard.sortedBy { it.frame }) {
             val text = SpeechMatcher.normalize(entry.text, query.languageCode)
-            if (text.isBlank()) continue
-            val spoken = spokenMatchTokens(text)
+            val spoken = if (text.isBlank()) emptyList() else spokenMatchTokens(text)
+            // Evidence that can be taken back: finished utterances, plus only the current partial.
+            val current = if (spoken.isEmpty()) emptyMap() else speechLibrary.scoreEvery(spoken)
+            if (entry.final) {
+                for ((id, detail) in current) {
+                    val old = completed[id]
+                    if (old == null || detail.weight >= old.weight) completed[id] = detail
+                }
+            }
+            val shown = HashMap(completed)
+            if (!entry.final) {
+                for ((id, detail) in current) {
+                    val old = shown[id]
+                    if (old == null || detail.weight >= old.weight) shown[id] = detail
+                }
+            }
+            retractable += SpeechStep(entry.frame, shown)
             if (spoken.isEmpty()) continue
             for ((id, score) in speechLibrary.scoreAll(spoken)) {
                 words.merge(id, score) { old, new -> SpeechScore(maxOf(old.words, new.words), maxOf(old.weight, new.weight)) }
@@ -133,7 +158,7 @@ internal class Replay(
             }
             steps += SpeechStep(entry.frame, HashMap(best))
         }
-        return SpeechOutcome(words, seen, steps)
+        return SpeechOutcome(words, seen, steps, retractable)
     }
 
     /** The best three songs under the threshold at each pitch tick; the last tick's are kept, as in the engine. */

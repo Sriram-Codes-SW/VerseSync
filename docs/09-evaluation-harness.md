@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.5 |
+| Version | 0.6 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -192,6 +192,7 @@ Section 9 chose nothing, because choosing among 120 settings on the recordings t
 The app is not changed by this. `SpeechRules` and the lock policy keep their defaults, and a decision rule, if one ships later, is its own layer with an ADR amendment and a check on singing.
 
 ### Result of the run
+**Correction (section 11):** these figures count decisions made on the last update of each transcript, which a live recognizer would not have given yet. With those not counted the chosen rule names the right song for 78% (73 to 83) and decides on an unknown song for 6.9% (4.7 to 10) on the report corpus, and the current speech rule for 50% (45 to 56). The conclusions below are unchanged.
 
 One run, on 470 selection recordings (257 of songs not in the library) and 606 report recordings (361 of songs not in the library, short of the 400 aimed for). The rule chosen on the selection corpus was **`words>=4 share>=0.65 gap>3.0`**. Acting the first time the rule fires:
 
@@ -215,7 +216,44 @@ What it shows:
 
 The first sweep in section 9 took the rival only among candidates, so a stricter candidate rule removed the rivals. With the rival taken from every song, on the report corpus and at the end of each recording, deciding on an unknown song falls from 109/361 = 30% (26 to 35) to 74/361 = 20% (17 to 25) at the current rule (two words, share 0.35), and from 30/361 = 8.3% (5.9 to 12) to 8/361 = 2.2% (1.1 to 4.3) at four words and share 0.65. The earlier table therefore overstated false decisions somewhat. Its conclusion, that the current rule is far too permissive, holds on the larger corpus.
 
-## 11. Not verified
+## 11. Why the held-out rule failed: diagnostics
+
+Before building a rule that waits, the held-out result was checked against data that already exists (`DiagnosticsRun`: `-Pversesync.eval.select=<dev> -Pversesync.eval.corpus=<test>`). Nothing here chooses anything. Read speech, not singing.
+
+**A flaw in the earlier measurement, now corrected.** Each captured transcript ends with the recognizer's final result, which a live recognizer only gives when it is stopped, not while someone is still singing. Section 10 counted decisions made on that last update. Updates at the last reported frame are no longer counted. The rule chosen in section 10 is the same, and on the report corpus the corrected figures are:
+
+| Rule (report corpus, acting first) | right song | wrong song | decides on a song not in the library |
+|---|---|---|---|
+| chosen `words>=4 share>=0.65 gap>3.0` | 192/245 = 78% (73 to 83) | 1/245 = 0.4% (0.1 to 2.3) | 25/361 = 6.9% (4.7 to 10) |
+| current speech rule | 207/245 = 84% (79 to 88) | 24/245 = 9.8% (6.7 to 14) | 182/361 = 50% (45 to 56) |
+| current lock words rule | 214/245 = 87% (83 to 91) | 8/245 = 3.3% (1.7 to 6.3) | 131/361 = 36% (31 to 41) |
+
+So the chosen rule named the right song for 78% of recordings, not 86%: 19 of its right answers had been made on the last update. The numbers "at the end of the recording" in section 10 are unchanged. On the selection corpus the chosen rule is 81% right (75 to 86) and 1.9% false (0.8 to 4.5) after the correction.
+
+What the checks show:
+
+1. **Early firing explains most of the false decisions, but not all of the gap.** Of the 25 recordings of songs not in the library that fired the rule, only 5 still decided on that song at the end. In 10 another song had overtaken it, in 9 the share of heard words in the lyrics had fallen (the rule fired on an update with few heard words and most of them found, and later updates heard more words), and in 1 a rival had caught up. The rule fired at a median of 2.4 s (1.2 to 4.5 s), roughly halfway through the recordings.
+2. **The test corpus is harder than the dev corpus even at the end.** At the end of the recording the same rule decides on an unknown song for 0.4% (0.1 to 2.2) on dev and 2.2% (1.1 to 4.3) on test. By language it is 0 of 51 on dev and 9 of 80 on test for French, and 2 of 61 and 9 of 92 for English; the intervals do not overlap for French. So part of the 1.9% to 6.9% difference is a difference between the two corpora, and part is choosing the minimum of 168 rules on dev.
+3. **By listening time.** False decisions on test rise from 2.2% by 2 s to 4.7% by 3 s and 6.9% by 5 s, then stop. On dev they are 0.4% by 2 s and 1.9% by 4 s. Recordings of songs in the library were right 50% (test) and 58% (dev) by 3 s, 76% and 77% by 5 s. A hold of about a second or two would remove firings in the first seconds, at the cost of those right answers arriving later.
+4. **Library size is not the explanation.** A word's weight is `ln(1 + songs / songs containing it)`, so the same gap means more in a smaller library. The gap was chosen with 110 songs and the test library has 155. Scaling it to 3.22 changes the false rate from 6.9% to 6.6%.
+
+What this means for the next step: the evidence in the replay only ever grows (the update with the most weight per song is kept), so a rule that waits can only be waiting for rivals to grow. Evidence that can be taken back is a different and more realistic idea: the best of the finished utterances, plus only the current partial, so a later partial replaces an earlier one. The capture now marks finished results (`"final": true`) so that this can be replayed. Transcripts captured before this change have no marks, and replay with each update standing alone.
+
+## 12. Settle rules: the plan, fixed before any run
+
+This section was written and committed before any rule that waits had been evaluated, and before the fresh report corpus existed. It follows from a review of section 10 and the checks above.
+
+**What is built (this change).** `Settle(holdFrames, retractable)` and `RuleMetrics.firing`: a rule acts only when the same song has been decided continuously for the hold, measured in frames of audio, and only if the hold completes before the last reported frame. Evidence is either the sticky kind of sections 9 and 10 or the retractable kind above. `RuleSlice` reports the median and 90th percentile seconds until the first right answer. A number of songs per language can be fixed in the builder (`-Pversesync.eval.recordedSongs`, `-Pversesync.eval.distractorSongs`) so that libraries are the same size in every corpus, and `fetch_fleurs_more.sh -s train` fetches the FLEURS train split. None of this has been run on a held-out corpus.
+
+**What is run next, not in this change.**
+
+1. **Corpora.** Rebuild the dev and test corpora with five recorded and fifteen unrecorded songs per language (100 songs in all) and recapture their transcripts with the final marks. Together they are the selection corpus; test is no longer clean after section 10. The fresh report corpus is a prefix of the FLEURS train split, about 90 MB per language for en-us, hi, es, de and fr, built the same way, with at least 600 recordings of songs not in the library. Before it is used, check that its sentences are not in dev or test.
+2. **Grid (64 rules).** At least 4 different words found; share 0.65 or 0.8; gap 0.4, 0.6, 0.8 or 1.0 times `ln(1 + songs)` (about 1.8, 2.8, 3.7 or 4.6 for 100 songs); hold 0, 0.5, 1 or 2 s; evidence sticky or retractable.
+3. **Criterion.** On the selection corpus, acting the first time the rule fires, a rule is eligible if it decides on a song not in the library for at most 1% of those recordings with the upper end of the 95% interval at most 3%, and names a different song than the one sung for at most 1% of recordings of songs in the library. Of the eligible rules, the one that names the right song most often is chosen. A tie goes to the shorter hold, then sticky evidence, then the lower share, then the smaller gap. If no rule is eligible, none is chosen and the report says so.
+4. **Pass on the report corpus,** reported once: the chosen rule decides on a song not in the library with the upper end of the interval at most 5%, and names a different song than the one sung for at most 1%. The right-song rate and the median and 90th percentile time to the first right answer are reported with it, by snippet length, because a hold costs the short snippets most, and a recording on which the rule never acts is a cost and not a success. A leave-one-language-out table is reported with it.
+5. **Not claimed.** One rate under 1% needs about a thousand recordings of unknown songs to show, which this corpus does not have. These are read sentences, so nothing here says how Vosk's partial results flicker on singing, where a hold may fail safe and never decide. The lock opens for one target, so its rate per target is measured per pair of recording and target song and not by "decides on any of the songs". The app is not changed by any of this, and if a rule is ever adopted it is its own layer, with an ADR amendment and a check on singing.
+
+## 13. Not verified
 
 - That the transcripts captured by feeding frames into Vosk match what the app hears from a live microphone. Both use the same recognizer and model, but the buffer sizes differ.
 - Anything on singing, children, or real phones: nothing of that has been recorded yet.
