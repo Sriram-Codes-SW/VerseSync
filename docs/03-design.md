@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.30 |
+| Version | 0.33 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -340,7 +340,6 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   * Room 2.8's migration test helper needs kotlinx.serialization 1.8, while the lifecycle libraries pin 1.7.3 and the helper then fails with `AbstractMethodError`. The newer version is added for debug and test builds only. The release classpath is unchanged.
   * Checked: the database of the previous build opens and keeps its songs after an upgrade install, `VerseDatabaseMigrationTest` passes, the exported schema is unchanged, and the app lock enables, prompts and unlocks on an Android 16 (API 36) emulator with a screen lock. The same app lock steps pass on Android 9 and 10 emulators (TC-M-14).
 
-
 ### ADR-18: A Speech Decision Layer for the Vocal Lock
 
 * **Status:** Proposed. This ADR does not authorize code changes. Nothing in the app changes until the conditions below are met and the owner approves.
@@ -374,6 +373,43 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   3. A check on a real phone, with the live recognizer, of the time to open and of how often the lock opens for the right voice, including children and accented speech.
   4. The rule is moved into the main sources with tests, one way of gathering evidence is chosen and measured, `VocalLockPolicy` uses it, and ADR-10 is amended.
   5. The owner approves the change in what the lock asks of a person.
+
+### ADR-19: Landmark Fingerprints for Recorded Music, Offline
+
+* **Status:** Proposed, and narrowed. This covers recorded playback near the phone (a backing track, a lip-synced number, music playing in a room), and it is NOT the concert path: a live band is a different performance, which this method is not expected to match. Only the matcher and its generated test set (phase 1), including a test of how far a re-performance can drift, are being built, and later phases are parked. This ADR does not authorize storing prints, a screen to learn songs, a catalog, or any change to what the app recognizes.
+* **Context:**
+  The app recognizes a person singing or saying a song's lyrics: Vosk for the words and a monophonic pitch matcher (ADR-03, ADR-04). A recording playing near the phone is a different input. In a trial with two library songs and a commercial recording played into the emulator microphone, the speech model barely transcribed the sung vocals over the instruments, one of two songs was found, and songs not in the library were offered as candidates (ADR-03 amendment for issue #44). A monophonic pitch tracker cannot follow a full mix.
+  The owner wants a Shazam-style app that works offline. Offline means no network for recognition: the fingerprints of the songs it can recognize must already be on the phone. That fixes what the app can promise. A service such as Shazam holds a licensed catalog of tens of millions of songs on servers. This project has no such catalog and cannot ship one, so **it can recognize only songs whose fingerprints it has, and it cannot recognize "any song" offline.** Where the fingerprints come from, and how many fit on a phone, are the open questions below.
+  The roadmap listed Shazam-style fingerprinting as not planned, because two performances of a song do not share the spectral peaks it relies on (docs/08, section 5). That reason does not apply when the same recording is played again: the same master has the same peaks every time, which is what the method was made for. It does not cover covers, live versions, the person singing, or sped-up and re-edited versions.
+  Constraints: no copyrighted audio may be stored or built into the app, so only hashes computed on the device may be kept, never audio; the audio of another app must never be read directly (no playback capture); nothing in the repository names a streaming service; the voice shortcut must never open on a recording (ADR-10, ADR-18).
+* **Considered Options:**
+  *How to fingerprint:*
+  1. *Landmark fingerprints (constellation hashes of spectral peak pairs, matched by offset voting):* The published method (Wang 2003). Robust to level, and to noise and a small speaker when peaks are taken from the band a phone speaker can reproduce. This is the proposal.
+  2. *Chroma fingerprints (Chromaprint style):* Built to compare whole, clean files, and weak on short noisy microphone snippets. The library is C++ under the LGPL and would need native code.
+  3. *A learned embedding:* More robust to noise and reverb, but it needs training data that is copyrighted or licensed, a model, and a way to check it that does not exist here. Later, only if a measured need appears.
+  4. *A larger speech model, such as a Whisper-class one:* Better on sung lyrics, with cost in size and delay, still weak over a full band, and it cannot tell recordings apart. It complements this and does not replace it (roadmap item 8).
+  5. *The playback capture API:* Reads other apps' audio digitally, which is ripping. Rejected.
+  *Where the fingerprints come from (not decided; the matcher is the same for all):*
+  6. *The person's own audio files on the phone,* decoded on the device and fingerprinted, the audio discarded. Needs no network and no listening, and uses only files the person already has. Does not reach songs that exist only as a stream.
+  7. *Learning by listening:* the person plays the song near the microphone once. Reaches streamed songs, but only the parts that were heard, and many streaming terms forbid recording.
+  8. *Catalog packs of openly licensed music,* fingerprinted by this project and downloaded once. Legal to build and share, but it is not the music people usually mean.
+  9. *A licensed commercial catalog:* the only way to recognize commercial songs the person has not taught the app. Not available to this project, and a data and licensing decision for the owner, not an engineering one.
+* **Decision (proposed):**
+  Phase 1: a pure-Kotlin landmark matcher (`fingerprinting/landmarks`), written from the published method, and a generated test set that is not copyrighted, with thresholds chosen on one seed and reported once on another, plus the cost of a bigger library: storage per song, and how lookup time and false accepts change from 60 to 600 songs (docs/09, section 13). Later phases are proposed and not decided: the prints in their own Room database file, kept out of backup and out of Bluetooth sharing, because a few hundred kilobytes per song would otherwise push the songs database over the Auto Backup limit; a way to add songs (options 6 and 7, chosen by the owner); and print evidence feeding the candidate list only. The voice shortcut ignores print evidence, with a test.
+* **Consequences:**
+  * Offline recognition is limited to the fingerprints on the device. On generated music a four-minute song measured about 110 KB (78 hashes a second), so 1,000 songs are about 110 MB and 10,000 about 1.1 GB, and a lookup took 0.1 ms at 60 songs and 0.5 ms at 600 (docs/09, section 13). A catalog of millions is out of reach on a phone without a much sparser print.
+  * Measured on generated music only: it finds a recording in noise (100% clean, 92% at 5 dB of white noise), but a playback 1% fast or slow leaves 14% or 4%, and a performance with a tempo 5% off leaves 1%, with new sounds and a drifting tempo 13%. The pre-registered false-accept target was not met (0.17% at the strictest rule against 0.1%), so no rule is chosen. It is not usable for a live band, and nothing here was measured on real music.
+  * Only the same recording matches. A cover, a live version, the person's own singing and an edit will not, and the copy must say so.
+  * Many streaming terms forbid recording. Listening to a whole song so as to learn it could be read that way. The hashes cannot be turned back into audio, but whether they count as a copy is a legal question and not one this ADR answers. The feature must not be advertised as working with any named service.
+  * The landmark-hash patents are believed to have expired. That was not checked.
+  * Not measured: real recordings, real speakers, rooms, or the phone's own audio processing (some phones apply speech noise suppression to the microphone input that can remove music). A generated corpus overstates accuracy, because real music repeats and songs of a style share structure.
+* **Conditions before any app change:**
+  1. The phase 1 result is reported as in docs/09 section 13, whatever it shows.
+  2. The owner chooses where the fingerprints come from (options 6 to 9), knowing that without a licensed catalog commercial songs are recognized only if the app was taught them.
+  3. The owner runs a real-phone protocol (phones, distances, rooms, songs in and not in the library, including the same artist), recording only per-trial results and never audio, and the result is reported with its intervals and how few trials it has.
+  4. A decision, with Opus's review, on where prints live and how they are migrated (ADR-12).
+  5. A test that a match on prints alone never opens the voice shortcut.
+  6. The owner approves the change.
 
 ---
 

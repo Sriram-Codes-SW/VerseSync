@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Recognition Quality Roadmap |
-| Version | 0.8 |
+| Version | 0.10 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Proposed |
@@ -66,7 +66,7 @@ Smooth the contour and fix octave jumps, search over key shifts instead of cente
 
 ## 5. Not planned
 
-- **Shazam-style audio fingerprinting.** Two performances of a song do not share the spectral peaks it relies on.
+- **Shazam-style fingerprinting of different performances** (covers, live versions, the person singing). Two performances of a song do not share the spectral peaks it relies on. Fingerprints of the SAME recording playing again are proposed in ADR-19, offline, for songs whose fingerprints are on the phone; a catalog of every song is not possible offline without a licensed one.
 - **Pitch matching of spoken input.** A spoken sentence has no stable melody.
 - **Any speaker-identity or "secure" claim for the voice shortcut.** It would need a speaker model, enrollment across sessions, liveness checks and measured error rates across many speakers including children. Even then it would not be the strongest class of Android biometric.
 - **Replacing TarsosDSP for now.** GPL-3.0 is accepted (ADR-13), so there is no license reason. Phases 3 and 4 of the pitch design wait.
@@ -98,3 +98,5 @@ Smooth the contour and fix octave jumps, search over key shifts instead of cente
 - **A speech decision rule passed its pre-registered bar on a fresh corpus (#44):** at least 4 different words, at least 80 percent of the heard words in the lyrics, and a rarity-weighted gap over the runner-up of 1.0 times `ln(1 + songs)`. On 812 recordings of read speech from the FLEURS train split it decided on a song not in the library for 0 of 707 (upper end 0.5 percent), against 46 percent for the current speech rule, and named the right song for 70 percent of recordings in the library against 90 percent. Waiting before acting did not help; the stricter thresholds did. It is read speech only, is not in the app, and needs an ADR and a check on real singing before it could be (docs/09, section 12).
 - **ADR-18 proposes the speech decision rule as its own layer for the vocal lock (#44):** it records the evidence, the options considered, the exact rule, what was not measured, and five conditions that must be met before any code changes, including a check on real singing and on a real phone. It is a proposal only and authorizes nothing (docs/03-design.md).
 - **The vocal lock is now the voice shortcut (#48), in the words a person reads only:** the name, the settings description ("Anyone who knows the words can open it") and the lock screen no longer suggest authentication or identity, the wording is in one tested place, and a threat model is written (docs/10). The false-accept rate on a negative set of television, music, other voices and silence is still not measured; #48 stays open for it.
+- **Recognizing recorded music offline (ADR-19, Proposed):** the owner wants a Shazam-style app that works offline. A recording playing near the phone is a different input from singing, and speech and pitch both fail on it. Landmark fingerprints of the same recording are proposed, limited to songs whose fingerprints are on the device. Phase 1 is a matcher and a generated test set, with its plan and pass bar fixed in advance (docs/09, section 13).
+- **Result of the recorded-music fingerprint run (ADR-19, generated music):** no rule met the pre-registered false-accept target, so none is chosen. The matcher finds a recording in noise but is very sensitive to playback speed (a 1 percent error leaves 14 percent or 4 percent) and does not follow a performance whose tempo is a few percent off, so it is not the concert path. Cost is about 110 KB per four-minute song. Next, per a second opinion: a Proposed ADR for a closed-set concert mode (a setlist, manual first), a harness option that restricts the library to about 16 to 20 songs, and a concert mode without recognition. Nothing real has been measured (docs/09, section 13).

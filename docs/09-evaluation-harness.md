@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.7 |
+| Version | 0.11 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -281,7 +281,72 @@ What it does not show:
 - **Singing, real lyrics, or the live app.** These are read sentences, four-sentence "songs" that share vocabulary the way Wikipedia text does, an 80-song library, and transcripts fed to Vosk faster than real time on an emulator. Real lyrics repeat words in choruses (a word counts once), sung speech is recognized worse and its partial results flicker more, and a live recognizer's timing differs from this replay.
 - **Anything about the app.** Nothing is adopted. A decision rule, if it ships, is its own layer on top of the unchanged candidate list, with an ADR and a check on real singing, and the lock would use it for its one target song.
 
-## 13. Not verified
+## 13. Recorded-music fingerprints: the plan, fixed before the run
+
+ADR-19 (Proposed). This section was written and committed before the matcher was run on any generated corpus. It is a different input from everything above: a recording playing near the phone, matched against fingerprints made from the same recording, with no speech and no pitch. Nothing here uses or stores copyrighted audio. The test music is generated from a seed at test time and is never committed.
+
+**What is built (phase 1, no app change).** A pure-Kotlin landmark matcher in `fingerprinting/landmarks`, written from the published method (Wang 2003): framing and a Hann window, a radix-2 FFT, spectral peaks from 250 to 4000 Hz (the band a phone speaker can reproduce), pairs of peaks as 22-bit hashes, and offset voting. It starts from these fixed parameters, which are not tuned on any corpus: 16 kHz mono; FFT 1024 (15.6 Hz bins); hop 256 (62.5 frames per second); a peak is a local maximum within 10 bins and 8 frames, at most 30 per second; each anchor pairs with its 5 strongest peaks 2 to 63 frames ahead and within 64 bins; hash = anchor bin (9 bits), bin difference (7 bits), frame difference (6 bits); stored per hash: the hash and the anchor frame (6 bytes packed). A match needs a count of votes at one offset (summed over three adjacent frames) of at least `minVotes`, and at least `ratio` times the votes of the best other song.
+
+**Generated corpora.** Two seeds (A, for choosing, and B, for reporting once), each with 60 library songs of 90 seconds and 40 songs of 90 seconds that are not in the library. A song is made of harmonic notes in a key, a chord progression, a melody, a bass line and noise percussion, in sections that repeat (a chorus returns), and songs share tempo (90, 110 or 128), key and progression families, so wrong songs look alike. Each library song is fingerprinted from its clean audio. Queries are 3, 5 or 10 seconds from random starts: 5 per library song (300) and 1,000 from songs not in the library, the same query set for every condition.
+
+**Conditions** (each damages the same queries): clean; white noise at 20, 10, 5, 0 and −5 dB signal to noise; pink noise and speech-shaped noise at 5 dB; level +20 dB with clipping and −20 dB; a speaker band of 250 to 4000 Hz; a made-up room echo (24 taps over 0.4 s, decay about 0.45 s); speed +1 and −1 percent; and a **headline condition**: 5 second queries through the speaker band, the echo and pink noise at 5 dB together.
+
+**Choosing (seed A only).** A grid of `minVotes` 8, 10, 12, 15, 20, 25 and `ratio` 1.5, 2, 3 (18 rules). A rule is eligible if, pooled over every condition, it accepts a song for at most 0.1% of recordings of songs not in the library with the upper end of the 95% interval at most 0.5%. Of the eligible rules the one with the best pooled top-1 on library queries is chosen; ties go to more votes, then the larger ratio. If none is eligible, none is chosen and the report says so.
+
+**Pass bar (seed B, reported once).** The chosen rule accepts a wrong song for pooled upper end at most 1%, and its top-1 at the headline condition is at least 80%. Everything else is reported with 95% Wilson intervals and no bar: top-1 and false accepts for every condition, by snippet length.
+
+**Cost of a bigger library, reported with no bar.** Bytes per song, and, on seed B with a library of 60 songs and again with 600 songs of 45 seconds, the median lookup time per query and the false-accept rate, because offline recognition is limited by the fingerprints that fit on the phone.
+
+**Addendum, committed before any run: re-performance conditions, and what this is for.** The owner's use is a live concert, where the band plays the song live and does not replay the recording. Landmark fingerprints of a recording are not expected to match that, and this run measures how far from the recording a performance can drift before they stop matching. It does not make the fingerprints the concert path; ADR-19 covers recorded playback (a backing track, a lip-synced number, walk-in music), and a separate proposal covers the concert.
+
+The same generated song is played again as a different performance of the same score, and a snippet of that performance is matched against the print of the original. Five conditions, none with added noise, all with 3, 5 and 10 second snippets, on the same query starts: **different sound** (new instrument sounds, a new percussion part, the same tempo and timing); **tempo +3%**, **+5%** and **+8%** (the whole performance faster, with the same sounds as the original); and **a live-like performance** (new sounds and percussion, tempo +5% with a drift of up to ±2% over the song, and each note starting up to 30 ms early or late). They are reported with 95% Wilson intervals and no bar, in the same table as the other conditions and not pooled with them, and they play no part in choosing the thresholds. What is expected, and not measured, is that matches fall to near zero as soon as the sounds and the timing change, and that this is a limit of the method and not a defect of this matcher.
+
+**Correction to the generated songs, committed before any evaluation run.** Two defects in the generated music were found by a small test on 6 songs, before any corpus was run. First, the random seeds of different songs collided (a melody seed was a sum, so song 7 reused pieces of song 5's melody); seeds are now mixed with a hash. Second, songs in one family shared their tempo exactly (90, 110 or 128 BPM) and their tuning exactly, so their bars and chord tones lined up frame for frame, and 4 of 20 queries for songs not in the library were accepted at the rule 15 votes and ratio 2. Real songs in one style do not share a tempo to a fraction of a percent or the same tuning. So within a family each song's tempo now differs by up to ±4% and its tuning by up to ±25 cents. The key and progression families, the repeating sections, the sounds, and every parameter of the matcher are unchanged. **The exact-family variant is kept as a stress test:** its clean-condition false accepts are reported for it separately, for the same library size, so the cost of identical tempo and tuning is visible and not hidden by the change.
+
+**What it will not show.** Real recordings, real speakers and rooms, the phone's own audio processing, any cover, live version or edit, or the person singing. Generated music repeats less than real music and overstates accuracy, so a pass here is not a claim about real songs.
+
+### Result of the run
+
+Run once on generated music (seed A 43 to choose, seed B 44 to report), after the plan, both addenda and the code were committed. Two earlier attempts at the run failed before producing a result: the first ran out of memory (the test now gets a 6 GB heap, and re-performed songs are no longer cached for the whole run), the second hit a bug in my timing code (a five second window that could run past the end of a 45 second song). Neither result was seen or used.
+
+**No rule met the criterion.** On seed A, pooled over every condition except re-performance (15,000 queries for songs not in the library and 4,500 for songs in it), no rule of the grid accepted a song not in the library for at most 0.1% with the upper end at most 0.5%. The strictest, 25 votes and ratio 3, accepted 25 of 15,000 (0.17%, 0.1 to 0.2) and named the right song for 3,165 of 4,500 (70%, 69 to 72). So nothing is chosen, the pass bar of seed B is not applied, and seed B's other conditions are not reported. The trade on seed A, pooled:
+
+| rule | top-1 | songs not in the library accepted |
+|---|---|---|
+| 8 votes, ratio 1.5 | 91% (90 to 92) | 17% (17 to 18) |
+| 15 votes, ratio 3 | 81% (80 to 82) | 0.6% (0.5 to 0.7) |
+| 20 votes, ratio 3 | 76% (74 to 77) | 0.3% (0.2 to 0.4) |
+| 25 votes, ratio 3 | 70% (69 to 72) | 0.17% (0.1 to 0.2) |
+
+The descriptive results below were never used to choose anything, and are at the strictest rule. Seed A by condition (top-1 of 300 library queries; accepted songs not in the library out of 1,000):
+
+| condition | top-1 | songs not in the library accepted |
+|---|---|---|
+| clean | 100% (99 to 100) | 4 (0.4%) |
+| white noise 20 / 10 / 5 / 0 / −5 dB | 100% / 100% / 92% / 70% / 31% | 7 / 1 / 0 / 0 / 0 |
+| pink noise 5 dB | 95% (92 to 97) | 2 |
+| speech-shaped noise 5 dB | 77% (72 to 81) | 0 |
+| level +20 dB, clipped | 51% (45 to 57) | 0 |
+| level −20 dB | 99% (98 to 100) | 2 |
+| speaker band 250 Hz to 4 kHz | 100% (99 to 100) | 4 |
+| room echo | 74% (69 to 79) | 0 |
+| speed +1% | 14% (11 to 19) | 0 |
+| speed −1% | 3.7% (2.1 to 6.4) | 5 |
+| headline: 5 s, speaker band, echo and pink noise 5 dB | 48% (42 to 54) | 0 |
+
+Re-performance, seed B (300 library queries, 1,000 for songs not in the library, no bar): the same score played with **different sounds** 99% (98 to 100); **tempo +3%** 46% (40 to 51); **+5%** 1.0% (0.3 to 2.9); **+8%** 0% (0 to 1.3); **live-like** (new sounds, +5% drifting, notes up to 30 ms early or late) 13% (9.7 to 17). Songs not in the library were accepted for 4, 1, 5, 0 and 0 of 1,000.
+
+What it shows:
+
+- **The false-accept target was not met on generated music.** The accepted songs are in the clean and mild conditions (4, 7, 4 and 5 of 1,000 for clean, white noise at 20 dB, the speaker band and speed −1%) and almost none in the noisy ones, which suggests they come from the songs themselves, which share key and chord tones within a family, and not from noise. That was not diagnosed further, and the criterion is not changed after seeing it. A rule that accepts fewer would cost more right answers (70% at the strictest).
+- **It finds a recording in noise but is very sensitive to speed.** Clean it finds 100%, and 92% at 5 dB of white noise. But playing the same recording 1% fast or slow leaves 14% or 4%, and clipping cuts it to 51%. The headline condition, 5 second snippets through a speaker band, an echo and noise together, is 48%.
+- **It does not follow a performance that is not the recording.** With the same notes at the same times and only the sounds changed it still matches (99%), because the long notes keep their pitches. A tempo 3% off leaves 46%, 5% off 1%, and the live-like performance 13%. A live band plays other notes, at other times, at a tempo that is rarely within a few percent of the record, and these generated variants are milder than that. This is consistent with ADR-19: it is not the concert path, and nothing here was measured on a real band.
+- **The cost is small.** The prints hold about 78 hashes a second, so a four-minute song is about 112 KB (not the 220 KB first assumed), 1,000 songs about 110 MB. Looking up a 5 second query took a median of 0.1 ms against 60 songs and 0.5 ms against 600, on one thread. Songs not in the library were accepted for 0.5% of clean queries at 60 songs and 0.1% at 600, so false accepts did not grow with the library in this range. Extrapolating, 10,000 songs would be about 1.1 GB, which was not measured.
+- **The stress variant** (songs of a family sharing tempo and tuning exactly), clean queries: top-1 100% and 0.1% of songs not in the library accepted, no worse than the main corpora at this rule. The earlier 6-song test shows that with a lenient rule identical tempo and tuning does make songs confusable.
+
+What it does not show: real recordings, real speakers, rooms or phones; the phone's own audio processing; any real live performance; or that the false-accept target is reachable on real music. A generated corpus repeats less than real music, and these songs share more structure than real songs of one style may.
+
+## 14. Not verified
 
 - That the transcripts captured by feeding frames into Vosk match what the app hears from a live microphone. Both use the same recognizer and model, but the buffer sizes differ.
 - Anything on singing, children, or real phones: nothing of that has been recorded yet.
