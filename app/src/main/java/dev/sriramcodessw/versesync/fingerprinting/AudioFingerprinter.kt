@@ -1,15 +1,17 @@
 package dev.sriramcodessw.versesync.fingerprinting
 
-import be.tarsos.dsp.AudioDispatcher
-import be.tarsos.dsp.pitch.PitchDetectionHandler
-import be.tarsos.dsp.pitch.PitchProcessor
-import be.tarsos.dsp.pitch.PitchProcessor.PitchEstimationAlgorithm
+import dev.sriramcodessw.versesync.audio.AudioFrame
+import dev.sriramcodessw.versesync.audio.PitchDetector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.log2
 
+/**
+ * Turns audio frames into a pitch contour: one value per frame in Hz, 0 for a frame with no pitch.
+ * The pitch comes from [detector], so any detector can be used.
+ */
 class AudioFingerprinter(
-    private val audioDispatcher: AudioDispatcher,
+    private val detector: PitchDetector,
 ) {
     private val rawFingerprintList = mutableListOf<Float>()
 
@@ -22,43 +24,22 @@ class AudioFingerprinter(
     private val _amplitude = MutableStateFlow(0f)
     val amplitude = _amplitude.asStateFlow()
 
-    private var isProcessorAttached = false
+    /** Processes one frame. Called on the audio source's thread. */
+    fun onFrame(frame: AudioFrame) {
+        val processedPitch = detector.detect(frame).hz
 
-    fun attachPitchProcessor(
-        sampleRate: Float = 16000f,
-        bufferSize: Int = 1024,
-    ) {
-        if (isProcessorAttached) return
-        isProcessorAttached = true
+        _instantPitch.value = processedPitch
 
-        val pitchDetectionHandler =
-            PitchDetectionHandler { res, audioEvent ->
-                val pitch = res.pitch
-                val processedPitch = if (pitch > 0f) pitch else 0f
-
-                _instantPitch.value = processedPitch
-
-                synchronized(rawFingerprintList) {
-                    rawFingerprintList.add(processedPitch)
-                    // Periodically update the state flow snapshot without hammering garbage collection
-                    if (rawFingerprintList.size % 4 == 0) {
-                        _fingerprint.value = rawFingerprintList.toList()
-                    }
-                }
-
-                // Loudness of this frame. This used to be the detector's confidence, which is not loudness.
-                _amplitude.value = AudioLevel.fromSamples(audioEvent.floatBuffer)
+        synchronized(rawFingerprintList) {
+            rawFingerprintList.add(processedPitch)
+            // Periodically update the state flow snapshot without hammering garbage collection
+            if (rawFingerprintList.size % 4 == 0) {
+                _fingerprint.value = rawFingerprintList.toList()
             }
+        }
 
-        val pitchProcessor =
-            PitchProcessor(
-                PitchEstimationAlgorithm.YIN,
-                sampleRate,
-                bufferSize,
-                pitchDetectionHandler,
-            )
-
-        audioDispatcher.addAudioProcessor(pitchProcessor)
+        // Loudness of this frame. This used to be the detector's confidence, which is not loudness.
+        _amplitude.value = AudioLevel.fromSamples(frame.samples)
     }
 
     companion object {

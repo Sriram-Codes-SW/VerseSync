@@ -3,7 +3,10 @@ package dev.sriramcodessw.versesync.engine
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
-import be.tarsos.dsp.io.android.AudioDispatcherFactory
+import dev.sriramcodessw.versesync.audio.AudioFrameSource
+import dev.sriramcodessw.versesync.audio.PitchDetector
+import dev.sriramcodessw.versesync.audio.tarsos.TarsosMicrophoneSource
+import dev.sriramcodessw.versesync.audio.tarsos.TarsosPitchDetector
 import dev.sriramcodessw.versesync.data.Song
 import dev.sriramcodessw.versesync.data.SongDao
 import dev.sriramcodessw.versesync.fingerprinting.AudioFingerprinter
@@ -35,10 +38,12 @@ class HybridRecognitionEngine(
     // instead of reaching into private fields and sleeping for seconds.
     private val vosk: VoskVoiceRecognition = VoskVoiceRecognition(context),
     private val pitchIntervalMs: Long = PITCH_INTERVAL_MS,
+    // Where audio comes from and which detector finds its pitch. Tests supply fakes.
+    private val audioSourceFactory: () -> AudioFrameSource = { TarsosMicrophoneSource() },
+    private val pitchDetectorFactory: () -> PitchDetector = { TarsosPitchDetector() },
 ) {
-    private var dispatcher: be.tarsos.dsp.AudioDispatcher? = null
+    private var audioSource: AudioFrameSource? = null
     private var fingerprinter: AudioFingerprinter? = null
-    private var recognitionThread: Thread? = null
 
     private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var currentLanguage = "en-us"
@@ -66,10 +71,10 @@ class HybridRecognitionEngine(
 
     private fun initializeAudioComponents(): Boolean =
         try {
-            if (dispatcher == null) {
-                // ADR-01: Use 16,000 Hz to align with Vosk STT and hardware HAL standards
-                dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(16000, 1024, 0)
-                val newFingerprinter = AudioFingerprinter(dispatcher!!)
+            if (audioSource == null) {
+                // ADR-01: audio is 16,000 Hz to align with Vosk STT and hardware HAL standards
+                audioSource = audioSourceFactory()
+                val newFingerprinter = AudioFingerprinter(pitchDetectorFactory())
                 fingerprinter = newFingerprinter
 
                 engineScope.launch {
@@ -265,13 +270,9 @@ class HybridRecognitionEngine(
                 vosk.startListening()
             }
 
-            // Start pitch processor
-            if (isPro) {
-                fingerprinter?.attachPitchProcessor(sampleRate = 16000f, bufferSize = 1024)
-            }
-
-            recognitionThread = Thread(dispatcher, "Audio Dispatcher")
-            recognitionThread?.start()
+            // Pitch is found for Pro users only. The source starts delivering frames on its own thread.
+            val pitchFingerprinter = if (isPro) fingerprinter else null
+            audioSource?.start { frame -> pitchFingerprinter?.onFrame(frame) }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start recognition", e)
             _error.value = "Failed to start recognition."
@@ -284,10 +285,8 @@ class HybridRecognitionEngine(
         synchronized(accumulatedSttCandidates) {
             accumulatedSttCandidates.clear()
         }
-        dispatcher?.stop()
-        recognitionThread?.interrupt()
-        dispatcher = null
+        audioSource?.stop()
+        audioSource = null
         fingerprinter = null
-        recognitionThread = null
     }
 }

@@ -1,37 +1,75 @@
 package dev.sriramcodessw.versesync.fingerprinting
 
 import android.app.Application
-import be.tarsos.dsp.AudioDispatcher
+import dev.sriramcodessw.versesync.audio.AudioFormat
+import dev.sriramcodessw.versesync.audio.FakeAudioSource
+import dev.sriramcodessw.versesync.audio.FixedPitchDetector
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import java.lang.reflect.Field
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class FingerprintCreationViewModelTest {
-    private lateinit var applicationMock: Application
-    private lateinit var dispatcherMock: AudioDispatcher
+    private lateinit var audioSource: FakeAudioSource
+    private lateinit var detector: FixedPitchDetector
     private lateinit var viewModel: FingerprintCreationViewModel
+
+    private val frame = FloatArray(AudioFormat.FRAME_SAMPLES)
 
     @BeforeEach
     fun setup() {
-        applicationMock = mock()
-        dispatcherMock = mock()
-        viewModel = FingerprintCreationViewModel(applicationMock)
-
-        val dispatcherField: Field = viewModel.javaClass.getDeclaredField("dispatcher")
-        dispatcherField.isAccessible = true
-        dispatcherField.set(viewModel, dispatcherMock)
+        audioSource = FakeAudioSource()
+        detector = FixedPitchDetector(330f)
+        viewModel =
+            FingerprintCreationViewModel(
+                mock<Application>(),
+                audioSourceFactory = { audioSource },
+                pitchDetectorFactory = { detector },
+            )
     }
 
     @Test
-    fun startRecording_doesNotCrashAndPreparesThread() {
+    fun startRecording_startsTheAudioSourceAndRunsFramesThroughTheDetector() {
         viewModel.startRecording()
+        audioSource.emit(frame)
+        audioSource.emit(frame)
+
+        assertTrue(audioSource.isRunning)
+        assertEquals(2, detector.frames)
+        assertNull(viewModel.error.value)
     }
 
     @Test
-    fun stopRecording_shouldCorrectlyCallStopOnDispatcher() {
+    fun stopRecording_stopsTheAudioSource() {
+        viewModel.startRecording()
+
         viewModel.stopRecording()
-        verify(dispatcherMock).stop()
+
+        assertEquals(1, audioSource.stopCount)
+        assertFalse(audioSource.isRunning)
+    }
+
+    @Test
+    fun stopRecording_beforeAnyRecording_doesNotFail() {
+        viewModel.stopRecording()
+
+        assertEquals(0f, viewModel.instantPitch.value)
+    }
+
+    @Test
+    fun startRecording_whenTheMicrophoneCannotBeOpened_reportsAnError() {
+        val failing =
+            FingerprintCreationViewModel(
+                mock<Application>(),
+                audioSourceFactory = { throw IllegalStateException("no microphone") },
+                pitchDetectorFactory = { detector },
+            )
+
+        failing.startRecording()
+
+        assertEquals("Microphone initialization failed. Please ensure no other app is using it.", failing.error.value)
     }
 }

@@ -1,18 +1,13 @@
 package dev.sriramcodessw.versesync.fingerprinting
 
-import be.tarsos.dsp.AudioDispatcher
-import be.tarsos.dsp.AudioEvent
-import be.tarsos.dsp.AudioProcessor
-import be.tarsos.dsp.io.TarsosDSPAudioFormat
+import dev.sriramcodessw.versesync.audio.AudioFrame
+import dev.sriramcodessw.versesync.audio.tarsos.TarsosPitchDetector
 import dev.sriramcodessw.versesync.fingerprinting.SyntheticSignals.FRAME
 import dev.sriramcodessw.versesync.fingerprinting.SyntheticSignals.frames
 import dev.sriramcodessw.versesync.fingerprinting.SyntheticSignals.join
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.test.assertEquals
@@ -116,17 +111,11 @@ class PitchCharacterizationTest {
     @Test
     fun theFingerprint_collectsEveryFrameButPublishesEveryFourth() {
         // The state flow snapshot is refreshed when the stored list reaches a multiple of four.
-        val dispatcher: AudioDispatcher = mock()
-        val fingerprinter = AudioFingerprinter(dispatcher)
-        fingerprinter.attachPitchProcessor(16000f, FRAME)
-        val captor = argumentCaptor<AudioProcessor>()
-        verify(dispatcher).addAudioProcessor(captor.capture())
+        val fingerprinter = AudioFingerprinter(TarsosPitchDetector())
         val signal = SyntheticSignals.tone(220.0, frames(10))
 
         for (i in 0 until 10) {
-            val event = AudioEvent(TarsosDSPAudioFormat(16000f, 16, 1, true, false))
-            event.floatBuffer = signal.copyOfRange(i * FRAME, (i + 1) * FRAME)
-            captor.firstValue.process(event)
+            fingerprinter.onFrame(AudioFrame(signal.copyOfRange(i * FRAME, (i + 1) * FRAME), 16000, i.toLong()))
         }
 
         assertEquals(8, fingerprinter.fingerprint.value.size)
