@@ -4,8 +4,11 @@
 cd "$(dirname "$0")"
 PAIRS="en-us:en_us hi:hi_in ta:ta_in te:te_in mr:mr_in bn:bn_in kn:kn_in ml:ml_in gu:gu_in pa:pa_in ar:ar_eg ko:ko_kr fr:fr_fr es:es_419 de:de_de ru:ru_ru cn:cmn_hans_cn ja:ja_jp pt:pt_br tr:tr_tr vn:vi_vn it:it_it nl:nl_nl el:el_gr pl:pl_pl sv:sv_se uk:uk_ua fa:fa_ir"
 BASE=https://huggingface.co/datasets/google/fleurs/resolve/main/data
+# Optional arguments limit the download to those language codes, for example: fetch_fleurs.sh en-us hi
+WANT=" $* "
 for pair in $PAIRS; do
   code=${pair%%:*}; cfg=${pair##*:}
+  if [ -n "$*" ] && [[ "$WANT" != *" $code "* ]]; then continue; fi
   d=fleurs/$code; rm -rf "$d"; mkdir -p "$d/x"
   curl -sL -o "$d/test.tsv" "$BASE/$cfg/test.tsv"
   curl -sL -r 0-2500000 -o "$d/part.tar.gz" "$BASE/$cfg/audio/test.tar.gz"

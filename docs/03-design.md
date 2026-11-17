@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.16 |
+| Version | 0.18 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -357,9 +357,8 @@ These corrections bring the records in line with the code as built.
 * **Large model unpacking:** Unpacking runs inside a broadcast receiver, which has a time limit. A model of about 300 MB, such as Swedish, may be cut off on a slow device. Moving it to WorkManager would fix this. ([#6](https://github.com/Sriram-Codes-SW/VerseSync/issues/6))
 * **Android 9 and 10:** The app lock authenticator choice for API 28 and 29 is unit tested but has not been run on a real device or emulator of that version. ([#7](https://github.com/Sriram-Codes-SW/VerseSync/issues/7))
 * **Pitch detection independence from TarsosDSP:** Pitch detection and audio capture are tied to one GPL-3.0 library, which makes tests awkward and leaves two microphone recorders open at once. The design and phased plan are in [07-pitch-detection-design.md](07-pitch-detection-design.md) ([#13](https://github.com/Sriram-Codes-SW/VerseSync/issues/13)). It would also finish what ADR-01 intended.
-* **Sync flow and vocal lock end to end:** Real audio was tested at the engine level only. The lyric sync and vocal lock screens have not been driven with real audio ([#9](https://github.com/Sriram-Codes-SW/VerseSync/issues/9)).
 * **Real devices:** Bluetooth sharing between two phones and the biometric prompt have never run, because the emulator has neither ([#8](https://github.com/Sriram-Codes-SW/VerseSync/issues/8)).
 * **Matching enhancements, not yet needed:** Elastic (DTW) pitch matching for tempo variation ([#16](https://github.com/Sriram-Codes-SW/VerseSync/issues/16)) and an FTS5 index for very large libraries ([#17](https://github.com/Sriram-Codes-SW/VerseSync/issues/17)).
 * **First-release checklist:** Play Console setup, the license decision, the privacy policy and release signing ([#18](https://github.com/Sriram-Codes-SW/VerseSync/issues/18)).
 * **Pre-release dependencies:** The release build uses Room 2.7.0-alpha11 and `biometric-ktx` 1.4.0-alpha02. Room has a stable version. Biometric has no stable version newer than 1.1.0, so the choice is recorded in the issue ([#26](https://github.com/Sriram-Codes-SW/VerseSync/issues/26)).
-* **Migration test in CI:** `VerseDatabaseMigrationTest` needs an emulator and never runs in CI ([#27](https://github.com/Sriram-Codes-SW/VerseSync/issues/27)).
+* **Background noise is fingerprinted:** The pitch detector reports a faint steady hum as a voiced tone, so a fingerprint recorded with that hum matches the hum later. In the end-to-end test the vocal lock opened with nothing playing. A level threshold in `AudioFingerprinter` would fix it and needs a decision because it changes what fingerprints contain ([#33](https://github.com/Sriram-Codes-SW/VerseSync/issues/33)).

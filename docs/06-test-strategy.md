@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.17 |
+| Version | 0.18 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -73,6 +73,8 @@ Notes:
 | **TC-U-29** | Audio / Level meter | Silence, a full-scale signal, tones of different loudness and pitch, and NaN input | The level follows loudness only, in decibels from -60 to 0 | ADR-01 |
 | **TC-U-30** | Fingerprinting / Level meter | A quiet and a loud tone through the real pitch processor | The meter value is the loudness of the frame, not the detector's confidence | ADR-01 |
 | **TC-U-31** | Fingerprinting / Pitch detection | Synthetic audio of known pitch through the current detector: clean tones from 82 to 1000 Hz, loudness, silence, noise, an octave jump, a glide, vibrato, a voice-like sound, noise on a tone, and the frame cadence | Pitch is within 30 cents, silence and noise are unvoiced, jumps and glides are followed, and one value is produced per 1,024-sample frame at 16 kHz | ADR-01, ADR-04 |
+| **TC-U-32** | Vocal lock / Attempts | Zero to three failed attempts | The device lock takes over from the second failed attempt, and the screen shows the same limit | ADR-10 |
 | **TC-M-10** | Database / Migration | Run `VerseDatabaseMigrationTest` on a device or emulator, and again after raising the version without a migration | Passes at version 3; fails with a missing-migration error when the version is raised alone | ADR-12 |
 | **TC-M-11** | Build / Application id | Install a build with the old id and a build with the new id on one device, and look at their data | Both install side by side and keep separate data; nothing from the old app appears in the new one | ADR-16 |
 | **TC-M-12** | Recognition / Pitch only | On a fresh install with no models, open Recognize Song, choose a language marked pitch only, and start recognition | The list offers the pitch-only languages, the screen says no speech model exists and pitch matching is active, and recognition starts and stops without a crash | ADR-15 |
+| **TC-M-13** | Sync, recognition and vocal lock / Real audio | Run `tools/audio-test/run_e2e.sh en-us hi` on an emulator: record two clips as songs, recognize the first, open the vocal lock with it, and play the second against it | Sync records fingerprints with voiced frames, the synced song is recognized, and the lock opens for the right clip. The lock staying closed for the wrong audio is known to fail while background noise is fingerprinted (issue 33) | ADR-01, ADR-10 |
