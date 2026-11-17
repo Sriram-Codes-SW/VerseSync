@@ -29,7 +29,7 @@ fun VocalLockScreen(
     // Check for success
     LaunchedEffect(recognitionResult) {
         recognitionResult?.let { result ->
-            if (result.candidates.any { it.id == targetSong.id }) {
+            if (VocalLockPolicy.opens(result.evidence[targetSong.id])) {
                 onSuccess()
             }
         }
