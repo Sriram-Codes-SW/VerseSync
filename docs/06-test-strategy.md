@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.10 |
+| Version | 0.16 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -69,5 +69,9 @@ Notes:
 | **TC-U-25** | Bluetooth / Size check | A small selection, a selection over 8 MiB, and the limit itself | Only a selection over the limit is reported as too large | ADR-11 |
 | **TC-U-26** | Engine / Matching | Speech of one language against the lyrics of every other language that shares its script | No pair reaches the match threshold | ADR-14 |
 | **TC-U-27** | Engine / Matching | A song found from speech is deleted from the library while listening | It stops being a candidate | ADR-05 |
+| **TC-U-28** | Recognition / Languages | The language list with nothing installed, with one installed, and the default selection | Installed languages and those without a speech model are listed in order, and the default is still English when nothing is installed | ADR-15 |
+| **TC-U-29** | Audio / Level meter | Silence, a full-scale signal, tones of different loudness and pitch, and NaN input | The level follows loudness only, in decibels from -60 to 0 | ADR-01 |
+| **TC-U-30** | Fingerprinting / Level meter | A quiet and a loud tone through the real pitch processor | The meter value is the loudness of the frame, not the detector's confidence | ADR-01 |
 | **TC-M-10** | Database / Migration | Run `VerseDatabaseMigrationTest` on a device or emulator, and again after raising the version without a migration | Passes at version 3; fails with a missing-migration error when the version is raised alone | ADR-12 |
 | **TC-M-11** | Build / Application id | Install a build with the old id and a build with the new id on one device, and look at their data | Both install side by side and keep separate data; nothing from the old app appears in the new one | ADR-16 |
+| **TC-M-12** | Recognition / Pitch only | On a fresh install with no models, open Recognize Song, choose a language marked pitch only, and start recognition | The list offers the pitch-only languages, the screen says no speech model exists and pitch matching is active, and recognition starts and stops without a crash | ADR-15 |
