@@ -27,7 +27,8 @@ class Rate(
     override fun toString(): String {
         if (total == 0) return "none"
 
-        fun pct(x: Double) = "%.0f".format(x * 100)
+        // Small rates matter here (a false-accept target is 1 percent), so they keep a decimal.
+        fun pct(x: Double) = if (x > 0.0 && x < 0.1) "%.1f".format(x * 100) else "%.0f".format(x * 100)
         return "$hits/$total = ${pct(value)}% (${pct(low)} to ${pct(high)})"
     }
 

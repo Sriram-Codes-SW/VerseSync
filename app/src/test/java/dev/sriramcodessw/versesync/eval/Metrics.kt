@@ -24,6 +24,12 @@ class Slice(
     val falseAccept: Rate,
     val lockOpens: Rate,
     val lockFalse: Rate,
+    /** The speech decision (see [Metrics.decision]) names the right song, over songs in the library. */
+    val decidesRight: Rate,
+    /** The decision names a different song, over songs in the library. */
+    val decidesWrongSong: Rate,
+    /** The decision names a song for a recording of one that is not in the library. */
+    val decidesFalse: Rate,
     val medianLatencyMs: Long?,
 )
 
@@ -67,14 +73,19 @@ object Metrics {
         var lockOpens = 0
         var lockFalseOpens = 0
         var lockFalseTrials = 0
+        var decidedRight = 0
+        var decidedWrongSong = 0
+        var decidedFalse = 0
         val latencies = mutableListOf<Long>()
 
         for (result in results) {
             val outcome = result.byPath.getValue(path)
             val target = result.query.song
+            val decided = decision(outcome, leadMargin)
             if (target == null) {
                 outOfLibrary++
                 if (outcome.ranked.isNotEmpty()) falseAccept++
+                if (decided != null) decidedFalse++
             } else {
                 inLibrary++
                 if (target in outcome.ranked) {
@@ -82,6 +93,11 @@ object Metrics {
                     outcome.firstSeenMs[target]?.let { latencies += it }
                 }
                 if (isTop1(target, outcome)) top1++
+                if (decided == target) {
+                    decidedRight++
+                } else if (decided != null) {
+                    decidedWrongSong++
+                }
                 if (VocalLockPolicy.opens(outcome.evidence[target], leadMargin)) lockOpens++
             }
             for (song in library) {
@@ -99,8 +115,26 @@ object Metrics {
             falseAccept = Rate(falseAccept, outOfLibrary),
             lockOpens = Rate(lockOpens, inLibrary),
             lockFalse = Rate(lockFalseOpens, lockFalseTrials),
+            decidesRight = Rate(decidedRight, inLibrary),
+            decidesWrongSong = Rate(decidedWrongSong, inLibrary),
+            decidesFalse = Rate(decidedFalse, outOfLibrary),
             medianLatencyMs = latencies.sorted().let { if (it.isEmpty()) null else it[it.size / 2] },
         )
+    }
+
+    /**
+     * The song the speech evidence settles on, or null when it does not: the strongest candidate, and only if it
+     * leads the strongest other candidate by [leadMargin] (issue #44: accept the best only if it beats the runner-up).
+     * Pitch-only evidence does not decide.
+     */
+    fun decision(
+        outcome: PathResult,
+        leadMargin: Float,
+    ): String? {
+        val top = outcome.ranked.firstOrNull() ?: return null
+        val evidence = outcome.evidence[top] ?: return null
+        if (evidence.speechWeight <= 0f) return null
+        return if (SpeechMatcher.leads(evidence.speechWeight, evidence.rivalWeight, leadMargin)) top else null
     }
 
     /** True when [target] has strictly stronger evidence than every other candidate. */

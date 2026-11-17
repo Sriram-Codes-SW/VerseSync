@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.25 |
+| Version | 0.26 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -79,6 +79,7 @@ Notes:
 | **TC-U-35** | Architecture / Library use | Scan the main sources for TarsosDSP imports, and the interface file for imports | Only the adapter uses TarsosDSP, and the interfaces import neither Android nor a library | ADR-13 |
 | **TC-U-40** | Evaluation / Harness | A generated corpus of three songs and five recordings with known answers, replayed through the real pitch and speech rules; a missing transcript; a recording of an unknown song; the report written twice | Found, top-1, false-accept, vocal-lock and latency counts equal the known answers; pitch is not scored before 5 seconds; a missing transcript is reported; the two reports are identical and hold no date | docs/09 |
 | **TC-U-41** | Engine / Speech scoring | Libraries of three or four songs with shared and rare words, heard words one letter off, short words, two songs tied and one clearly ahead, through the scorer, the engine and the lock rule | A rare word weighs more than one in every song; only candidates are kept; a near miss counts only with fuzzy matching on and only for words of five letters or more; tied or close songs keep the lock closed on the words path, a song clearly ahead opens it, and the pitch path is unaffected | ADR-03, ADR-10 |
+| **TC-U-42** | Evaluation / FLEURS corpus builder | A made-up FLEURS folder with recordings, sentences read twice and sentences with no recording, built twice with one seed and once with another | Songs of four sentences with and without a pitch reference; recordings in and out of the library; the second reading of a sentence is by another speaker; snippets no longer than asked; the same seed gives byte-identical files and another seed does not; the built corpus replays | docs/09 |
 | **TC-M-10** | Database / Migration | Run `VerseDatabaseMigrationTest` on a device or emulator, and again after raising the version without a migration | Passes at version 3; fails with a missing-migration error when the version is raised alone | ADR-12 |
 | **TC-M-11** | Build / Application id | Install a build with the old id and a build with the new id on one device, and look at their data | Both install side by side and keep separate data; nothing from the old app appears in the new one | ADR-16 |
 | **TC-M-12** | Recognition / Pitch only | On a fresh install with no models, open Recognize Song, choose a language marked pitch only, and start recognition | The list offers the pitch-only languages, the screen says no speech model exists and pitch matching is active, and recognition starts and stops without a crash | ADR-15 |
@@ -86,3 +87,4 @@ Notes:
 | **TC-M-14** | App lock / Android versions | On emulators for Android 9 (API 28), Android 10 (API 29) and Android 16 (API 36), set a device PIN, turn on the app lock in Settings, restart the app, and enter the PIN | The switch is accepted, the system unlock prompt appears with no crash, and the PIN opens the app. Create the Android 9 and 10 emulators from the `google_apis` x86_64 images | ADR-10, ADR-17 |
 | **TC-M-15** | Models / Unpack survives the process | Run `ModelUnpackWorkerInstrumentedTest` on a device, then queue a 1.6 GB unpack with `-e bigmodel 1600` (it needs the app launched once afterwards, because ending the test stops the app), watch the staging folder grow, and kill the app process halfway | The system starts a new process, the job restarts and finishes, the model is installed and the archive is deleted | ADR-11 |
 | **TC-M-17** | Evaluation / Transcript capture | Run `tools/audio-test/capture_transcripts.sh <corpus> <codes>` on an emulator or phone, then `./gradlew :app:testDebugUnitTest --tests "*EvaluationRun*" -Pversesync.eval.corpus=<corpus>` | A transcript file is written per recording, and the report is produced; rerunning the replay gives an identical report | docs/09 |
+| **TC-M-18** | Evaluation / FLEURS corpus run | Run `fetch_fleurs_more.sh`, build the corpus, capture transcripts on the emulator for five languages, then run the report with the sweep | 353 recordings and 353 transcripts; a report and a sweep of 120 settings; results as in docs/09 section 8 | docs/09 |

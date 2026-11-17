@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.24 |
+| Version | 0.25 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -382,6 +382,6 @@ These corrections bring the records in line with the code as built.
 * **Real devices:** Bluetooth sharing between two phones and the biometric prompt have never run, because the emulator has neither ([#8](https://github.com/Sriram-Codes-SW/VerseSync/issues/8)).
 * **Matching enhancements, not yet needed:** Elastic (DTW) pitch matching for tempo variation ([#16](https://github.com/Sriram-Codes-SW/VerseSync/issues/16)) and an FTS5 index for very large libraries ([#17](https://github.com/Sriram-Codes-SW/VerseSync/issues/17)).
 * **First-release checklist:** Play Console setup, the license decision, the privacy policy and release signing ([#18](https://github.com/Sriram-Codes-SW/VerseSync/issues/18)).
-* **Matching evidence:** The speech and pitch rules were tightened and the lock asks for more, including a lead over the other songs (ADR-03, ADR-04, ADR-10, issues #41 and #44), after finding that one heard word, or a pitch score of 2.8 against 3.0, could open it. The cost is recall: pitch matching of short spoken clips was already weak and is weaker, and speech needs a second correctly heard word. The thresholds were set from two real recordings and need more data, and elastic matching might recover recall ([#41](/41), [#16](/16), [#33](/33)). The stricter rule has only been measured on an emulator.
+* **Matching evidence:** The speech and pitch rules were tightened and the lock asks for more, including a lead over the other songs (ADR-03, ADR-04, ADR-10, issues #41 and #44), after finding that one heard word, or a pitch score of 2.8 against 3.0, could open it. The cost is recall: pitch matching of short spoken clips was already weak and is weaker, and speech needs a second correctly heard word. The thresholds were set from two real recordings and need more data, and elastic matching might recover recall ([#41](/41), [#16](/16), [#33](/33)). The stricter rule has only been measured on an emulator. A measurement on 353 recordings of read speech against a 92-song library (docs/09, section 8) found that the current speech rule decides on a wrong song for 38 percent of recordings of songs not in the library, and that pitch finds 16 percent of recordings that are pieces of their own reference. The rules are not yet changed for it.
 * **Biometric library is a beta:** The release build uses `androidx.biometric` 1.4.0-beta01, because there is no stable version newer than 1.1.0 from 2020 (ADR-17). Revisit when 1.4 reaches a stable release.
 * **Downloads that finish while the app is closed:** The receiver that notices a finished download only exists while the app is open, so a model that finishes downloading with the app closed is never unpacked ([#36](https://github.com/Sriram-Codes-SW/VerseSync/issues/36)).
