@@ -82,3 +82,12 @@ bash tools/audio-test/capture_transcripts.sh <corpus dir> [codes...]       # wha
 ```
 
 The seed corpus is one speaker per language, so it is a sanity baseline, not an evaluation set.
+
+### A larger corpus from FLEURS
+
+```
+bash tools/audio-test/fetch_fleurs_more.sh 40 en-us hi es de fr    # about 40 MB of each language's test audio, into fleursbig/ (ignored by git)
+```
+
+Then build, capture and run as in `docs/09-evaluation-harness.md`, section 8. The clips are read
+speech from many speakers, so the corpus has several songs per language that share common words.

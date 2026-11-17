@@ -29,6 +29,8 @@ import dev.sriramcodessw.versesync.fingerprinting.PitchTrack
 enum class Path { SPEECH, PITCH, COMBINED }
 
 internal class EvalConfig(
+    /** Whether to replay pitch. A sweep of the speech rules leaves it out, because pitch does not depend on them. */
+    val pitch: Boolean = true,
     val pitchIntervalMs: Long = 5000L,
     /** The speech rules to replay with. The default is what the app runs; the sweep varies it. */
     val rules: SpeechRules = SpeechRules(),
@@ -56,8 +58,12 @@ internal class Replay(
 
     // The stored contour of each song, made from its reference recording as when a user syncs.
     private val contours: Map<String, List<Float>?> =
-        corpus.library.associate { song ->
-            song.id to song.reference?.let { PitchTrack.of(Wav.read16k(corpus.recording(it))) }
+        if (!config.pitch) {
+            emptyMap()
+        } else {
+            corpus.library.associate { song ->
+                song.id to song.reference?.let { PitchTrack.of(Wav.read16k(corpus.recording(it))) }
+            }
         }
 
     fun run(): List<QueryResult> = corpus.queries.map { run(it) }
@@ -118,6 +124,7 @@ internal class Replay(
         query: Query,
         notes: MutableList<String>,
     ): PitchOutcome {
+        if (!config.pitch) return PitchOutcome(emptyMap(), emptyMap())
         val file = query.file
         if (file == null) {
             notes += "no recording, pitch not replayed"

@@ -47,11 +47,11 @@ object Report {
             sb.appendLine()
             Metrics.slices(results, path, corpus.library).forEach { (dimension, slices) ->
                 if (dimension != "all") sb.appendLine("### by $dimension").also { sb.appendLine() }
-                sb.appendLine("| slice | songs in lib | found | top-1 | not in lib | false accept | lock opens | lock false | latency |")
-                sb.appendLine("|---|---|---|---|---|---|---|---|---|")
+                sb.appendLine("| slice | songs in lib | found | top-1 | decides right | decides wrong song | not in lib | false accept | decides on unknown | lock opens | lock false | latency |")
+                sb.appendLine("|---|---|---|---|---|---|---|---|---|---|---|---|")
                 slices.forEach { s ->
                     sb.appendLine(
-                        "| ${s.name} | ${s.inLibrary} | ${s.found} | ${s.top1} | ${s.outOfLibrary} | ${s.falseAccept} | ${s.lockOpens} | ${s.lockFalse} | ${latency(s.medianLatencyMs)} |",
+                        "| ${s.name} | ${s.inLibrary} | ${s.found} | ${s.top1} | ${s.decidesRight} | ${s.decidesWrongSong} | ${s.outOfLibrary} | ${s.falseAccept} | ${s.decidesFalse} | ${s.lockOpens} | ${s.lockFalse} | ${latency(s.medianLatencyMs)} |",
                     )
                 }
                 sb.appendLine()
@@ -83,6 +83,9 @@ object Report {
                                 "falseAccept" to rate(s.falseAccept),
                                 "lockOpens" to rate(s.lockOpens),
                                 "lockFalse" to rate(s.lockFalse),
+                                "decidesRight" to rate(s.decidesRight),
+                                "decidesWrongSong" to rate(s.decidesWrongSong),
+                                "decidesFalse" to rate(s.decidesFalse),
                                 "medianLatencyMs" to s.medianLatencyMs,
                             )
                         }

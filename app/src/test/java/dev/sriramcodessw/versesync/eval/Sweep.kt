@@ -17,8 +17,8 @@ internal object Sweep {
         val slice: Slice,
     )
 
-    val minWords = listOf(1, 2, 3)
-    val shareThresholds = listOf(0.25f, 0.35f, 0.5f)
+    val minWords = listOf(1, 2, 3, 4, 6)
+    val shareThresholds = listOf(0.35f, 0.5f, 0.65f, 0.8f)
     val fuzzy = listOf(false, true)
     val leadMargins = listOf(0f, 0.25f, 0.5f)
 
@@ -29,7 +29,7 @@ internal object Sweep {
                 for (isFuzzy in fuzzy) {
                     // The lead margin only changes what the lock does, so replay once per speech setting.
                     val rules = SpeechRules(shareThreshold = share, minWords = words, fuzzy = isFuzzy)
-                    val results = Replay(corpus, EvalConfig(rules = rules)).run()
+                    val results = Replay(corpus, EvalConfig(pitch = false, rules = rules)).run()
                     for (margin in leadMargins) {
                         rows += Row(rules.copy(leadMargin = margin), Metrics.slice("all", results, Path.SPEECH, corpus.library, margin))
                     }
@@ -50,14 +50,14 @@ internal object Sweep {
         corpus.caution?.let { sb.appendLine("> **$it**").also { sb.appendLine() } }
         sb.appendLine("Speech path only. The defaults are minWords 2, share 0.35, fuzzy off, margin 0.25.")
         sb.appendLine()
-        sb.appendLine("| min words | share | fuzzy | margin | found | top-1 | false accept | lock opens | lock false |")
-        sb.appendLine("|---|---|---|---|---|---|---|---|---|")
+        sb.appendLine("| min words | share | fuzzy | margin | found | top-1 | false accept | decides right | decides wrong song | decides on unknown | lock opens | lock false |")
+        sb.appendLine("|---|---|---|---|---|---|---|---|---|---|---|---|")
         rows.forEach { r ->
             val d = SpeechRules()
             val mark = if (r.rules == d) " (default)" else ""
             val s = r.slice
             sb.appendLine(
-                "| ${r.rules.minWords}$mark | ${r.rules.shareThreshold} | ${if (r.rules.fuzzy) "on" else "off"} | ${r.rules.leadMargin} | ${s.found} | ${s.top1} | ${s.falseAccept} | ${s.lockOpens} | ${s.lockFalse} |",
+                "| ${r.rules.minWords}$mark | ${r.rules.shareThreshold} | ${if (r.rules.fuzzy) "on" else "off"} | ${r.rules.leadMargin} | ${s.found} | ${s.top1} | ${s.falseAccept} | ${s.decidesRight} | ${s.decidesWrongSong} | ${s.decidesFalse} | ${s.lockOpens} | ${s.lockFalse} |",
             )
         }
         return sb.toString()
