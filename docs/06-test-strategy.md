@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.18 |
+| Version | 0.19 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -78,3 +78,4 @@ Notes:
 | **TC-M-11** | Build / Application id | Install a build with the old id and a build with the new id on one device, and look at their data | Both install side by side and keep separate data; nothing from the old app appears in the new one | ADR-16 |
 | **TC-M-12** | Recognition / Pitch only | On a fresh install with no models, open Recognize Song, choose a language marked pitch only, and start recognition | The list offers the pitch-only languages, the screen says no speech model exists and pitch matching is active, and recognition starts and stops without a crash | ADR-15 |
 | **TC-M-13** | Sync, recognition and vocal lock / Real audio | Run `tools/audio-test/run_e2e.sh en-us hi` on an emulator: record two clips as songs, recognize the first, open the vocal lock with it, and play the second against it | Sync records fingerprints with voiced frames, the synced song is recognized, and the lock opens for the right clip. The lock staying closed for the wrong audio is known to fail while background noise is fingerprinted (issue 33) | ADR-01, ADR-10 |
+| **TC-M-14** | App lock / Android versions | On emulators for Android 9 (API 28), Android 10 (API 29) and Android 16 (API 36), set a device PIN, turn on the app lock in Settings, restart the app, and enter the PIN | The switch is accepted, the system unlock prompt appears with no crash, and the PIN opens the app. Create the Android 9 and 10 emulators from the `google_apis` x86_64 images | ADR-10, ADR-17 |
