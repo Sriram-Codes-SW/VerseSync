@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.33 |
+| Version | 0.34 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -410,6 +410,55 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   4. A decision, with Opus's review, on where prints live and how they are migrated (ADR-12).
   5. A test that a match on prints alone never opens the voice shortcut.
   6. The owner approves the change.
+
+
+### ADR-20: Concert Mode, a Setlist Tracked Manual-First
+
+* **Status:** Proposed. This ADR does not authorize code changes. The first phase has no recognition at all; every later phase is proposed and not decided, and needs its own ADR (see the conditions below).
+* **Context:**
+  The owner's use is a concert with a poor network. The person has a library of songs with lyrics on the phone and wants to sing along. A live song is not the recording played again, and nothing in the repository has been measured on singing, a concert, a crowd or a real phone.
+  What is known, each from its own source:
+  * In a trial with two library songs and a commercial recording played into the emulator microphone, the speech model barely transcribed the sung vocals over the instruments, and one of the two songs was found (ADR-19, context). That is two songs on an emulator.
+  * On read speech, the pitch matcher found 16 percent (19 of 116, 11 to 24) of recordings that were a piece of their own reference (docs/09, section 8).
+  * The strictest speech decision rule decided on a song not in the library for 0 of 707 read recordings (upper end 0.5 percent) and named the right song for 70 percent (60 to 78) of read recordings in the library. It is not in the app and was not measured on singing (ADR-18, docs/09, section 12).
+  * On generated music, a live-like re-performance of a library song matched 13 percent (9.7 to 17) by landmark fingerprints and a tempo 5 percent off matched 1 percent. No real band was measured (ADR-19, docs/09, section 13).
+  So there is no measured way for the app to tell which song a live band is playing, and wrong lyrics on a screen at a concert cost the person the song.
+  What the app already has: songs with lyrics, folders (`Folder`, `Song.folderId`) that group songs without an order, and lyric display. It has no ordered setlist.
+  What a concert may give is a closed set. This is assumed and not measured: a setlist is often known in advance (perhaps 15 to 30 songs) and is mostly played in order, so choosing among a few songs would be easier than recognizing one among a library. The sequence simulation below is meant to test what that assumption is worth.
+* **Considered Options:**
+  1. *Open recognition across the whole library (the recognition screen as it is):* Unmeasured on live singing, and a wrong answer is costly at a concert.
+  2. *A closed-set concert mode, manual first:* The person orders a setlist from the library, and the app shows the current song's lyrics, with one tap for the next song, a tap to jump to any song, and manual scrolling. If recognition is ever approved, it only suggests ("Is this X?") and never switches the song by itself. This is the proposal.
+  3. *Automatic following:* Recognition switches songs and scrolls the lyrics line by line by itself. Not until it has been measured on real singing in a loud venue, which has not been done.
+  4. *Landmark fingerprints:* They match a recording, and on generated music a live-like performance matched 13 percent (docs/09, section 13). Rejected for the concert (ADR-19).
+  5. *Online song or setlist lookups:* The network is the thing that fails at a concert. Rejected.
+* **Decision (proposed):**
+  **Phase 1: concert mode with no recognition.**
+  * A setlist is a named, ordered list of library song ids, kept on the device and separate from folders. A song may appear more than once. Deleting a library song removes its entry from every setlist.
+  * The concert screen shows the current song's lyrics large and high-contrast and keeps the screen on. It has big controls for the next song, the previous song, jumping to any song of the setlist, and a blank screen, and the lyrics scroll by hand. "Next" on the last song and "previous" on the first do nothing. It does not auto-scroll from LRC timings, because a live tempo differs from the recording.
+  * A song with empty lyrics shows a clear "No lyrics" placeholder and still advances.
+  * If the artist plays a song not on the list, the person jumps to any library song or to the blank screen without changing the setlist. A wrong or reordered setlist is fixed by hand at the venue.
+  * "No microphone" means the screen never starts the speech service, the lyric sync screen or any audio capture, and never asks for `RECORD_AUDIO`. The manifest does not change. Keeping the screen on uses the window flag only, with no wake-lock permission.
+  * It works with no network.
+  * Whether it is a Pro feature (folders are) is the owner's decision when it is built.
+  * Storage is not decided here. A new Room table would be the first `Migration` (`MIGRATIONS` is empty at version 3), and a non-Room store is the alternative. Whether setlists are in backup scope (ADR-12) is decided when it is built, with a second opinion.
+  * Tests when built: ordering, next and previous at the ends, jumping, deleting a song in a setlist, and that no audio is started.
+  **Later phases, proposed and not decided, each needing its own ADR with its own measured pass bar:** suggestions from heard words, restricted to the setlist, with an ordering prior (the same song continues, or the next one follows, with a small share kept for a song not on the list), shown as a question and never switching the song by itself; and a line follower that moves the lyrics by matching heard words to nearby lines, with manual scrolling as the fallback. Any recognition is new, and no concert suggestion ever opens the voice shortcut or the vocal lock (as ADR-19 requires for fingerprints).
+  **Measured before any recognition is built:** the harness restricted to libraries the size of a setlist (for example 15, 20 and 30 songs); a simulator of setlist sequences with the ordering prior and its pass bar fixed before the run; and a trial by the owner at home with a live album they own through a speaker, recording only per-trial results (the song, the suggestion, the time to the right song, wrong switches) and never audio. At a concert the owner would tap the true song as ground truth, so no audio is recorded and bystanders are not captured.
+* **Consequences:**
+  * Phase 1 helps without any claim the repository cannot back, and works with no network.
+  * The person has to tap. That is the cost of not claiming recognition.
+  * A setlist must be made by the person from songs that have lyrics. Importing one is not designed.
+  * Lyrics are entered by the person, are shown only on their own phone, and are not shared or bundled by this feature.
+  * Phase 1 does not use the microphone. If recognition is added, the app listens at a concert: the sound is analyzed on the device and not stored, the privacy text (docs/PRIVACY.md) must say so, and its statement that the app is not directed at children still holds.
+  * Keeping the screen on and a bright display cost battery over a long show, and were not measured. A dark, high-contrast theme and large type are part of the design, not an option. Accessibility (TalkBack labels, minimum touch targets) is part of the design and is tested.
+  * Not measured, and each is a condition below: singing at a concert, a crowd, a loud room, the ordering assumption, the speech model over a band, a real phone, battery over a show.
+* **Conditions before recognition is added:**
+  1. The harness results for libraries the size of a setlist and for setlist sequences are reported, with their intervals.
+  2. The owner's live-album trial is reported with how few trials it has.
+  3. A decision, with a second opinion, on whether a larger speech model is worth its size, delay and battery (roadmap item 8, #50).
+  4. The privacy text is updated for listening at a concert.
+  5. A separate ADR, with its own measured pass bar, is accepted before any later phase.
+  6. The owner approves.
 
 ---
 
