@@ -75,6 +75,12 @@ public static class WavePlayer {
             }
             mono[i] = s / channels;
         }
+        // Bring the loudest sample to about 80 percent of full scale. The virtual cable can arrive far
+        // quieter than the recording, and a quiet clip is not recognized reliably.
+        double peak = 0;
+        for (int i = 0; i < frames; i++) peak = Math.Max(peak, Math.Abs(mono[i]));
+        double gain = peak > 0 ? Math.Min(0.8 * 32767.0 / peak, 40.0) : 1.0;
+        for (int i = 0; i < frames; i++) mono[i] *= gain;
         int outRate = 48000;
         int pad = outRate;
         int outFrames = (int)((long)frames * outRate / rate);

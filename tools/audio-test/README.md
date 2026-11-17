@@ -30,6 +30,7 @@ It is Windows only, because it plays audio through a virtual audio cable.
 
 ```
 bash tools/audio-test/fetch_fleurs.sh          # one recording and transcript per language
+bash tools/audio-test/fetch_fleurs.sh en-us hi  # only the languages you name
 bash tools/audio-test/run_lang.sh en-us        # one language
 bash tools/audio-test/runall.sh hi ko ru       # several, results go to results.txt
 ```
@@ -46,3 +47,23 @@ which is the quickest way to check that audio reaches the emulator.
   different sentence before concluding.
 - Languages whose model link is empty in `LanguageViewModel` have no Vosk model and are skipped.
 - Downloaded models and recordings are kept next to the scripts and are ignored by git.
+
+## End to end: sync, recognition and the vocal lock
+
+```
+bash tools/audio-test/run_e2e.sh en-us hi
+```
+
+`RealAudioEndToEndInstrumentedTest` records two real clips as songs with the real fingerprint view
+model, recognizes the first, opens the vocal lock with it, and plays the second against that lock.
+It installs the speech model for the first language, so use a language that has one. The script
+plays each clip into the microphone when the app logs `READY step=N`.
+
+The last step, the lock staying closed for the wrong audio, fails today because background noise is
+fingerprinted (issue 33). By default the run reports that as `FALSE ACCEPT` and still passes. Run
+`STRICT=1 bash tools/audio-test/run_e2e.sh en-us hi` to make it fail, and add `silent` as a third
+argument to play nothing in that step. The test adds songs titled `E2E ...` to the app's real
+database and removes them when it ends.
+
+The player raises each clip so its loudest sample is about 80 percent of full scale. Through the
+virtual cable the unscaled clips can arrive quieter than the hum of the emulator's microphone.
