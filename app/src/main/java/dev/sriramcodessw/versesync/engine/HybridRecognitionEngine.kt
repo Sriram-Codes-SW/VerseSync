@@ -23,11 +23,16 @@ private const val PITCH_INTERVAL_MS = 5000L
  * How strongly a song matched, for callers that need more than "it is a candidate", such as the
  * vocal lock. [speechWords] is the most different heard words found in the lyrics in one piece of
  * speech. [pitchScore] and [pitchOverlap] are the best pitch distance and the voiced frames it used.
+ * [speechWeight] is how rare those words are in the library (a word every song has counts for little),
+ * and [rivalWeight] is the same for the strongest OTHER song, so a caller can tell a song that is clearly
+ * ahead from one that is tied with another (issue #44).
  */
 data class MatchEvidence(
     val speechWords: Int = 0,
     val pitchScore: Float = Float.MAX_VALUE,
     val pitchOverlap: Int = 0,
+    val speechWeight: Float = 0f,
+    val rivalWeight: Float = 0f,
 )
 
 data class RecognitionResult(
@@ -65,9 +70,13 @@ class HybridRecognitionEngine(
     // Persistent candidate accumulator to prevent state flickering
     private val accumulatedSttCandidates = mutableListOf<Song>()
 
-    // Most different words heard and found in a song's lyrics in one piece of speech, per song id.
-    // Guarded by the same lock as the candidates.
-    private val speechEvidence = HashMap<Int, Int>()
+    // Most different words heard and found in a song's lyrics in one piece of speech, and how rare they are
+    // in the library, per song id. Guarded by the same lock as the candidates.
+    private val speechEvidence = HashMap<Int, SpeechScore>()
+
+    // The library as the speech rules see it, rebuilt only when a song or its lyrics change.
+    private var speechLibrary: SpeechLibrary<Int>? = null
+    private var speechLibrarySignature = 0
 
     // The pitch contour grows continuously and only needs re-scoring now and then.
     private val pitchHeartbeat =
@@ -159,19 +168,30 @@ class HybridRecognitionEngine(
 
         val spoken = spokenMatchTokens(sttQuery)
         if (spoken.isEmpty()) return
-        val found = mutableListOf<Pair<Song, Int>>()
-        for (song in library) {
-            val cached =
-                cache[song.id]?.takeIf { it.lyrics == song.lyrics }
-                    ?: CachedLyricTokens(song.lyrics, lyricTokenSet(song.lyrics)).also { cache[song.id] = it }
-            SpeechMatcher.matchedWords(spoken, cached.tokens)?.let { words -> found += song to words }
-        }
+        val tokenSets =
+            library.associate { song ->
+                val cached =
+                    cache[song.id]?.takeIf { it.lyrics == song.lyrics }
+                        ?: CachedLyricTokens(song.lyrics, lyricTokenSet(song.lyrics)).also { cache[song.id] = it }
+                song.id to cached.tokens
+            }
+        val signature = library.fold(17) { hash, song -> 31 * (31 * hash + song.id) + song.lyrics.hashCode() }
+        val scorer =
+            speechLibrary?.takeIf { speechLibrarySignature == signature }
+                ?: SpeechLibrary(tokenSets).also {
+                    speechLibrary = it
+                    speechLibrarySignature = signature
+                }
+        val scores = scorer.scoreAll(spoken)
+        val found = library.mapNotNull { song -> scores[song.id]?.let { song to it } }
         synchronized(accumulatedSttCandidates) {
-            found.forEach { (candidate, words) ->
+            found.forEach { (candidate, score) ->
                 if (accumulatedSttCandidates.none { it.id == candidate.id }) {
                     accumulatedSttCandidates.add(candidate)
                 }
-                speechEvidence.merge(candidate.id, words) { old, new -> maxOf(old, new) }
+                speechEvidence.merge(candidate.id, score) { old, new ->
+                    SpeechScore(maxOf(old.words, new.words), maxOf(old.weight, new.weight))
+                }
             }
         }
     }
@@ -194,14 +214,18 @@ class HybridRecognitionEngine(
         val (retained, words) = synchronized(accumulatedSttCandidates) { accumulatedSttCandidates.toList() to HashMap(speechEvidence) }
         val candidates = (retained + pitchMatches.map { it.first }).distinctBy { it.id }
         val pitchById = pitchMatches.associate { it.first.id to it.second }
+        val rivals = SpeechMatcher.rivalWeights(words.mapValues { it.value.weight })
         val evidence =
             candidates.associate { song ->
                 val pitch = pitchById[song.id]
+                val speech = words[song.id]
                 song.id to
                     MatchEvidence(
-                        speechWords = words[song.id] ?: 0,
+                        speechWords = speech?.words ?: 0,
                         pitchScore = pitch?.score ?: Float.MAX_VALUE,
                         pitchOverlap = pitch?.overlap ?: 0,
+                        speechWeight = speech?.weight ?: 0f,
+                        rivalWeight = rivals[song.id] ?: 0f,
                     )
             }
         return RecognitionResult(candidates, evidence)

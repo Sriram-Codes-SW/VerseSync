@@ -110,9 +110,9 @@ object Metrics {
         return outcome.evidence.all { (id, other) -> id == target || stronger(mine, other) }
     }
 
-    /** More heard words win; with equal words, a closer pitch wins. */
+    /** Rarer heard words win (more of them, and less common in the library); with equal words, a closer pitch wins. */
     private fun stronger(
         a: MatchEvidence,
         b: MatchEvidence,
-    ): Boolean = if (a.speechWords != b.speechWords) a.speechWords > b.speechWords else a.pitchScore < b.pitchScore
+    ): Boolean = if (a.speechWeight != b.speechWeight) a.speechWeight > b.speechWeight else a.pitchScore < b.pitchScore
 }

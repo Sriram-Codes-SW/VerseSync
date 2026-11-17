@@ -1,6 +1,7 @@
 package dev.sriramcodessw.versesync.ui.screens
 
 import dev.sriramcodessw.versesync.engine.MatchEvidence
+import dev.sriramcodessw.versesync.engine.SpeechMatcher
 
 /**
  * What the vocal lock needs before it opens, and what happens when it is given up on.
@@ -27,7 +28,8 @@ object VocalLockPolicy {
     /** Whether [evidence] for the target song is enough to open the lock. */
     fun opens(evidence: MatchEvidence?): Boolean {
         if (evidence == null) return false
-        val heardEnoughWords = evidence.speechWords >= MIN_WORDS
+        // Enough words, and no other song close behind: the words must tell this song apart from the rest (issue #44).
+        val heardEnoughWords = evidence.speechWords >= MIN_WORDS && SpeechMatcher.leads(evidence.speechWeight, evidence.rivalWeight)
         val followedThePitch = evidence.pitchScore <= MAX_PITCH_SCORE && evidence.pitchOverlap >= MIN_PITCH_OVERLAP
         return heardEnoughWords || followedThePitch
     }
