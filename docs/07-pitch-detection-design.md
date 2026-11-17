@@ -10,6 +10,8 @@
 
 Tracked in issue [#13](https://github.com/Sriram-Codes-SW/VerseSync/issues/13).
 
+**Progress:** phase 0 is done. The unused view model was removed (#15), the level meter now measures loudness (#14), and `PitchCharacterizationTest` (TC-U-31) pins what the current detector reports for audio of known pitch, using the reusable `SyntheticSignals` and `PitchTrack` helpers in the test sources.
+
 ## 1. Why
 
 Pitch detection and the audio capture it depends on are tied to one third-party library, and that causes four problems today.

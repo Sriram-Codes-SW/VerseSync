@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.16 |
+| Version | 0.17 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -15,7 +15,7 @@ This directory contains the system architecture, security, design records (ADRs)
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
 | [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.16 | Active |
-| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.16 | Active |
+| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.17 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
@@ -40,3 +40,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.14 | 2026-11-08 | Claude Code | Follow-ups from a review: the CI workflow also builds the release APK, PRIVACY.md corrected to Android 11 and older, key files ignored by git, new open items for pre-release dependencies and the migration test. The document header version now matches this table. |
 | 0.15 | 2026-11-08 | Claude Code | The `Protect main` ruleset now also requires branches to be up to date before merging. RELEASING.md updated. |
 | 0.16 | 2026-11-08 | Claude Code | Fixed the level meter (it showed pitch confidence, now loudness), removed the unused FingerprintingViewModel, and offered pitch-only languages on the recognition screen (issues #14, #15, #5). Test cases TC-U-28 to TC-U-30 and TC-M-12. Three open items removed. |
+| 0.17 | 2026-11-08 | Claude Code | Phase 0 of the pitch design is done: characterization tests for the current detector (TC-U-31) and a progress note in 07-pitch-detection-design.md. |
