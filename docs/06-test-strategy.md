@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.22 |
+| Version | 0.23 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
