@@ -1,6 +1,7 @@
 package dev.sriramcodessw.versesync.eval
 
 import dev.sriramcodessw.versesync.engine.MatchEvidence
+import dev.sriramcodessw.versesync.engine.SpeechMatcher
 import dev.sriramcodessw.versesync.ui.screens.VocalLockPolicy
 
 /*
@@ -56,6 +57,7 @@ object Metrics {
         results: List<QueryResult>,
         path: Path,
         library: List<LibrarySong>,
+        leadMargin: Float = SpeechMatcher.LEAD_MARGIN,
     ): Slice {
         var inLibrary = 0
         var outOfLibrary = 0
@@ -80,12 +82,12 @@ object Metrics {
                     outcome.firstSeenMs[target]?.let { latencies += it }
                 }
                 if (isTop1(target, outcome)) top1++
-                if (VocalLockPolicy.opens(outcome.evidence[target])) lockOpens++
+                if (VocalLockPolicy.opens(outcome.evidence[target], leadMargin)) lockOpens++
             }
             for (song in library) {
                 if (song.id == target) continue
                 lockFalseTrials++
-                if (VocalLockPolicy.opens(outcome.evidence[song.id])) lockFalseOpens++
+                if (VocalLockPolicy.opens(outcome.evidence[song.id], leadMargin)) lockFalseOpens++
             }
         }
         return Slice(

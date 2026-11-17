@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.1 |
+| Version | 0.2 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -74,7 +74,7 @@ bash tools/audio-test/capture_transcripts.sh <corpus dir> [language codes]
 ./gradlew :app:testDebugUnitTest --tests "*EvaluationRun*" -Pversesync.eval.corpus=<corpus dir> [-Pversesync.eval.label=<name>] [-Pversesync.eval.out=<dir>]
 ```
 
-The report is written to `app/build/eval/report.md` and `report.json` unless an output directory is given. Neither holds a date, so the same corpus and the same code give the same files, and two runs can be compared with an ordinary diff. Without `-Pversesync.eval.corpus` the run is skipped, and the normal test run does not need a corpus.
+The report is written to `app/build/eval/report.md` and `report.json` unless an output directory is given. Add `-Pversesync.eval.sweep=true` to also write `sweep.md` (section 8). Neither holds a date, so the same corpus and the same code give the same files, and two runs can be compared with an ordinary diff. Without `-Pversesync.eval.corpus` the run is skipped, and the normal test run does not need a corpus.
 
 Step 1 is only needed once per recording and speech model. Changing the matching rules and rerunning step 2 takes seconds.
 
@@ -116,7 +116,13 @@ What this does and does not show:
 - **Pitch on the library clips** is not meaningful here, because each clip is its own reference. Two of the 14 were still missed, which was not investigated.
 - **The vocal lock** opened for a wrong song in 2 of 280 trials, through pitch. Those trials are not independent, so the interval is optimistic.
 
-## 8. Not verified
+## 8. Choosing the speech rules
+
+Issue [#44](https://github.com/Sriram-Codes-SW/VerseSync/issues/44) asks for the minimum evidence and the margin to be chosen from the evaluation set and not by hand. `-Pversesync.eval.sweep=true` replays the corpus under 54 settings of the speech rules (minimum different words 1 to 3, share of heard words 0.25 to 0.5, fuzzy matching on or off, lead margin 0 to 0.5) and writes `sweep.md` beside the report. It sweeps the speech path alone, because pitch does not depend on these settings and, on spoken recordings, accepts so many wrong songs that it hides any speech effect.
+
+On the seed corpus the sweep is flat: all 54 settings, including the loosest (one word, share 0.25, fuzzy on), give 14 of 14 found and 0 of 7 false accepts. So the seed cannot choose any of them, and the defaults stay (two words, share 0.35, fuzzy off, margin 0.25). The reasons are in the corpus. Each library song is in a different language, so no two songs share words, and the clips are clean speech with no music or singing, so the garbled transcripts that cause ties and false accepts never occur. The settings are to be chosen when the real set exists, with songs in the same language and singing in noisy conditions. Pick the row that keeps false accepts at or under the target with the best found and top-1 rates, and when several rows are the same within their intervals, keep the default.
+
+## 9. Not verified
 
 - That the transcripts captured by feeding frames into Vosk match what the app hears from a live microphone. Both use the same recognizer and model, but the buffer sizes differ.
 - Anything on singing, children, or real phones: nothing of that has been recorded yet.

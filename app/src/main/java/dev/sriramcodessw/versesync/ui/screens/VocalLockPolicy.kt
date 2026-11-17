@@ -26,10 +26,13 @@ object VocalLockPolicy {
     fun fallsBackToDeviceLock(failedAttempts: Int): Boolean = failedAttempts >= MAX_ATTEMPTS
 
     /** Whether [evidence] for the target song is enough to open the lock. */
-    fun opens(evidence: MatchEvidence?): Boolean {
+    fun opens(
+        evidence: MatchEvidence?,
+        leadMargin: Float = SpeechMatcher.LEAD_MARGIN,
+    ): Boolean {
         if (evidence == null) return false
         // Enough words, and no other song close behind: the words must tell this song apart from the rest (issue #44).
-        val heardEnoughWords = evidence.speechWords >= MIN_WORDS && SpeechMatcher.leads(evidence.speechWeight, evidence.rivalWeight)
+        val heardEnoughWords = evidence.speechWords >= MIN_WORDS && SpeechMatcher.leads(evidence.speechWeight, evidence.rivalWeight, leadMargin)
         val followedThePitch = evidence.pitchScore <= MAX_PITCH_SCORE && evidence.pitchOverlap >= MIN_PITCH_OVERLAP
         return heardEnoughWords || followedThePitch
     }
