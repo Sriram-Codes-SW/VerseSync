@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.21 |
+| Version | 0.22 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -346,7 +346,7 @@ VerseSync is an offline-first Android application designed for musicians, worshi
 
 These corrections bring the records in line with the code as built.
 
-* **ADR-01 (implementation status):** Only the shared 16 kHz sample rate is implemented. TarsosDSP (`AudioDispatcherFactory.fromDefaultMicrophone`) and Vosk (`SpeechService`) still open their own `AudioRecord`, so the "single shared stream" option was not built. Concurrent capture by one app is permitted on Android 10 and later, but it has not been verified on every device.
+* **ADR-01 (implementation status):** Phase 2 of the pitch design builds the "single shared stream" option. One `AudioRecordSource` (`AudioRecord`, 16 kHz, mono, 16-bit, 1,024-sample blocks, `MIC` source) feeds the pitch detector, the level meter and the speech recognizer. Vosk no longer records: `SpeechDecoder` takes copies of the frames on its own thread, so the audio thread never waits for it, and drops the oldest frames if recognition falls behind. Before this, `SpeechService` and TarsosDSP each opened their own `AudioRecord`. How well it recognizes speech is not settled: see the validation notes in the pull request and TC-M-16. Concurrent capture by one app is permitted on Android 10 and later, and that no longer matters here because only one capture runs.
 * **ADR-03 (implementation):** Tokenized matching exists only in `HybridRecognitionEngine`, which loads all songs and ranks them in memory. No multi-token query was added to `SongDao`. The unused exact-substring query `searchSongsByLyrics` has been removed so the code no longer contradicts this record.
 * **ADR-03 (tokenization):** Matching now uses script-aware tokens, described in ADR-14, because the original rule broke Indic scripts, Arabic with diacritics, and Chinese and Japanese.
 * **ADR-04 (distance rule):** Unvoiced frames are `NaN` in the relative contour and are skipped when either contour is unvoiced at that frame. Previously a frame silent in only one contour was compared against 0 and inflated the distance. A match also needs at least 8 frames voiced in both contours. Mean-centering still uses the whole live buffer and not only the compared window.
