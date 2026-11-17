@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.27 |
+| Version | 0.28 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,13 +14,13 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.25 | Active |
-| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.26 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.26 | Active |
+| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.27 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
-| [docs/08-quality-roadmap.md](08-quality-roadmap.md) | Recognition Quality Roadmap: where it stands and what to build next | 0.3 | Proposed |
-| [docs/09-evaluation-harness.md](09-evaluation-harness.md) | Evaluation Harness: replay recordings, measure accuracy and false accepts, recording protocol | 0.3 | Active |
+| [docs/08-quality-roadmap.md](08-quality-roadmap.md) | Recognition Quality Roadmap: where it stands and what to build next | 0.4 | Proposed |
+| [docs/09-evaluation-harness.md](09-evaluation-harness.md) | Evaluation Harness: replay recordings, measure accuracy and false accepts, recording protocol | 0.5 | Active |
 
 ## Revision History
 
@@ -53,3 +53,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.25 | 2026-11-17 | Claude Code | Added the evaluation harness (09-evaluation-harness.md, issue #43): the matching rules are shared functions, recordings are replayed on the JVM with transcripts captured on a device, and a report gives accuracy and false-accept rates with intervals. TC-U-40 and TC-M-17, and a first seed run. |
 | 0.26 | 2026-11-17 | Claude Code | Speech scoring (issue #44): words weighted by rarity, a lead over the other songs required for the vocal lock to open on words, optional fuzzy matching (off), and a parameter sweep in the harness. ADR-03 and ADR-10 amendments, TC-U-41. The seed corpus cannot choose the settings, so the defaults stay and #44 stays open. |
 | 0.27 | 2026-11-17 | Claude Code | A same-language FLEURS corpus (read speech, 353 recordings, 5 languages) with a fixed-seed builder, a fetch script, decision measures and a 120-setting sweep in the harness. At the current rules the speech path decides on a wrong song for 38 percent of recordings of songs not in the library, and pitch finds 16 percent of recordings that are pieces of their own reference. No rule is changed. TC-U-42 and TC-M-18. |
+| 0.28 | 2026-11-17 | Claude Code | Held-out choice of a speech decision rule (issue #44): FLEURS dev and test corpora (470 and 606 recordings), a decision rule that sees every song and is judged acting first, a criterion fixed in the docs before the run, and a leave-one-language-out table. The rule chosen on dev missed its target on test (7.8 percent against at most 2 percent) and is not adopted; the rival fix shows the first sweep overstated false decisions somewhat. No app change. TC-U-43 and TC-M-19. |

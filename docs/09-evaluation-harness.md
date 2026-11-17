@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.4 |
+| Version | 0.5 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -132,7 +132,7 @@ bash tools/audio-test/capture_transcripts.sh <corpus dir>                  # nee
 
 How it is built, per language: the recordings are shuffled, about a third go to the library and their sentences become songs of four sentences each, so songs share common words. The rest are recordings of sentences that are in no song. More songs are made from sentences with no recording, with no pitch contour, so the library is larger than what is heard. Every recording is cut to a 3, 5 or 10 second snippet from a random start. The archives are in file-name order, so a prefix is a random-looking sample, but only a few sentences have both readings in it, which is why only 16 recordings are by another speaker than the reference.
 
-The corpus used for the numbers below has 353 recordings in five languages (en-us 91, hi 67, es 64, de 56, fr 75): 132 of songs in the library (116 are the reference recording itself, 16 are by another speaker) and 221 of songs that are not, with 92 songs in the library, 32 of them with a pitch contour. That is fewer recordings of unknown songs than the 300 aimed for, because the 40 MB prefixes held only 353 clips. Speech was captured with the Vosk small models on an Android emulator by feeding frames straight into the recognizer.
+The first corpus built, whose numbers are below, has 353 recordings in five languages (en-us 91, hi 67, es 64, de 56, fr 75): 132 of songs in the library (116 are the reference recording itself, 16 are by another speaker) and 221 of songs that are not, with 92 songs in the library, 32 of them with a pitch contour. That is fewer recordings of unknown songs than the 300 aimed for, because the 40 MB prefixes held only 353 clips. Speech was captured with the Vosk small models on an Android emulator by feeding frames straight into the recognizer.
 
 **These are read sentences, not singing, and four-sentence "songs", not real lyrics.** They say how the rules behave when many songs share common words, which the seed could not. They do not say how well the app recognizes singing.
 
@@ -169,7 +169,7 @@ On the seed corpus the sweep was flat, so it could not choose. On the FLEURS cor
 | 6 | 0.65 | 94/132 = 71% (63 to 78) | 0/132 | 1/221 = 0.5% (0.1 to 2.5) |
 | 6 | 0.8 | 82/132 = 62% (54 to 70) | 0/132 | 0/221 = 0% (0 to 1.7) |
 
-The trade is steep: the settings that keep a confident wrong decision under a few percent also stop deciding for a quarter to a third of recordings that are in the library. **No setting is applied in this change.** Choosing a row from this table and reporting it on the same recordings would be optimistic, and a fixed number of words is a poor rule for a 3 second snippet, which cannot contain six words. The next step is to pick the rule on part of the data and report it on recordings that were not used to pick it, and to try a rule that scales with how much speech was heard. Pick the row that keeps false decisions at or under the target with the best decides-right rate, and when several rows are the same within their intervals, keep the simpler one.
+These numbers took the rival only among candidates, which distorts them (see the end of section 10). The trade is steep: the settings that keep a confident wrong decision under a few percent also stop deciding for a quarter to a third of recordings that are in the library. **No setting is applied in this change.** Choosing a row from this table and reporting it on the same recordings would be optimistic, and a fixed number of words is a poor rule for a 3 second snippet, which cannot contain six words. The next step is to pick the rule on part of the data and report it on recordings that were not used to pick it, and to try a rule that scales with how much speech was heard. Pick the row that keeps false decisions at or under the target with the best decides-right rate, and when several rows are the same within their intervals, keep the simpler one.
 
 ## 10. Choosing a decision rule on held-out data
 
@@ -190,6 +190,30 @@ Section 9 chose nothing, because choosing among 120 settings on the recordings t
 ```
 
 The app is not changed by this. `SpeechRules` and the lock policy keep their defaults, and a decision rule, if one ships later, is its own layer with an ADR amendment and a check on singing.
+
+### Result of the run
+
+One run, on 470 selection recordings (257 of songs not in the library) and 606 report recordings (361 of songs not in the library, short of the 400 aimed for). The rule chosen on the selection corpus was **`words>=4 share>=0.65 gap>3.0`**. Acting the first time the rule fires:
+
+| Rule | Corpus | right song | wrong song | decides on a song not in the library |
+|---|---|---|---|---|
+| chosen | selection | 182/213 = 85% (80 to 90) | 0/213 = 0% (0 to 1.8) | 5/257 = 1.9% (0.8 to 4.5) |
+| chosen | **report** | 211/245 = 86% (81 to 90) | 1/245 = 0.4% (0.1 to 2.3) | **28/361 = 7.8% (5.4 to 11)** |
+| current speech rule | report | 213/245 = 87% (82 to 91) | 24/245 = 9.8% (6.7 to 14) | 193/361 = 53% (48 to 59) |
+| current lock words rule | report | 221/245 = 90% (86 to 93) | 8/245 = 3.3% (1.7 to 6.3) | 142/361 = 39% (34 to 44) |
+
+At the end of the recording instead of the first firing, on the report corpus: the chosen rule decides on a song not in the library for 8/361 = 2.2% (1.1 to 4.3) and names the right song for 207/245 = 84%; the current speech rule for 74/361 = 20% (17 to 25) and 234/245 = 96%.
+
+What it shows:
+
+- **The chosen rule did not meet the criterion on held-out data.** It decided on an unknown song for 7.8% (5.4 to 11) against a target of at most 2% with the upper end at most 5%, where on the selection corpus it was 1.9%. That gap is the selection optimism this procedure exists to expose. The rule is not adopted and nothing in the app changes.
+- **It is still far better than the current rules.** It cuts deciding on an unknown song from 53% (speech rule) or 39% (lock words rule) to 7.8%, and wrong-song decisions from 9.8% or 3.3% to 0.4%, while naming the right song as often (86% against 87% and 90%).
+- **The trouble is acting early.** At the end of the recording the same rule is at 2.2%, which would pass. A garbled early piece of text can fire the rule and later text cannot take it back. A rule that waits for the evidence to settle, for example the same leader for several updates or a minimum listening time, is the thing to try next. It can be measured with the per-update evidence the replay now keeps; it was not tried here, and trying it on the report corpus now would spoil it as held-out data.
+- **The top of the ranking is flat and the exact numbers do not carry over.** Many rules are the same within noise on the selection corpus, and leaving a language out changes the rule chosen (gap 0 or 3, share 0.65 or 0.8). On a language left out the rule decided on an unknown song for between 0% and 12% of recordings (de 12%, en-us 9.8%, es 0%, fr 6.3%, hi 1.6%) and named the right song for 65% to 90%. What is stable is the family: at least four different words and at least 65% of the heard words in the lyrics. The 3.0 gap is not.
+- **Short snippets decide less, and not wrongly.** The chosen rule named the right song for 50 of 70 recordings (71%, 60 to 81) of 3 seconds and 86 of 89 (97%, 91 to 99) of 10 seconds, with no wrong-song decision at 3 or 10 seconds.
+- **"Decides on a song not in the library" means naming any of the 155 songs.** The vocal lock opens for one target song, so its rate for a given target is much lower (83 of 93,685 pairs of recording and song, 0.1%, at the current rules). Do not read these rates as the chance that the lock opens for a stranger.
+
+The first sweep in section 9 took the rival only among candidates, so a stricter candidate rule removed the rivals. With the rival taken from every song, on the report corpus and at the end of each recording, deciding on an unknown song falls from 109/361 = 30% (26 to 35) to 74/361 = 20% (17 to 25) at the current rule (two words, share 0.35), and from 30/361 = 8.3% (5.9 to 12) to 8/361 = 2.2% (1.1 to 4.3) at four words and share 0.65. The earlier table therefore overstated false decisions somewhat. Its conclusion, that the current rule is far too permissive, holds on the larger corpus.
 
 ## 11. Not verified
 
