@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.10 |
+| Version | 0.11 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -304,6 +304,47 @@ The same generated song is played again as a different performance of the same s
 **Correction to the generated songs, committed before any evaluation run.** Two defects in the generated music were found by a small test on 6 songs, before any corpus was run. First, the random seeds of different songs collided (a melody seed was a sum, so song 7 reused pieces of song 5's melody); seeds are now mixed with a hash. Second, songs in one family shared their tempo exactly (90, 110 or 128 BPM) and their tuning exactly, so their bars and chord tones lined up frame for frame, and 4 of 20 queries for songs not in the library were accepted at the rule 15 votes and ratio 2. Real songs in one style do not share a tempo to a fraction of a percent or the same tuning. So within a family each song's tempo now differs by up to ±4% and its tuning by up to ±25 cents. The key and progression families, the repeating sections, the sounds, and every parameter of the matcher are unchanged. **The exact-family variant is kept as a stress test:** its clean-condition false accepts are reported for it separately, for the same library size, so the cost of identical tempo and tuning is visible and not hidden by the change.
 
 **What it will not show.** Real recordings, real speakers and rooms, the phone's own audio processing, any cover, live version or edit, or the person singing. Generated music repeats less than real music and overstates accuracy, so a pass here is not a claim about real songs.
+
+### Result of the run
+
+Run once on generated music (seed A 43 to choose, seed B 44 to report), after the plan, both addenda and the code were committed. Two earlier attempts at the run failed before producing a result: the first ran out of memory (the test now gets a 6 GB heap, and re-performed songs are no longer cached for the whole run), the second hit a bug in my timing code (a five second window that could run past the end of a 45 second song). Neither result was seen or used.
+
+**No rule met the criterion.** On seed A, pooled over every condition except re-performance (15,000 queries for songs not in the library and 4,500 for songs in it), no rule of the grid accepted a song not in the library for at most 0.1% with the upper end at most 0.5%. The strictest, 25 votes and ratio 3, accepted 25 of 15,000 (0.17%, 0.1 to 0.2) and named the right song for 3,165 of 4,500 (70%, 69 to 72). So nothing is chosen, the pass bar of seed B is not applied, and seed B's other conditions are not reported. The trade on seed A, pooled:
+
+| rule | top-1 | songs not in the library accepted |
+|---|---|---|
+| 8 votes, ratio 1.5 | 91% (90 to 92) | 17% (17 to 18) |
+| 15 votes, ratio 3 | 81% (80 to 82) | 0.6% (0.5 to 0.7) |
+| 20 votes, ratio 3 | 76% (74 to 77) | 0.3% (0.2 to 0.4) |
+| 25 votes, ratio 3 | 70% (69 to 72) | 0.17% (0.1 to 0.2) |
+
+The descriptive results below were never used to choose anything, and are at the strictest rule. Seed A by condition (top-1 of 300 library queries; accepted songs not in the library out of 1,000):
+
+| condition | top-1 | songs not in the library accepted |
+|---|---|---|
+| clean | 100% (99 to 100) | 4 (0.4%) |
+| white noise 20 / 10 / 5 / 0 / −5 dB | 100% / 100% / 92% / 70% / 31% | 7 / 1 / 0 / 0 / 0 |
+| pink noise 5 dB | 95% (92 to 97) | 2 |
+| speech-shaped noise 5 dB | 77% (72 to 81) | 0 |
+| level +20 dB, clipped | 51% (45 to 57) | 0 |
+| level −20 dB | 99% (98 to 100) | 2 |
+| speaker band 250 Hz to 4 kHz | 100% (99 to 100) | 4 |
+| room echo | 74% (69 to 79) | 0 |
+| speed +1% | 14% (11 to 19) | 0 |
+| speed −1% | 3.7% (2.1 to 6.4) | 5 |
+| headline: 5 s, speaker band, echo and pink noise 5 dB | 48% (42 to 54) | 0 |
+
+Re-performance, seed B (300 library queries, 1,000 for songs not in the library, no bar): the same score played with **different sounds** 99% (98 to 100); **tempo +3%** 46% (40 to 51); **+5%** 1.0% (0.3 to 2.9); **+8%** 0% (0 to 1.3); **live-like** (new sounds, +5% drifting, notes up to 30 ms early or late) 13% (9.7 to 17). Songs not in the library were accepted for 4, 1, 5, 0 and 0 of 1,000.
+
+What it shows:
+
+- **The false-accept target was not met on generated music.** The accepted songs are in the clean and mild conditions (4, 7, 4 and 5 of 1,000 for clean, white noise at 20 dB, the speaker band and speed −1%) and almost none in the noisy ones, which suggests they come from the songs themselves, which share key and chord tones within a family, and not from noise. That was not diagnosed further, and the criterion is not changed after seeing it. A rule that accepts fewer would cost more right answers (70% at the strictest).
+- **It finds a recording in noise but is very sensitive to speed.** Clean it finds 100%, and 92% at 5 dB of white noise. But playing the same recording 1% fast or slow leaves 14% or 4%, and clipping cuts it to 51%. The headline condition, 5 second snippets through a speaker band, an echo and noise together, is 48%.
+- **It does not follow a performance that is not the recording.** With the same notes at the same times and only the sounds changed it still matches (99%), because the long notes keep their pitches. A tempo 3% off leaves 46%, 5% off 1%, and the live-like performance 13%. A live band plays other notes, at other times, at a tempo that is rarely within a few percent of the record, and these generated variants are milder than that. This is consistent with ADR-19: it is not the concert path, and nothing here was measured on a real band.
+- **The cost is small.** The prints hold about 78 hashes a second, so a four-minute song is about 112 KB (not the 220 KB first assumed), 1,000 songs about 110 MB. Looking up a 5 second query took a median of 0.1 ms against 60 songs and 0.5 ms against 600, on one thread. Songs not in the library were accepted for 0.5% of clean queries at 60 songs and 0.1% at 600, so false accepts did not grow with the library in this range. Extrapolating, 10,000 songs would be about 1.1 GB, which was not measured.
+- **The stress variant** (songs of a family sharing tempo and tuning exactly), clean queries: top-1 100% and 0.1% of songs not in the library accepted, no worse than the main corpora at this rule. The earlier 6-song test shows that with a lenient rule identical tempo and tuning does make songs confusable.
+
+What it does not show: real recordings, real speakers, rooms or phones; the phone's own audio processing; any real live performance; or that the false-accept target is reachable on real music. A generated corpus repeats less than real music, and these songs share more structure than real songs of one style may.
 
 ## 14. Not verified
 

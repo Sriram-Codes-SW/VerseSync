@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.32 |
+| Version | 0.33 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -397,7 +397,8 @@ VerseSync is an offline-first Android application designed for musicians, worshi
 * **Decision (proposed):**
   Phase 1: a pure-Kotlin landmark matcher (`fingerprinting/landmarks`), written from the published method, and a generated test set that is not copyrighted, with thresholds chosen on one seed and reported once on another, plus the cost of a bigger library: storage per song, and how lookup time and false accepts change from 60 to 600 songs (docs/09, section 13). Later phases are proposed and not decided: the prints in their own Room database file, kept out of backup and out of Bluetooth sharing, because a few hundred kilobytes per song would otherwise push the songs database over the Auto Backup limit; a way to add songs (options 6 and 7, chosen by the owner); and print evidence feeding the candidate list only. The voice shortcut ignores print evidence, with a test.
 * **Consequences:**
-  * Offline recognition is limited to the fingerprints on the device. At the starting density a four-minute song is about 220 KB, so 1,000 songs are about 220 MB, and a catalog of millions is out of reach on a phone without a much sparser print, which phase 1 measures.
+  * Offline recognition is limited to the fingerprints on the device. On generated music a four-minute song measured about 110 KB (78 hashes a second), so 1,000 songs are about 110 MB and 10,000 about 1.1 GB, and a lookup took 0.1 ms at 60 songs and 0.5 ms at 600 (docs/09, section 13). A catalog of millions is out of reach on a phone without a much sparser print.
+  * Measured on generated music only: it finds a recording in noise (100% clean, 92% at 5 dB of white noise), but a playback 1% fast or slow leaves 14% or 4%, and a performance with a tempo 5% off leaves 1%, with new sounds and a drifting tempo 13%. The pre-registered false-accept target was not met (0.17% at the strictest rule against 0.1%), so no rule is chosen. It is not usable for a live band, and nothing here was measured on real music.
   * Only the same recording matches. A cover, a live version, the person's own singing and an edit will not, and the copy must say so.
   * Many streaming terms forbid recording. Listening to a whole song so as to learn it could be read that way. The hashes cannot be turned back into audio, but whether they count as a copy is a legal question and not one this ADR answers. The feature must not be advertised as working with any named service.
   * The landmark-hash patents are believed to have expired. That was not checked.

@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Recognition Quality Roadmap |
-| Version | 0.9 |
+| Version | 0.10 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Proposed |
@@ -99,3 +99,4 @@ Smooth the contour and fix octave jumps, search over key shifts instead of cente
 - **ADR-18 proposes the speech decision rule as its own layer for the vocal lock (#44):** it records the evidence, the options considered, the exact rule, what was not measured, and five conditions that must be met before any code changes, including a check on real singing and on a real phone. It is a proposal only and authorizes nothing (docs/03-design.md).
 - **The vocal lock is now the voice shortcut (#48), in the words a person reads only:** the name, the settings description ("Anyone who knows the words can open it") and the lock screen no longer suggest authentication or identity, the wording is in one tested place, and a threat model is written (docs/10). The false-accept rate on a negative set of television, music, other voices and silence is still not measured; #48 stays open for it.
 - **Recognizing recorded music offline (ADR-19, Proposed):** the owner wants a Shazam-style app that works offline. A recording playing near the phone is a different input from singing, and speech and pitch both fail on it. Landmark fingerprints of the same recording are proposed, limited to songs whose fingerprints are on the device. Phase 1 is a matcher and a generated test set, with its plan and pass bar fixed in advance (docs/09, section 13).
+- **Result of the recorded-music fingerprint run (ADR-19, generated music):** no rule met the pre-registered false-accept target, so none is chosen. The matcher finds a recording in noise but is very sensitive to playback speed (a 1 percent error leaves 14 percent or 4 percent) and does not follow a performance whose tempo is a few percent off, so it is not the concert path. Cost is about 110 KB per four-minute song. Next, per a second opinion: a Proposed ADR for a closed-set concert mode (a setlist, manual first), a harness option that restricts the library to about 16 to 20 songs, and a concert mode without recognition. Nothing real has been measured (docs/09, section 13).

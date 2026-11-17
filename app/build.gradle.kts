@@ -68,10 +68,13 @@ android {
                 listOf("versesync.eval.corpus", "versesync.eval.out", "versesync.eval.label", "versesync.eval.sweep", "versesync.eval.fleurs", "versesync.eval.languages", "versesync.eval.select", "versesync.eval.recordedSongs", "versesync.eval.distractorSongs", "versesync.eval.print").forEach { key ->
                     providers.gradleProperty(key).orNull?.let { test.systemProperty(key, it) }
                 }
+                // The recorded-music run (docs/09 section 13) holds generated songs in memory.
+                if (providers.gradleProperty("versesync.eval.print").isPresent) test.maxHeapSize = "6g"
                 // Reads from outside the build, so the result must not be reused from the cache.
                 test.inputs.property("evalCorpus", providers.gradleProperty("versesync.eval.corpus").orElse(""))
                 test.inputs.property("evalFleurs", providers.gradleProperty("versesync.eval.fleurs").orElse(""))
                 test.inputs.property("evalSelect", providers.gradleProperty("versesync.eval.select").orElse(""))
+                test.inputs.property("evalPrint", providers.gradleProperty("versesync.eval.print").orElse(""))
             }
         }
     }

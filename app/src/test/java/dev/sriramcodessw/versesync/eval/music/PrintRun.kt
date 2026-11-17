@@ -40,8 +40,9 @@ class PrintRun {
         val stress = PrintEvaluation.Run(PrintEvaluation.Setup(seed = 44, exactFamilies = true))
         val stressClean = stress.outcomes(conditions.first { it.name == "clean" })
 
-        val scale = scale(chosen, conditions)
-        val report = report(chosen, pooledA, outcomesB, bytesPerSong, stressClean, scale)
+        // With no rule chosen the strictest rule of the grid is used for the descriptive results, which choose nothing.
+        val scale = scale(chosen ?: PrintEvaluation.Rule(25, 3f), conditions)
+        val report = report(chosen, outcomesA, pooledA, outcomesB, bytesPerSong, stressClean, scale)
         File(out, "print-report.md").writeText(report)
         println("Print report written to ${File(out, "print-report.md").absolutePath}")
         assertTrue(File(out, "print-report.md").isFile)
@@ -70,7 +71,7 @@ class PrintRun {
             val prints =
                 run.queries.filter { !it.known }.take(220).map { q ->
                     val source = run.original(q.song)
-                    val from = (q.startSeconds * PrintEvaluation.RATE).toInt()
+                    val from = minOf((q.startSeconds * PrintEvaluation.RATE).toInt(), source.size - 5 * PrintEvaluation.RATE)
                     LandmarkFingerprinter.fingerprint(headlineCondition.damage(source.copyOfRange(from, from + 5 * PrintEvaluation.RATE), random))
                 }
             prints.take(20).forEach { run.index.scores(it) }
@@ -97,8 +98,60 @@ class PrintRun {
         rule: PrintEvaluation.Rule,
     ) = PrintEvaluation.tally(outcomes, rule)
 
+    /**
+     * What is reported when no rule met the criterion: nothing is chosen, so there is no pass or fail, and these are
+     * descriptive only, at the strictest rule of the grid. Seed A by condition says where the false accepts come from;
+     * the re-performance conditions, the stress variant and the library sizes were never used to choose.
+     */
+    private fun descriptive(
+        sb: StringBuilder,
+        outcomesA: Map<PrintEvaluation.Condition, List<PrintEvaluation.Outcome>>,
+        outcomesB: Map<PrintEvaluation.Condition, List<PrintEvaluation.Outcome>>,
+        bytesPerSong: Double,
+        stressClean: List<PrintEvaluation.Outcome>,
+        scale: List<ScaleRow>,
+    ) {
+        val strictest = PrintEvaluation.Rule(25, 3f)
+        sb.appendLine()
+        sb.appendLine("## Seed A by condition at the strictest rule of the grid (`$strictest`)")
+        sb.appendLine()
+        sb.appendLine("Diagnostic only, to see where false accepts come from. Nothing is chosen from it, and the pass bar is not applied.")
+        sb.appendLine()
+        sb.appendLine("| condition | top-1 | false accepts |")
+        sb.appendLine("|---|---|---|")
+        for ((condition, outcomes) in outcomesA) {
+            val t = tally(outcomes, strictest)
+            sb.appendLine("| ${condition.name} | ${t.knownRight} | ${t.unknownAccepted} |")
+        }
+        sb.appendLine()
+        sb.appendLine("## Re-performance, stress and library size, at the strictest rule (`$strictest`)")
+        sb.appendLine()
+        sb.appendLine("Descriptive, seed B, with no bar. None of this was used to choose a rule. The re-performance rows play the same generated score with other sounds, a faster or drifting tempo and loose timing, the closest stand-in here for a live band.")
+        sb.appendLine()
+        sb.appendLine("| re-performance | library queries | top-1 | false accepts |")
+        sb.appendLine("|---|---|---|---|")
+        for ((condition, outcomes) in outcomesB.filterKeys { it.rePerformance != null }) {
+            val t = tally(outcomes, strictest)
+            sb.appendLine("| ${condition.name.removePrefix("re-performance: ")} | ${t.knownRight.total} | ${t.knownRight} | ${t.unknownAccepted} |")
+        }
+        sb.appendLine()
+        val s = tally(stressClean, strictest)
+        sb.appendLine("Stress variant (songs of a family share tempo and tuning exactly), clean queries: top-1 ${s.knownRight}, false accepts ${s.unknownAccepted}.")
+        sb.appendLine()
+        sb.appendLine("Cost of a bigger library: songs of 45 s, bytes per song ${"%.0f".format(bytesPerSong * 0.5)} at this length. Lookup time is the median for one 5 s query on one thread, not counting fingerprinting.")
+        sb.appendLine()
+        sb.appendLine("| songs in library | hashes stored | bytes per song | median lookup ms | clean top-1 | clean false accepts | headline top-1 | headline false accepts |")
+        sb.appendLine("|---|---|---|---|---|---|---|---|")
+        for (row in scale) {
+            sb.appendLine(
+                "| ${row.songs} | ${row.postings} | ${"%.0f".format(row.bytesPerSong)} | ${"%.1f".format(row.medianLookupMs)} | ${row.clean?.knownRight} | ${row.clean?.unknownAccepted} | ${row.headline?.knownRight} | ${row.headline?.unknownAccepted} |",
+            )
+        }
+    }
+
     private fun report(
         chosen: PrintEvaluation.Rule?,
+        outcomesA: Map<PrintEvaluation.Condition, List<PrintEvaluation.Outcome>>,
         pooledA: List<PrintEvaluation.Outcome>,
         outcomesB: Map<PrintEvaluation.Condition, List<PrintEvaluation.Outcome>>,
         bytesPerSong: Double,
@@ -118,6 +171,7 @@ class PrintRun {
             sb.appendLine("| rule | top-1 (library queries) | false accepts (songs not in the library) |")
             sb.appendLine("|---|---|---|")
             PrintEvaluation.grid.forEach { r -> tally(pooledA, r).let { sb.appendLine("| $r | ${it.knownRight} | ${it.unknownAccepted} |") } }
+            descriptive(sb, outcomesA, outcomesB, bytesPerSong, stressClean, scale)
             return sb.toString()
         }
         val a = tally(pooledA, chosen)

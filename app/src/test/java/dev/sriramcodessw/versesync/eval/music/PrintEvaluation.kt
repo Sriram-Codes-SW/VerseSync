@@ -90,14 +90,8 @@ internal object PrintEvaluation {
         val setup: Setup,
     ) {
         private val originals = ConcurrentHashMap<Int, FloatArray>()
-        private val performances = ConcurrentHashMap<Pair<Int, Int>, FloatArray>()
 
         fun original(index: Int): FloatArray = originals.getOrPut(index) { SyntheticMusic.song(setup.seed, index, setup.songSeconds, exactFamilies = setup.exactFamilies) }
-
-        fun performed(
-            index: Int,
-            performance: Performance,
-        ): FloatArray = performances.getOrPut(index to System.identityHashCode(performance)) { SyntheticMusic.song(setup.seed, index, setup.songSeconds, performance, setup.exactFamilies) }
 
         val prints: Map<Int, LandmarkPrint> by lazy {
             val result = ConcurrentHashMap<Int, LandmarkPrint>()
@@ -130,9 +124,11 @@ internal object PrintEvaluation {
         fun outcomes(condition: Condition): List<Outcome> {
             val list = queries
             val results = arrayOfNulls<Outcome>(list.size)
+            // The re-performed songs of this condition only, dropped when it is done so they do not pile up.
+            val performed = ConcurrentHashMap<Int, FloatArray>()
             IntStream.range(0, list.size).parallel().forEach { i ->
                 val q = list[i]
-                val source = condition.rePerformance?.let { performed(q.song, it) } ?: original(q.song)
+                val source = condition.rePerformance?.let { p -> performed.getOrPut(q.song) { SyntheticMusic.song(setup.seed, q.song, setup.songSeconds, p, setup.exactFamilies) } } ?: original(q.song)
                 val seconds = condition.fixedSeconds ?: q.seconds
                 val from = (q.startSeconds * RATE).toInt()
                 val slice = source.copyOfRange(from, minOf(source.size, from + seconds * RATE))
