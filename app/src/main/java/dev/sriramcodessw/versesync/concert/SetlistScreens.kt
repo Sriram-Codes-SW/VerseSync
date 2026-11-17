@@ -5,12 +5,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -55,57 +58,74 @@ import dev.sriramcodessw.versesync.data.SetlistEntryWithSong
 import dev.sriramcodessw.versesync.data.Song
 import kotlinx.coroutines.flow.Flow
 
-/** The Setlists tab of the main screen (ADR-20). Concert mode is free, so nothing here looks at Pro status. */
-@Composable
-fun SetlistsTabContent(
+/**
+ * The Setlists section of the Folders tab (ADR-20): a heading with a New setlist button, a Resume
+ * card for the setlist and song the person was at, and a row for each setlist. Concert mode is
+ * free, so nothing here looks at Pro status.
+ */
+fun LazyListScope.setlistsSection(
     setlists: List<Setlist>,
     resume: ResumeInfo?,
     onResume: (Int) -> Unit,
     onOpen: (Int) -> Unit,
     onStart: (Int) -> Unit,
     onDelete: (Setlist) -> Unit,
+    onNew: () -> Unit,
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding =
-            androidx.compose.foundation.layout
-                .PaddingValues(16.dp),
-    ) {
-        if (resume != null) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable { onResume(resume.setlistId) },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Resume", style = MaterialTheme.typography.labelLarge)
-                        Text("${resume.setlistName}, song ${resume.songNumber}", style = MaterialTheme.typography.titleMedium)
-                    }
-                }
+    item(key = "setlists-header") {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Setlists", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = onNew, modifier = Modifier.heightIn(min = 48.dp)) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("New setlist")
             }
         }
-        if (setlists.isEmpty()) {
-            item {
-                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Text("No setlists yet. Tap + to make one for a show.")
-                }
-            }
-        }
-        items(setlists, key = { it.id }) { setlist ->
-            Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable { onOpen(setlist.id) },
-                verticalAlignment = Alignment.CenterVertically,
+    }
+    if (resume != null) {
+        item(key = "setlists-resume") {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).clickable { onResume(resume.setlistId) },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             ) {
-                Text(setlist.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(end = 8.dp))
-                IconButton(onClick = { onStart(setlist.id) }, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = "Start concert with ${setlist.name}")
-                }
-                IconButton(onClick = { onDelete(setlist) }, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete ${setlist.name}")
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Resume", style = MaterialTheme.typography.labelLarge)
+                    Text("${resume.setlistName}, song ${resume.songNumber}", style = MaterialTheme.typography.titleMedium)
                 }
             }
-            HorizontalDivider()
         }
+    }
+    if (setlists.isEmpty()) {
+        item(key = "setlists-empty") {
+            Text(
+                "No setlists yet. A setlist is an ordered list of songs for a show.",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+    }
+    items(setlists, key = { "setlist-${it.id}" }) { setlist ->
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 64.dp)
+                    .clickable { onOpen(setlist.id) }
+                    .padding(start = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(setlist.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(end = 8.dp))
+            IconButton(onClick = { onStart(setlist.id) }, modifier = Modifier.size(56.dp)) {
+                Icon(Icons.Default.PlayArrow, contentDescription = "Start concert with ${setlist.name}")
+            }
+            IconButton(onClick = { onDelete(setlist) }, modifier = Modifier.size(56.dp)) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete ${setlist.name}")
+            }
+        }
+        HorizontalDivider()
     }
 }
 
