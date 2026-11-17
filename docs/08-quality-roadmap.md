@@ -1,0 +1,89 @@
+| Field | Value |
+|---|---|
+| Document | VerseSync Recognition Quality Roadmap |
+| Version | 0.1 |
+| Date | 2026-11-17 |
+| Author | Claude Code |
+| Status | Proposed |
+
+# Recognition Quality Roadmap
+
+Tracked in issue [#51](https://github.com/Sriram-Codes-SW/VerseSync/issues/51).
+
+## 1. What this is for
+
+VerseSync identifies a song from a few seconds of someone singing or saying its lyrics, and has an optional vocal lock. This plan says what to build, in what order, to make that work as well as it can offline.
+
+**Which comparison is fair.** The right comparison is a hum-to-search product, such as Google's or SoundHound's. It is not Shazam, which matches exact studio recordings, and not a general speech recognizer, which VerseSync is not. Those products search millions of songs. VerseSync searches the user's own tens or hundreds, which is a much easier problem. So today's accuracy is lower than a small closed library should give.
+
+## 2. Where it stands
+
+Measured on an emulator, one sentence per language. These numbers are noisy: the same build gives different results between runs, and nothing has been tried on a real phone or on singing.
+
+| Area | State |
+|---|---|
+| Speech | Vosk small offline models, 21 languages. The text is often garbled, for example "maybe was on think about" for a sentence about dinosaurs. A song matches when at least 0.35 of the heard words and at least two different heard words are in its lyrics. With that rule 15 of 21 languages passed, and four of the six that failed passed under the old one-word rule. |
+| Pitch | One Hz value per 64 ms frame. On two short spoken clips, the same clip was accepted about half the time and a different clip in 1 of 12 comparisons at the current setting. |
+| Pitch defect | The stored contour is centered on its whole mean and a short live snippet on its own mean, so a perfect fragment from the middle of a song is shifted by a constant. Frames are compared one to one with a coarse 5 frame offset search, and there is no tempo warping. |
+| Vocal lock | Opens on three different heard words or a close pitch over about two seconds (ADR-10). It checks the words, not the speaker. |
+| Capture | Two microphone recorders still run at once. The single shared capture exists as draft #39 with inconclusive evidence. |
+| Tests | 376 unit tests, but no evaluation set, no real phones, no singing recordings. |
+
+## 3. How this plan was made
+
+It combines two assessments: my own, from the measurements above, and a second model's review (Claude Opus) of the same briefing. They agreed on the main points. A review by the Fable models was attempted twice and could not run because of a usage limit. The second model's claims are advice, not measurement, and the ones I could not verify are in section 6.
+
+## 4. The roadmap
+
+Order matters. Everything is judged by the evaluation set, so it comes first. Thresholds should stop being set from a handful of clips.
+
+| # | Item | Issue | Effort | Success is | Depends on |
+|---|---|---|---|---|---|
+| 1 | Evaluation set and replay harness | [#43](https://github.com/Sriram-Codes-SW/VerseSync/issues/43) | 3 to 4 weeks | One command gives the same numbers every time, with a baseline and intervals | none |
+| 2 | Score every song, require a margin, fuzzy word matching | [#44](https://github.com/Sriram-Codes-SW/VerseSync/issues/44) | 1 to 2 weeks | Better top-1 accuracy at a fixed 1 percent false-accept rate | 1 |
+| 3 | Restrict the recognizer to the library's words | [#45](https://github.com/Sriram-Codes-SW/VerseSync/issues/45) | about 1 week | Better word hit rate, and no worse false accepts on songs not in the library | 1, 2 |
+| 4 | Rebuild pitch matching for singing | [#46](https://github.com/Sriram-Codes-SW/VerseSync/issues/46) | 2 to 3 weeks | Better equal error rate on singing, including plus or minus 15 percent tempo | 1 |
+| 5 | Combine text and pitch scores | [#47](https://github.com/Sriram-Codes-SW/VerseSync/issues/47) | about 1 week | Beats the better single path | 2, 4 |
+| 6 | Vocal lock: honest naming and false-accept measurement | [#48](https://github.com/Sriram-Codes-SW/VerseSync/issues/48) | a few days | Honest copy, and a measured false-accept rate with an interval | 1 |
+| 7 | Shared capture on real phones | [#49](https://github.com/Sriram-Codes-SW/VerseSync/issues/49) | about 1 week | Identical frames, no dropouts, no lower pass rate | 1 |
+| 8 | Whisper-class model spike | [#50](https://github.com/Sriram-Codes-SW/VerseSync/issues/50) | about 2 weeks | Accuracy gain weighed against delay, battery and size | 1 |
+
+### 4.1 The evaluation set
+
+The set has to be good enough to trust, because the current setup is not.
+
+- Three or four real phones, at low, mid and high price levels.
+- About 20 to 30 speakers, adults plus children with consent. Recordings stay private.
+- Singing and speaking, in the five or six languages that will be officially supported.
+- Snippets of 3, 5 and 10 seconds from random start points, in quiet, with television in the background, in the street and in a car.
+- Queries for songs that are not in the library, to measure false accepts.
+- Record once, replay deterministically in JVM tests.
+- Report top-1 accuracy, false-accept rate and latency per language with confidence intervals. Estimating a 1 percent false-accept rate takes hundreds of trials per condition.
+
+### 4.2 The pitch rebuild
+
+Smooth the contour and fix octave jumps, search over key shifts instead of centering on the mean, and use subsequence DTW or note-interval contours so a short sung piece can match anywhere in a stored one at a different tempo. Use pitch matching for singing only. This supersedes the plan in #16.
+
+## 5. Not planned
+
+- **Shazam-style audio fingerprinting.** Two performances of a song do not share the spectral peaks it relies on.
+- **Pitch matching of spoken input.** A spoken sentence has no stable melody.
+- **Any speaker-identity or "secure" claim for the vocal lock.** It would need a speaker model, enrollment across sessions, liveness checks and measured error rates across many speakers including children. Even then it would not be the strongest class of Android biometric.
+- **Replacing TarsosDSP for now.** GPL-3.0 is accepted (ADR-13), so there is no license reason. Phases 3 and 4 of the pitch design wait.
+- **Bluetooth protocol v2 (#10) and full-text search (#17)** until there is a reason.
+- **A claim of 21 supported languages.** Label most of them experimental until the evaluation set shows otherwise.
+
+## 6. Not verified
+
+- That Vosk's small models can take a runtime grammar that restricts them to the library's words. Check before relying on it.
+- On-device speed, size and quality of a Whisper-class model.
+- The license of every Vosk model, language by language.
+- The history of Google's "trusted voice" feature, mentioned in the second review as a reason not to rely on voice unlock. The reviewer was not sure of it either.
+
+## 7. Risks
+
+- **Google Play.** Explain the microphone permission and answer the Data safety form to match the privacy policy. Background microphone limits and accessibility-service rules do not apply, because the lock is an in-app screen that listens only after a button press. Every accuracy claim in the listing must be backed by the benchmark. Pro purchases must use Play Billing.
+- **Children.** If children use the app, the families policy and children's privacy rules for voice data apply.
+- **GPL-3.0.** Anyone may rebuild Pro for free. Sell convenience and support, not a license check. Every release needs its matching source.
+- **Lyrics are copyrighted.** Do not bundle or scrape them. Store pitch contours, not raw audio.
+- **False comfort.** A false accept on the lock gives a false sense of security.

@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.23 |
+| Version | 0.24 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -19,6 +19,7 @@ This directory contains the system architecture, security, design records (ADRs)
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
+| [docs/08-quality-roadmap.md](08-quality-roadmap.md) | Recognition Quality Roadmap: where it stands and what to build next | 0.1 | Proposed |
 
 ## Revision History
 
@@ -47,3 +48,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.21 | 2026-11-08 | Claude Code | Phase 1 of the pitch design: audio capture and pitch detection are behind interfaces, TarsosDSP is confined to one adapter, and the tests no longer use reflection. Test cases TC-U-34 and TC-U-35 (issue #13). |
 | 0.22 | 2026-11-08 | Claude Code | A silence threshold keeps a faint hum out of fingerprints (ADR-04 amendment, TC-U-37, issue #33). The open item now says the lock can still open on the wrong audio for another reason. The end-to-end script can play a hum (HUM=1). |
 | 0.23 | 2026-11-08 | Claude Code | Matching needs more evidence (issue #41): two different heard words for speech, a 2.5 semitone pitch threshold, and a stricter rule for the vocal lock. ADR-03, ADR-04 and ADR-10 amendments, TC-U-38 and TC-U-39. |
+| 0.24 | 2026-11-17 | Claude Code | Added 08-quality-roadmap.md (Proposed), the plan for raising recognition quality, tracked in issue #51 with items #43 to #50. |
