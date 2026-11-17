@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.3 |
+| Version | 0.4 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -171,7 +171,27 @@ On the seed corpus the sweep was flat, so it could not choose. On the FLEURS cor
 
 The trade is steep: the settings that keep a confident wrong decision under a few percent also stop deciding for a quarter to a third of recordings that are in the library. **No setting is applied in this change.** Choosing a row from this table and reporting it on the same recordings would be optimistic, and a fixed number of words is a poor rule for a 3 second snippet, which cannot contain six words. The next step is to pick the rule on part of the data and report it on recordings that were not used to pick it, and to try a rule that scales with how much speech was heard. Pick the row that keeps false decisions at or under the target with the best decides-right rate, and when several rows are the same within their intervals, keep the simpler one.
 
-## 10. Not verified
+## 10. Choosing a decision rule on held-out data
+
+Section 9 chose nothing, because choosing among 120 settings on the recordings they are reported on flatters the best one. This section sets the procedure and the criterion, and it was written and committed **before** any result on the held-out recordings existed.
+
+**Corpora.** The FLEURS dev split gives the selection corpus and the FLEURS test split gives the report corpus. Their sentences are different, so no song, sentence or recording is on both sides. Both are built with `FleursCorpusBuilder` and the same seed, the same languages and the same library recipe (section 8). The dev split is fetched with `fetch_fleurs_more.sh -s dev`.
+
+**What is chosen.** A decision rule, kept apart from the candidate rule. The candidate rule (share and minimum words) builds the list a person chooses from, where a wrong candidate is harmless. A decision acts without a person choosing, as the vocal lock does, so it is judged separately, and it sees every song, not only candidates. Section 9's sweep took the rival only among candidates, so a stricter candidate rule removed the rivals and made the leader look clear; that distorted part of its table. `DecisionRule` takes the rival from every song that has a heard word, counts a tie as no decision, and has four settings: the leader needs at least `minWords` different heard words found (or all of them if its lyrics have fewer), at least `minShare` of the heard words found, and an absolute gap in rarity weight over the strongest other song, `gap`, that must be exceeded. The grid is minWords 1, 2, 3, 4, 5, 6, 8; minShare 0.35, 0.5, 0.65, 0.8; gap 0, 0.5, 1, 1.5, 2, 3 (168 rules). An absolute gap is used rather than evidence per heard word, because dividing by the number of heard words is nearly the share again and lets a 3 second snippet decide as easily as a 10 second one.
+
+**When it acts.** The rule is evaluated after every piece of heard text, on the evidence so far (for each song, the update with the most weight, so words, share and weight come from one update). "Acts first" counts the rule as acting the first time it fires, which is what the app would do if it acted on the first time the rule holds. "At end" looks only at the final evidence, and is shown for comparison.
+
+**Criterion, fixed before the run.** On the selection corpus, acting first, a rule is eligible if it decides on a song that is not in the library for at most 2 percent of those recordings with the upper end of the 95 percent interval at most 5 percent, and names a different song than the one sung for at most 1 percent of recordings of songs in the library. Of the eligible rules, the one that names the right song most often is chosen, and a tie goes to fewer words, then lower share, then smaller gap. If no rule is eligible, none is chosen and the report says so. The targets are not claims about what is safe: a rate under 1 percent needs about a thousand recordings of unknown songs to show, and this corpus has a few hundred, so the interval, not the point estimate, is what the upper bound limits.
+
+**Report.** The chosen rule and two baselines (the current speech rule and the current lock words rule, both in the same form) are reported once on the report corpus with 95 percent Wilson intervals, by language and by snippet length, with the selection-side numbers beside them to show the gap. A leave-one-language-out table chooses the rule without one language and reports it on that language, as a check that it carries over to a language it was not tuned on. Run it with:
+
+```
+./gradlew :app:testDebugUnitTest --tests "*HeldOutRun*" -Pversesync.eval.select=<selection corpus> -Pversesync.eval.corpus=<report corpus>
+```
+
+The app is not changed by this. `SpeechRules` and the lock policy keep their defaults, and a decision rule, if one ships later, is its own layer with an ADR amendment and a check on singing.
+
+## 11. Not verified
 
 - That the transcripts captured by feeding frames into Vosk match what the app hears from a live microphone. Both use the same recognizer and model, but the buffer sizes differ.
 - Anything on singing, children, or real phones: nothing of that has been recorded yet.

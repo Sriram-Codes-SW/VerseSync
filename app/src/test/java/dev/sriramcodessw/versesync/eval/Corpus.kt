@@ -40,12 +40,15 @@ class Query(
     val device: String?,
     val speaker: String?,
     val speakerGroup: String?,
+    /** Length in seconds of the snippet, when the corpus has snippets of set lengths. */
+    val snippet: Int? = null,
 ) {
     val modeName get() = mode ?: "unknown"
     val languageCode get() = language ?: "unknown"
     val conditionName get() = condition ?: "unknown"
     val deviceName get() = device ?: "unknown"
     val speakerGroupName get() = speakerGroup ?: "unknown"
+    val snippetName get() = snippet?.let { "$it s" } ?: "unknown"
 }
 
 /** What the speech recognizer reported at one point of a recording: the text, and the 64 ms frame it was reported at. */

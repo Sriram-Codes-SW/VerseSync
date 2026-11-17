@@ -33,7 +33,7 @@ class Slice(
     val medianLatencyMs: Long?,
 )
 
-object Metrics {
+internal object Metrics {
     /** Ways to cut the recordings. The first, "all", is everything. */
     val dimensions: List<Pair<String, (Query) -> String>> =
         listOf(
@@ -43,6 +43,7 @@ object Metrics {
             "condition" to { q -> q.conditionName },
             "device" to { q -> q.deviceName },
             "speaker group" to { q -> q.speakerGroupName },
+            "snippet" to { q -> q.snippetName },
         )
 
     fun slices(

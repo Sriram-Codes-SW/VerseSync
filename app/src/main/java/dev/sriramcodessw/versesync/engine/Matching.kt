@@ -101,6 +101,14 @@ internal data class SpeechScore(
     val weight: Float,
 )
 
+/** Everything the speech evidence says about one song: [words] different heard words found, their rarity [weight], the [share] of heard words found, and how many different words the lyrics have. */
+internal data class SpeechDetail(
+    val words: Int,
+    val weight: Float,
+    val share: Float,
+    val lyricWords: Int,
+)
+
 /** The tokens of one song's lyrics, with what is needed to find a heard word that is a little off. */
 internal class LyricIndex(
     val tokens: Set<String>,
@@ -164,10 +172,14 @@ internal class SpeechLibrary<K>(
     /** The weight of a heard word: higher the fewer songs have it. A word in no song exactly (a near miss) weighs the most. */
     private fun weight(word: String): Float = ln(1f + songs.toFloat() / maxOf(1, documentFrequency[word] ?: 0))
 
-    /** The score of every song that is a candidate for [spoken] (from [spokenMatchTokens]); the others are left out. */
-    fun scoreAll(spoken: List<String>): Map<K, SpeechScore> {
+    /**
+     * The score of EVERY song that has at least one heard word in its lyrics, before any candidate rule is applied.
+     * A rule that decides between songs must see all of them: if the songs that are not candidates were left out,
+     * a stricter candidate rule would remove the rivals and make the leader look clear.
+     */
+    fun scoreEvery(spoken: List<String>): Map<K, SpeechDetail> {
         if (spoken.isEmpty()) return emptyMap()
-        val result = HashMap<K, SpeechScore>()
+        val result = HashMap<K, SpeechDetail>()
         for ((key, index) in indexes) {
             val tokens = index.tokens
             if (tokens.isEmpty()) continue
@@ -179,12 +191,23 @@ internal class SpeechLibrary<K>(
                     matched += word
                 }
             }
-            if (heardInLyrics.toFloat() / spoken.size < rules.shareThreshold) continue
-            if (matched.size < minOf(rules.minWords, tokens.size)) continue
-            result[key] = SpeechScore(matched.size, matched.sumOf { weight(it).toDouble() }.toFloat())
+            if (matched.isEmpty()) continue
+            result[key] =
+                SpeechDetail(
+                    words = matched.size,
+                    weight = matched.sumOf { weight(it).toDouble() }.toFloat(),
+                    share = heardInLyrics.toFloat() / spoken.size,
+                    lyricWords = tokens.size,
+                )
         }
         return result
     }
+
+    /** The score of every song that is a candidate for [spoken] (from [spokenMatchTokens]); the others are left out. */
+    fun scoreAll(spoken: List<String>): Map<K, SpeechScore> =
+        scoreEvery(spoken)
+            .filterValues { it.share >= rules.shareThreshold && it.words >= minOf(rules.minWords, it.lyricWords) }
+            .mapValues { SpeechScore(it.value.words, it.value.weight) }
 }
 
 internal object SpeechMatcher {
