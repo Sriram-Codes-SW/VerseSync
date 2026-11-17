@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Recognition Quality Roadmap |
-| Version | 0.6 |
+| Version | 0.7 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Proposed |
@@ -96,3 +96,4 @@ Smooth the contour and fix octave jumps, search over key shifts instead of cente
 - **Held-out choice of a speech decision rule (#44):** a rule chosen on the FLEURS dev split missed its pre-set target on the test split (7.8 percent of unknown-song recordings against at most 2 percent), though it cut that rate from 53 percent and naming the right song stayed at 86 percent. Nothing is adopted. The next thing to try is a rule that waits for the evidence to settle before acting, and the real recordings are still needed (docs/09, section 10).
 - **Why the held-out rule failed, and the plan for a rule that waits (#44):** the end-of-file result had been counted as a decision, which overstated the right-song rate (86 percent, corrected to 78 percent); 20 of the 25 false decisions did not survive to the end of the recording, and the test corpus is also harder than dev (fr and en-us), so early firing is part of the explanation and not all of it. A rule that holds a decision before acting, with evidence that can be taken back, is built and tested on generated data and its evaluation is fixed in advance on a fresh corpus (docs/09, sections 11 and 12). Nothing in the app changes.
 - **A speech decision rule passed its pre-registered bar on a fresh corpus (#44):** at least 4 different words, at least 80 percent of the heard words in the lyrics, and a rarity-weighted gap over the runner-up of 1.0 times `ln(1 + songs)`. On 812 recordings of read speech from the FLEURS train split it decided on a song not in the library for 0 of 707 (upper end 0.5 percent), against 46 percent for the current speech rule, and named the right song for 70 percent of recordings in the library against 90 percent. Waiting before acting did not help; the stricter thresholds did. It is read speech only, is not in the app, and needs an ADR and a check on real singing before it could be (docs/09, section 12).
+- **ADR-18 proposes the speech decision rule as its own layer for the vocal lock (#44):** it records the evidence, the options considered, the exact rule, what was not measured, and five conditions that must be met before any code changes, including a check on real singing and on a real phone. It is a proposal only and authorizes nothing (docs/03-design.md).
