@@ -17,6 +17,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -88,7 +89,8 @@ fun AuthWrapper(activity: AppCompatActivity) {
     val songs by verseViewModel.songs.collectAsState()
 
     var isUnlocked by remember { mutableStateOf(false) }
-    var failedAttempts by remember { mutableIntStateOf(0) }
+    // Where the person is in the voice shortcut. Saved across a rotation, as the count of failed attempts must not reset.
+    var attempts by rememberSaveable(stateSaver = VoiceShortcutAttempts.Saver) { mutableStateOf(VoiceShortcutAttempts()) }
     val securityManager = remember { SecurityManager(activity) }
 
     val syncReadySongs =
@@ -104,6 +106,17 @@ fun AuthWrapper(activity: AppCompatActivity) {
             onSuccess = { isUnlocked = true },
             onError = { },
         )
+    }
+
+    // Carries out what VoiceShortcutAttempts decided: the microphone and the device prompt are started and stopped here.
+    fun carryOut(step: VoiceShortcutAttempts.Step) {
+        attempts = step.next
+        step.carryOut(
+            startListening = { hybridViewModel.startRecognition(true) },
+            stopListening = { hybridViewModel.stopRecognition() },
+            promptDevice = { promptDeviceCredential(LockCopy.DEVICE_PROMPT_SUBTITLE) },
+        )
+        if (step.next.state == VoiceShortcutAttempts.State.Open) isUnlocked = true
     }
 
     LaunchedEffect(lockConfig) {
@@ -128,18 +141,16 @@ fun AuthWrapper(activity: AppCompatActivity) {
                 VerseSyncNavHost(application, securityViewModel, verseViewModel, hybridViewModel)
             }
 
-            config.type == LockType.VOCAL && targetSong != null -> {
+            config.type == LockType.VOCAL && targetSong != null && attempts.state != VoiceShortcutAttempts.State.DeviceLock -> {
                 VocalLockScreen(
                     targetSong = targetSong,
                     hybridViewModel = hybridViewModel,
-                    attemptCount = failedAttempts + 1,
-                    onSuccess = { isUnlocked = true },
-                    onFailure = {
-                        failedAttempts++
-                        if (VocalLockPolicy.fallsBackToDeviceLock(failedAttempts)) {
-                            promptDeviceCredential(LockCopy.DEVICE_PROMPT_SUBTITLE)
-                        }
-                    },
+                    isListening = attempts.state == VoiceShortcutAttempts.State.Listening,
+                    tryNumber = attempts.tryNumber,
+                    onMicTapped = { carryOut(attempts.micTapped()) },
+                    onMatched = { carryOut(attempts.matched()) },
+                    onTimedOut = { carryOut(attempts.timedOut()) },
+                    onFallback = { carryOut(attempts.fallbackTapped()) },
                 )
             }
 

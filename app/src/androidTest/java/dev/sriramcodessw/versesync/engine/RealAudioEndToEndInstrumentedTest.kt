@@ -18,7 +18,9 @@ import dev.sriramcodessw.versesync.VerseSyncApp
 import dev.sriramcodessw.versesync.data.Song
 import dev.sriramcodessw.versesync.data.SongDao
 import dev.sriramcodessw.versesync.fingerprinting.FingerprintCreationViewModel
+import dev.sriramcodessw.versesync.ui.screens.LockCopy
 import dev.sriramcodessw.versesync.ui.screens.VocalLockScreen
+import dev.sriramcodessw.versesync.ui.screens.VoiceShortcutAttempts
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -166,14 +168,29 @@ class RealAudioEndToEndInstrumentedTest {
             // 4 and 5: the vocal lock, one screen reused for both rounds.
             val unlocked = AtomicBoolean(false)
             var viewModel by mutableStateOf(HybridRecognitionViewModel(app))
+            // The same steps the app takes (MainActivity.carryOut): the state class decides, the effects run on the view model.
+            var attempts by mutableStateOf(VoiceShortcutAttempts())
+
+            fun carryOut(step: VoiceShortcutAttempts.Step) {
+                attempts = step.next
+                step.carryOut(
+                    startListening = { viewModel.startRecognition(true) },
+                    stopListening = { viewModel.stopRecognition() },
+                    promptDevice = {},
+                )
+                if (step.next.state == VoiceShortcutAttempts.State.Open) unlocked.set(true)
+            }
             compose.setContent {
                 key(viewModel) {
                     VocalLockScreen(
                         targetSong = target,
                         hybridViewModel = viewModel,
-                        attemptCount = 1,
-                        onSuccess = { unlocked.set(true) },
-                        onFailure = {},
+                        isListening = attempts.state == VoiceShortcutAttempts.State.Listening,
+                        tryNumber = attempts.tryNumber,
+                        onMicTapped = { carryOut(attempts.micTapped()) },
+                        onMatched = { carryOut(attempts.matched()) },
+                        onTimedOut = { carryOut(attempts.timedOut()) },
+                        onFallback = { carryOut(attempts.fallbackTapped()) },
                     )
                 }
             }
@@ -187,7 +204,7 @@ class RealAudioEndToEndInstrumentedTest {
                 assertTrue("Speech model for $codeA did not load", loaded == true)
                 compose.onNodeWithContentDescription("Listen").performClick()
                 compose.waitForIdle()
-                compose.onNodeWithText("Verifying your voice...").assertExists()
+                compose.onNodeWithText(LockCopy.LISTENING).assertExists()
                 ready(step, what)
             }
 
