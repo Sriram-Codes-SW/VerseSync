@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Voice Shortcut Threat Model |
-| Version | 0.1 |
+| Version | 0.2 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -29,7 +29,7 @@ The song library and lyrics in the app, from someone who opens the app and does 
 
 ## 4. The device lock
 
-The fallback is the device lock (the system PIN, pattern, password or biometrics), unchanged by this document (ADR-10). After two attempts, the device prompt opens. It is the only actual protection. The voice shortcut adds convenience and does not replace it. (Issue [#60](https://github.com/Sriram-Codes-SW/VerseSync/issues/60): the "Use device lock" button currently counts as a failed attempt and needs two taps.)
+The fallback is the device lock (the system PIN, pattern, password or biometrics), unchanged by this document (ADR-10). It is the only actual protection. The voice shortcut adds convenience and does not replace it. The device prompt opens at once when "Use device lock" is tapped, and after two failed attempts, where an attempt is one stretch of listening that ends, by a tap or after 10 seconds, without opening (ADR-10, issue #60). The microphone stops when listening ends or the screen is left. After either, the shortcut is not offered again until the app restarts.
 
 ## 5. What has been measured, and what has not
 
@@ -51,5 +51,5 @@ Measured, on read speech and not singing, by replaying recordings through the ap
 
 - The false-accept measurement on the negative set, which needs recordings that do not exist yet (issue #48 stays open for it, and #43 for the recordings).
 - Whether the stricter rule of ADR-18 ever ships.
-- The behavior of the "Use device lock" button (#60).
+- Rotating the phone locks the app again and picks another song to say ([#63](https://github.com/Sriram-Codes-SW/VerseSync/issues/63)); the microphone and recognizer outlive the view model ([#62](https://github.com/Sriram-Codes-SW/VerseSync/issues/62)); the screen loads no speech model, so on a cold start only the pitch path can open it ([#64](https://github.com/Sriram-Codes-SW/VerseSync/issues/64)).
 - "Strict Biometric", the name of another lock option in settings, makes a claim of its own and should be checked separately.

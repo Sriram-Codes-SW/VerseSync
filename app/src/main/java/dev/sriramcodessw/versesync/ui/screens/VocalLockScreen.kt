@@ -13,26 +13,46 @@ import androidx.compose.ui.unit.dp
 import dev.sriramcodessw.versesync.data.Song
 import dev.sriramcodessw.versesync.engine.HybridRecognitionViewModel
 import dev.sriramcodessw.versesync.ui.components.PitchVisualizer
+import kotlinx.coroutines.delay
 
+/**
+ * The voice shortcut screen. What each tap or timeout leads to is decided by [VoiceShortcutAttempts]; this screen
+ * only shows it, reports what happened, and makes sure the microphone is off when it is left (issue #60).
+ */
 @Composable
 fun VocalLockScreen(
     targetSong: Song,
     hybridViewModel: HybridRecognitionViewModel,
-    onSuccess: () -> Unit,
-    onFailure: () -> Unit,
-    attemptCount: Int,
+    isListening: Boolean,
+    tryNumber: Int,
+    onMicTapped: () -> Unit,
+    onMatched: () -> Unit,
+    onTimedOut: () -> Unit,
+    onFallback: () -> Unit,
 ) {
-    var isListening by remember { mutableStateOf(false) }
     val recognitionResult by hybridViewModel.recognitionResult.collectAsState(initial = null)
     val instantPitch by hybridViewModel.instantPitch.collectAsState(initial = 0f)
 
-    // Check for success
+    // A result only opens the shortcut while listening; VoiceShortcutAttempts ignores one that arrives after a stop.
     LaunchedEffect(recognitionResult) {
         recognitionResult?.let { result ->
             if (VocalLockPolicy.opens(result.evidence[targetSong.id])) {
-                onSuccess()
+                onMatched()
             }
         }
+    }
+
+    // One attempt listens for a limited time, and a limited time that ends without opening counts as failed.
+    LaunchedEffect(isListening) {
+        if (isListening) {
+            delay(VoiceShortcutAttempts.LISTEN_MS)
+            onTimedOut()
+        }
+    }
+
+    // However this screen is left (opened, device lock, rotation), the microphone must not stay on.
+    DisposableEffect(Unit) {
+        onDispose { hybridViewModel.stopRecognition() }
     }
 
     Column(
@@ -49,7 +69,7 @@ fun VocalLockScreen(
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Attempt $attemptCount of ${VocalLockPolicy.MAX_ATTEMPTS}",
+            text = LockCopy.tryLabel(tryNumber, VocalLockPolicy.MAX_ATTEMPTS),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.secondary,
         )
@@ -83,14 +103,7 @@ fun VocalLockScreen(
         Spacer(Modifier.height(32.dp))
 
         Button(
-            onClick = {
-                isListening = !isListening
-                if (isListening) {
-                    hybridViewModel.startRecognition(true)
-                } else {
-                    hybridViewModel.stopRecognition()
-                }
-            },
+            onClick = onMicTapped,
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.size(80.dp),
             contentPadding = PaddingValues(0.dp),
@@ -108,7 +121,7 @@ fun VocalLockScreen(
 
         Spacer(Modifier.height(48.dp))
 
-        TextButton(onClick = onFailure) {
+        TextButton(onClick = onFallback) {
             Text(LockCopy.FALLBACK_BUTTON)
         }
     }

@@ -26,6 +26,12 @@ object LockCopy {
     const val FALLBACK_BUTTON = "Use device lock"
     const val DEVICE_PROMPT_SUBTITLE = "Use your device lock to open VerseSync."
 
+    /** Which listening try this is, out of the most there are before the device lock takes over. */
+    fun tryLabel(
+        number: Int,
+        of: Int,
+    ) = "Try $number of $of"
+
     /** The name shown in settings for the chosen lock type. */
     fun typeName(type: LockType): String =
         when (type) {
@@ -45,5 +51,6 @@ object LockCopy {
             LISTENING,
             FALLBACK_BUTTON,
             DEVICE_PROMPT_SUBTITLE,
+            tryLabel(1, VocalLockPolicy.MAX_ATTEMPTS),
         )
 }
