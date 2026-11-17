@@ -32,7 +32,7 @@ class AudioFingerprinter(
         isProcessorAttached = true
 
         val pitchDetectionHandler =
-            PitchDetectionHandler { res, _ ->
+            PitchDetectionHandler { res, audioEvent ->
                 val pitch = res.pitch
                 val processedPitch = if (pitch > 0f) pitch else 0f
 
@@ -46,7 +46,8 @@ class AudioFingerprinter(
                     }
                 }
 
-                _amplitude.value = res.probability
+                // Loudness of this frame. This used to be the detector's confidence, which is not loudness.
+                _amplitude.value = AudioLevel.fromSamples(audioEvent.floatBuffer)
             }
 
         val pitchProcessor =
