@@ -1,93 +1,133 @@
 package dev.sriramcodessw.versesync.engine
 
 import android.content.Context
+import dev.sriramcodessw.versesync.audio.AudioFormat
+import dev.sriramcodessw.versesync.audio.FakeAudioSource
+import dev.sriramcodessw.versesync.audio.FixedPitchDetector
 import dev.sriramcodessw.versesync.data.SongDao
 import dev.sriramcodessw.versesync.fingerprinting.AudioFingerprinter
 import dev.sriramcodessw.versesync.stt.VoskVoiceRecognition
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.lang.reflect.Field
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class HybridRecognitionEngineTest {
     private lateinit var voskMock: VoskVoiceRecognition
-    private lateinit var fingerprinterMock: AudioFingerprinter
-    private lateinit var dispatcherMock: be.tarsos.dsp.AudioDispatcher
     private lateinit var songDaoMock: SongDao
+    private lateinit var audioSource: FakeAudioSource
+    private lateinit var detector: FixedPitchDetector
     private lateinit var hybridEngine: HybridRecognitionEngine
+
+    private val silence = FloatArray(AudioFormat.FRAME_SAMPLES)
 
     @BeforeEach
     fun setup() {
         voskMock = mock()
-        fingerprinterMock = mock()
-        dispatcherMock = mock()
         songDaoMock = mock()
+        audioSource = FakeAudioSource()
+        detector = FixedPitchDetector(220f)
         val contextMock: Context = mock()
 
         whenever(voskMock.isModelReady).thenReturn(MutableStateFlow(true))
 
-        hybridEngine = HybridRecognitionEngine(contextMock, songDaoMock)
-
-        val voskField: Field = hybridEngine.javaClass.getDeclaredField("vosk")
-        voskField.isAccessible = true
-        voskField.set(hybridEngine, voskMock)
-
-        val fingerprinterField: Field = hybridEngine.javaClass.getDeclaredField("fingerprinter")
-        fingerprinterField.isAccessible = true
-        fingerprinterField.set(hybridEngine, fingerprinterMock)
-
-        val dispatcherField: Field = hybridEngine.javaClass.getDeclaredField("dispatcher")
-        dispatcherField.isAccessible = true
-        dispatcherField.set(hybridEngine, dispatcherMock)
+        hybridEngine =
+            HybridRecognitionEngine(
+                contextMock,
+                songDaoMock,
+                voskMock,
+                audioSourceFactory = { audioSource },
+                pitchDetectorFactory = { detector },
+            )
     }
 
     @Test
-    fun startRecognition_forProUser_shouldStartBothSttAndFingerprinting() {
-        // When
+    fun startRecognition_forProUser_shouldStartBothSttAndPitch() {
         hybridEngine.startRecognition(isPro = true)
+        audioSource.emit(silence)
 
-        // Then
         verify(voskMock).startListening()
-        verify(fingerprinterMock).attachPitchProcessor(any(), any())
+        assertTrue(audioSource.isRunning)
+        assertEquals(1, detector.frames, "A Pro user's audio must be run through the pitch detector")
     }
 
     @Test
     fun startRecognition_forFreeUser_shouldStartOnlyStt() {
-        // When
         hybridEngine.startRecognition(isPro = false)
+        audioSource.emit(silence)
 
-        // Then
         verify(voskMock).startListening()
-        verify(fingerprinterMock, never()).attachPitchProcessor(any(), any())
+        assertEquals(0, detector.frames, "A free user's audio must not be run through the pitch detector")
     }
 
     @Test
-    fun startRecognition_whenVoskModelNotReady_shouldStillStartPitchProcessorForPro() {
+    fun startRecognition_whenVoskModelNotReady_shouldStillStartPitchForPro() {
         // Given (ADR-02, TC-U-07)
         whenever(voskMock.isModelReady).thenReturn(MutableStateFlow(false))
 
         // When
         hybridEngine.startRecognition(isPro = true)
+        audioSource.emit(silence)
 
         // Then
         verify(voskMock, never()).startListening()
-        verify(fingerprinterMock).attachPitchProcessor(any(), any())
+        assertEquals(1, detector.frames)
     }
 
     @Test
-    fun stopRecognition_shouldStopBothSttAndDispatcher() {
-        // When
+    fun startRecognition_whenTheMicrophoneCannotBeOpened_reportsAnError() {
+        val failing =
+            HybridRecognitionEngine(
+                mock<Context>(),
+                songDaoMock,
+                voskMock,
+                audioSourceFactory = { throw IllegalStateException("no microphone") },
+                pitchDetectorFactory = { detector },
+            )
+
+        failing.startRecognition(isPro = true)
+
+        assertEquals("Microphone initialization failed.", failing.error.value)
+        verify(voskMock, never()).startListening()
+    }
+
+    @Test
+    fun stopRecognition_shouldStopBothSttAndTheAudioSource() {
+        hybridEngine.startRecognition(isPro = true)
+
         hybridEngine.stopRecognition()
 
-        // Then
         verify(voskMock).stopListening()
+        assertEquals(1, audioSource.stopCount)
+        assertFalse(audioSource.isRunning)
+    }
+
+    @Test
+    fun startingAgainAfterStopping_usesAFreshAudioSource() {
+        var created = 0
+        val engine =
+            HybridRecognitionEngine(
+                mock<Context>(),
+                songDaoMock,
+                voskMock,
+                audioSourceFactory = {
+                    created++
+                    FakeAudioSource()
+                },
+                pitchDetectorFactory = { detector },
+            )
+
+        engine.startRecognition(isPro = true)
+        engine.stopRecognition()
+        engine.startRecognition(isPro = true)
+
+        assertEquals(2, created)
     }
 
     @Test

@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.20 |
+| Version | 0.21 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -372,7 +372,7 @@ These corrections bring the records in line with the code as built.
 * **Resumable transfer:** Not supported until partial data is persisted (ADR-11). ([#10](https://github.com/Sriram-Codes-SW/VerseSync/issues/10))
 * **State flow after a live write:** In unit tests, a view model state flow occasionally did not show a value written just after the view model started, even though the DataStore held the correct value. It happened about 1 in 10 times under test dispatchers and was not seen in 100 runs with a real Main thread. DataStore 1.3.0 reduced it but did not remove it. A later diagnostic showed the write itself succeeded: the stored value was correct and a fresh read returned it, but a collector that was already waiting never received it. That points at DataStore 1.1.1, so DataStore was updated to 1.3.0, after which 54 runs of the four DataStore-backed test classes passed, against 3 failing runs out of 26 on 1.1.1. The cause is still not identified, and the behavior on a device has not been checked. An emulator run (TC-M-06, TC-M-07) showed the trial counter, the lock switch and the lock type label updating immediately, so this has not been seen in the app. ([#19](https://github.com/Sriram-Codes-SW/VerseSync/issues/19))
 * **Real-audio coverage:** Sanskrit was not tested with real audio, and every other language was tested with one sentence only (see the results section of the test strategy). ([#11](https://github.com/Sriram-Codes-SW/VerseSync/issues/11))
-* **Pitch detection independence from TarsosDSP:** Pitch detection and audio capture are tied to one GPL-3.0 library, which makes tests awkward and leaves two microphone recorders open at once. The design and phased plan are in [07-pitch-detection-design.md](07-pitch-detection-design.md) ([#13](https://github.com/Sriram-Codes-SW/VerseSync/issues/13)). It would also finish what ADR-01 intended.
+* **Pitch detection independence from TarsosDSP:** Phases 0 and 1 of the plan are done: TarsosDSP is used in one adapter file behind interfaces. Phase 2 (one shared audio capture), phase 3 (an in-house detector) and phase 4 (removing the library) remain, see [07-pitch-detection-design.md](07-pitch-detection-design.md) ([#13](https://github.com/Sriram-Codes-SW/VerseSync/issues/13)). It would also finish what ADR-01 intended.
 * **Real devices:** Bluetooth sharing between two phones and the biometric prompt have never run, because the emulator has neither ([#8](https://github.com/Sriram-Codes-SW/VerseSync/issues/8)).
 * **Matching enhancements, not yet needed:** Elastic (DTW) pitch matching for tempo variation ([#16](https://github.com/Sriram-Codes-SW/VerseSync/issues/16)) and an FTS5 index for very large libraries ([#17](https://github.com/Sriram-Codes-SW/VerseSync/issues/17)).
 * **First-release checklist:** Play Console setup, the license decision, the privacy policy and release signing ([#18](https://github.com/Sriram-Codes-SW/VerseSync/issues/18)).

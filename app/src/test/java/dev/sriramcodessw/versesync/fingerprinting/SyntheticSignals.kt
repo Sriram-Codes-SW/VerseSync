@@ -1,12 +1,8 @@
 package dev.sriramcodessw.versesync.fingerprinting
 
-import be.tarsos.dsp.AudioDispatcher
-import be.tarsos.dsp.AudioEvent
-import be.tarsos.dsp.AudioProcessor
-import be.tarsos.dsp.io.TarsosDSPAudioFormat
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
+import dev.sriramcodessw.versesync.audio.AudioFrame
+import dev.sriramcodessw.versesync.audio.PitchDetector
+import dev.sriramcodessw.versesync.audio.tarsos.TarsosPitchDetector
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
@@ -89,24 +85,22 @@ object SyntheticSignals {
 
 /**
  * The pitch reported for every 1,024-sample frame of a signal, in Hz, with 0 for unvoiced.
- * This is what the app stores as a song's fingerprint. It runs the current detector, TarsosDSP YIN,
- * through [AudioFingerprinter], so any replacement detector can be compared against it.
+ * This is what the app stores as a song's fingerprint. By default it runs the current detector,
+ * TarsosDSP YIN, through [AudioFingerprinter], and any other [PitchDetector] can be passed in to
+ * compare it against that.
  */
 object PitchTrack {
-    fun of(signal: FloatArray): List<Float> {
-        val dispatcher: AudioDispatcher = mock()
-        val fingerprinter = AudioFingerprinter(dispatcher)
-        fingerprinter.attachPitchProcessor(SyntheticSignals.SAMPLE_RATE.toFloat(), SyntheticSignals.FRAME)
-        val captor = argumentCaptor<AudioProcessor>()
-        verify(dispatcher).addAudioProcessor(captor.capture())
-        val processor = captor.firstValue
-
+    fun of(
+        signal: FloatArray,
+        detector: PitchDetector = TarsosPitchDetector(),
+    ): List<Float> {
+        val fingerprinter = AudioFingerprinter(detector)
         val track = mutableListOf<Float>()
         var start = 0
+        var index = 0L
         while (start + SyntheticSignals.FRAME <= signal.size) {
-            val event = AudioEvent(TarsosDSPAudioFormat(SyntheticSignals.SAMPLE_RATE.toFloat(), 16, 1, true, false))
-            event.floatBuffer = signal.copyOfRange(start, start + SyntheticSignals.FRAME)
-            processor.process(event)
+            val samples = signal.copyOfRange(start, start + SyntheticSignals.FRAME)
+            fingerprinter.onFrame(AudioFrame(samples, SyntheticSignals.SAMPLE_RATE, index++))
             track += fingerprinter.instantPitch.value
             start += SyntheticSignals.FRAME
         }
