@@ -15,6 +15,8 @@ internal object Sweep {
     class Row(
         val rules: SpeechRules,
         val slice: Slice,
+        /** The same decision with the rival taken from every song and a tie not counted (see DecisionRule), at the end of each recording. */
+        val unfiltered: RuleSlice,
     )
 
     val minWords = listOf(1, 2, 3, 4, 6)
@@ -31,7 +33,8 @@ internal object Sweep {
                     val rules = SpeechRules(shareThreshold = share, minWords = words, fuzzy = isFuzzy)
                     val results = Replay(corpus, EvalConfig(pitch = false, rules = rules)).run()
                     for (margin in leadMargins) {
-                        rows += Row(rules.copy(leadMargin = margin), Metrics.slice("all", results, Path.SPEECH, corpus.library, margin))
+                        val rule = DecisionRule(minWords = words, minShare = share, absoluteGap = 0f, relativeMargin = margin)
+                        rows += Row(rules.copy(leadMargin = margin), Metrics.slice("all", results, Path.SPEECH, corpus.library, margin), RuleMetrics.evaluate(rule.label(), results, rule))
                     }
                 }
             }
@@ -50,14 +53,14 @@ internal object Sweep {
         corpus.caution?.let { sb.appendLine("> **$it**").also { sb.appendLine() } }
         sb.appendLine("Speech path only. The defaults are minWords 2, share 0.35, fuzzy off, margin 0.25.")
         sb.appendLine()
-        sb.appendLine("| min words | share | fuzzy | margin | found | top-1 | false accept | decides right | decides wrong song | decides on unknown | lock opens | lock false |")
-        sb.appendLine("|---|---|---|---|---|---|---|---|---|---|---|---|")
+        sb.appendLine("| min words | share | fuzzy | margin | found | top-1 | false accept | decides right | decides wrong song | decides on unknown | right, rival from all songs | on unknown, rival from all songs | lock opens | lock false |")
+        sb.appendLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
         rows.forEach { r ->
             val d = SpeechRules()
             val mark = if (r.rules == d) " (default)" else ""
             val s = r.slice
             sb.appendLine(
-                "| ${r.rules.minWords}$mark | ${r.rules.shareThreshold} | ${if (r.rules.fuzzy) "on" else "off"} | ${r.rules.leadMargin} | ${s.found} | ${s.top1} | ${s.falseAccept} | ${s.decidesRight} | ${s.decidesWrongSong} | ${s.decidesFalse} | ${s.lockOpens} | ${s.lockFalse} |",
+                "| ${r.rules.minWords}$mark | ${r.rules.shareThreshold} | ${if (r.rules.fuzzy) "on" else "off"} | ${r.rules.leadMargin} | ${s.found} | ${s.top1} | ${s.falseAccept} | ${s.decidesRight} | ${s.decidesWrongSong} | ${s.decidesFalse} | ${r.unfiltered.finalRight} | ${r.unfiltered.finalFalse} | ${s.lockOpens} | ${s.lockFalse} |",
             )
         }
         return sb.toString()

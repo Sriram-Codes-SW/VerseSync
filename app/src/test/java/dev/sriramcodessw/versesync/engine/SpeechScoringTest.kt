@@ -33,6 +33,18 @@ class SpeechScoringTest {
     private fun heard(text: String) = spokenMatchTokens(text)
 
     @Test
+    fun scoreEvery_keepsSongsThatAreNotCandidates_andScoreAllIsItsFilter() {
+        val songs = library("ocean river mountain valley", "ocean forest meadow whisper", "desert canyon sunrise shadow")
+        val every = songs.scoreEvery(heard("ocean river mountain banana kiwi"))
+
+        // Song 1 has one heard word of five: not a candidate, but it is evidence, and a rival.
+        assertEquals(setOf(0, 1), every.keys)
+        assertEquals(1, every.getValue(1).words)
+        assertEquals(setOf(0), songs.scoreAll(heard("ocean river mountain banana kiwi")).keys)
+        assertEquals(0.6f, every.getValue(0).share, 0.0001f)
+    }
+
+    @Test
     fun editDistance_countsOneLetterOffAsClose() {
         assertTrue(editDistanceAtMost("garden", "gardin", 1))
         assertTrue(editDistanceAtMost("garden", "gardens", 1))

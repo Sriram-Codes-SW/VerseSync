@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Recognition Quality Roadmap |
-| Version | 0.3 |
+| Version | 0.4 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Proposed |
@@ -93,3 +93,4 @@ Smooth the contour and fix octave jumps, search over key shifts instead of cente
 - **Item 1, evaluation set and harness ([#43](https://github.com/Sriram-Codes-SW/VerseSync/issues/43)):** the harness is built and a seed baseline is recorded (docs/09). The real recordings are still to be made.
 - **Item 2, scoring and margin ([#44](https://github.com/Sriram-Codes-SW/VerseSync/issues/44)):** partly done. Words are weighted by rarity in the library, each match carries the strongest other song's score, and the vocal lock no longer opens on words when another song is tied or within 25 percent. Fuzzy word matching is built but off, and the margin and minimum evidence are not yet chosen from data, because the seed corpus cannot tell any setting from another (docs/09, section 8). It stays open for that.
 - **A larger public corpus (follow-up to #43):** a same-language corpus of read speech from FLEURS is built and measured (docs/09, sections 8 and 9). It showed that the current speech rule decides on a wrong song for 38 percent of recordings of songs not in the library, which the seed corpus hid, and that pitch finds only 16 percent of recordings that are pieces of their own reference. Neither is changed yet. Choosing the speech rule needs a held-out part of the data, and the pitch result is the evidence for item 4.
+- **Held-out choice of a speech decision rule (#44):** a rule chosen on the FLEURS dev split missed its pre-set target on the test split (7.8 percent of unknown-song recordings against at most 2 percent), though it cut that rate from 53 percent and naming the right song stayed at 86 percent. Nothing is adopted. The next thing to try is a rule that waits for the evidence to settle before acting, and the real recordings are still needed (docs/09, section 10).

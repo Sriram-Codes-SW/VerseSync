@@ -3,6 +3,7 @@ package dev.sriramcodessw.versesync.eval
 import dev.sriramcodessw.versesync.engine.MatchEvidence
 import dev.sriramcodessw.versesync.engine.PitchMatch
 import dev.sriramcodessw.versesync.engine.PitchMatcher
+import dev.sriramcodessw.versesync.engine.SpeechDetail
 import dev.sriramcodessw.versesync.engine.SpeechLibrary
 import dev.sriramcodessw.versesync.engine.SpeechMatcher
 import dev.sriramcodessw.versesync.engine.SpeechRules
@@ -43,11 +44,17 @@ class PathResult(
     val firstSeenMs: Map<String, Long>,
 )
 
-class QueryResult(
+internal class QueryResult(
     val query: Query,
     val byPath: Map<Path, PathResult>,
     /** What could not be replayed, for example a missing transcript. Shown in the report. */
     val notes: List<String>,
+    /**
+     * What the speech evidence was after each piece of heard text, for every song with a heard word in its lyrics and
+     * before any candidate rule: per song, the update with the highest rarity weight so far (a later update wins a tie),
+     * so words, share and weight come from one update and not from a mix. Empty without a transcript.
+     */
+    val speechSteps: List<SpeechStep> = emptyList(),
 )
 
 internal class Replay(
@@ -81,12 +88,14 @@ internal class Replay(
                 Path.COMBINED to combined,
             ),
             notes,
+            speech.steps,
         )
     }
 
     private class SpeechOutcome(
         val words: Map<String, SpeechScore>,
         val seen: Map<String, Long>,
+        val steps: List<SpeechStep> = emptyList(),
     )
 
     private class PitchOutcome(
@@ -106,6 +115,8 @@ internal class Replay(
         }
         val words = HashMap<String, SpeechScore>()
         val seen = HashMap<String, Long>()
+        val best = HashMap<String, SpeechDetail>()
+        val steps = mutableListOf<SpeechStep>()
         for (entry in heard.sortedBy { it.frame }) {
             val text = SpeechMatcher.normalize(entry.text, query.languageCode)
             if (text.isBlank()) continue
@@ -115,8 +126,14 @@ internal class Replay(
                 words.merge(id, score) { old, new -> SpeechScore(maxOf(old.words, new.words), maxOf(old.weight, new.weight)) }
                 seen.putIfAbsent(id, entry.frame * FRAME_MS)
             }
+            // Every song, whether or not it is a candidate, and from one update per song (the one with the most weight).
+            for ((id, detail) in speechLibrary.scoreEvery(spoken)) {
+                val old = best[id]
+                if (old == null || detail.weight >= old.weight) best[id] = detail
+            }
+            steps += SpeechStep(entry.frame, HashMap(best))
         }
-        return SpeechOutcome(words, seen)
+        return SpeechOutcome(words, seen, steps)
     }
 
     /** The best three songs under the threshold at each pitch tick; the last tick's are kept, as in the engine. */
@@ -202,3 +219,9 @@ internal class Replay(
         private const val TOP_PITCH = 3
     }
 }
+
+/** The speech evidence per song after the piece of heard text reported at [frame]. */
+internal class SpeechStep(
+    val frame: Int,
+    val state: Map<String, SpeechDetail>,
+)

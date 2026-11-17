@@ -12,7 +12,7 @@ import kotlin.random.Random
  * so songs share common words, many more recordings of songs that are not in the library, and snippets of
  * 3, 5 and 10 seconds from random starts. It is still read speech, not singing.
  *
- * Input, per language code: <fleurs>/<code>/test.tsv and <fleurs>/<code>/wav/ holding the .wav files (tools/audio-test/fetch_fleurs_more.sh).
+ * Input, per language code: <fleurs>/<code>/<split>.tsv and <fleurs>/<code>/wav/ holding the .wav files (tools/audio-test/fetch_fleurs_more.sh).
  *
  * How a library is made, per language:
  * - the recordings are shuffled, and about a third go to the library: their sentences become "songs" of four
@@ -48,7 +48,8 @@ internal object FleursCorpusBuilder {
         for (code in codes.sorted()) {
             val rng = Random(seed * 31 + code.hashCode())
             val sentences = HashMap<String, Pair<String, String>>() // file name -> sentence, gender
-            File(fleurs, "$code/test.tsv").readLines(Charsets.UTF_8).forEach { line ->
+            val tsv = File(fleurs, code).listFiles { f -> f.extension == "tsv" }?.minByOrNull { it.name } ?: error("no .tsv list in $fleurs/$code")
+            tsv.readLines(Charsets.UTF_8).forEach { line ->
                 val cols = line.split('\t')
                 if (cols.size >= 7) sentences[cols[1]] = cols[2].trim() to cols[6].trim()
             }
@@ -121,6 +122,7 @@ internal object FleursCorpusBuilder {
                         "device" to "fleurs",
                         "speaker" to null,
                         "speakerGroup" to clip.gender.lowercase(),
+                        "snippet" to seconds,
                     )
             }
 

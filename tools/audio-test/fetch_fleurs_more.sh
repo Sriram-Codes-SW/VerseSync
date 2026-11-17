@@ -1,10 +1,15 @@
 #!/bin/bash
-# Usage: fetch_fleurs_more.sh [megabytes per language, default 40] <language codes...>
-# Downloads the first part of each language's FLEURS test audio archive (Google FLEURS, CC BY 4.0) and
-# unpacks the complete clips into fleursbig/<code>/wav, with the transcript list as fleursbig/<code>/test.tsv.
+# Usage: fetch_fleurs_more.sh [-s test|dev] [megabytes per language, default 40] <language codes...>
+# Downloads the first part of each language's FLEURS audio archive for one split (Google FLEURS, CC BY 4.0)
+# and unpacks the complete clips into <folder>/<code>/wav, with the transcript list as <folder>/<code>/<split>.tsv.
+# The folder is fleursbig for the test split and fleursdev for the dev split. The two splits have different
+# sentences, so one can be used to choose a rule and the other to report it (docs/09-evaluation-harness.md).
 # The archives are in file-name order, so a prefix is a random-looking sample of the recordings.
-# Downloaded audio is ignored by git. See docs/09-evaluation-harness.md.
+# Downloaded audio is ignored by git.
 cd "$(dirname "$0")"
+SPLIT=test
+if [ "$1" = "-s" ]; then SPLIT=$2; shift 2; fi
+case "$SPLIT" in test) OUT=fleursbig ;; dev) OUT=fleursdev ;; *) echo "split must be test or dev"; exit 2 ;; esac
 MB=40
 case "$1" in ''|*[!0-9]*) ;; *) MB=$1; shift ;; esac
 [ $# -eq 0 ] && { echo "give language codes, for example: en-us hi es de fr"; exit 2; }
@@ -13,13 +18,13 @@ BASE=https://huggingface.co/datasets/google/fleurs/resolve/main/data
 for code in "$@"; do
   cfg=${CFG[$code]}
   [ -z "$cfg" ] && { echo "$code: unknown language"; continue; }
-  d=fleursbig/$code; rm -rf "$d"; mkdir -p "$d/x" "$d/wav"
-  curl -sL -o "$d/test.tsv" "$BASE/$cfg/test.tsv"
-  curl -sL -r 0-$((MB * 1000000)) -o "$d/part.tar.gz" "$BASE/$cfg/audio/test.tar.gz"
+  d=$OUT/$code; rm -rf "$d"; mkdir -p "$d/x" "$d/wav"
+  curl -sL -o "$d/$SPLIT.tsv" "$BASE/$cfg/$SPLIT.tsv"
+  curl -sL -r 0-$((MB * 1000000)) -o "$d/part.tar.gz" "$BASE/$cfg/audio/$SPLIT.tar.gz"
   # The last file of a truncated archive is incomplete, so it is left out.
   files=$(tar -tzf "$d/part.tar.gz" 2>/dev/null | grep '\.wav$' | head -n -1)
   (cd "$d/x" && tar -xzf ../part.tar.gz 2>/dev/null)
   for f in $files; do mv "$d/x/$f" "$d/wav/$(basename "$f")" 2>/dev/null; done
   rm -rf "$d/x" "$d/part.tar.gz"
-  echo "$code: $(ls "$d/wav" | wc -l) clips, $(du -sh "$d/wav" | cut -f1)"
+  echo "$SPLIT $code: $(ls "$d/wav" | wc -l) clips, $(du -sh "$d/wav" | cut -f1)"
 done

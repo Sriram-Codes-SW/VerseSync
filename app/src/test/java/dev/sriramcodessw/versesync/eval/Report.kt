@@ -4,7 +4,7 @@ import com.google.gson.GsonBuilder
 import java.io.File
 
 /** Writes the result of a run as markdown for people and JSON for comparing runs. Neither holds a date, so the same corpus gives the same files. */
-object Report {
+internal object Report {
     class Written(
         val markdown: File,
         val json: File,
