@@ -82,6 +82,18 @@ class FleursCorpusBuilderTest {
     }
 
     @Test
+    fun aFixedNumberOfSongs_givesTheSameSizeLibrary_andRecordingsOfTheOthersAreOfUnknownSongs() {
+        val corpus = FleursCorpusBuilder.build(fakeFleurs(), File(dir, "fixed"), listOf("xx"), recordedSongs = 1, distractorSongs = 2)
+
+        assertEquals(1, corpus.library.count { it.reference != null })
+        assertEquals(2, corpus.library.count { it.reference == null })
+        assertEquals(12, corpus.queries.size)
+        // Every recording that names a song names the one song with a recording.
+        val recorded = corpus.library.single { it.reference != null }.id
+        assertTrue(corpus.queries.mapNotNull { it.song }.all { it == recorded })
+    }
+
+    @Test
     fun theBuiltCorpus_isReplayable() {
         val corpus = FleursCorpusBuilder.build(fakeFleurs(), File(dir, "out"), listOf("xx"))
         // No transcripts yet, so only pitch runs; it must not fail on a built corpus.

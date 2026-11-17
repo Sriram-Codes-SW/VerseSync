@@ -51,6 +51,25 @@ internal class Decision(
     val rivalWeight: Float,
 )
 
+/**
+ * How long a decision has to hold before the rule acts on it, and which evidence it looks at. A garbled early piece of
+ * heard text can make a rule fire that later text would have contradicted; waiting trades speed for fewer false decisions.
+ */
+internal data class Settle(
+    /** The same song must be decided continuously for this many 64 ms frames of audio before the rule acts. 0 acts at once. */
+    val holdFrames: Int = 0,
+    /** Use evidence that can be taken back (finished utterances plus the current partial) instead of evidence that only grows. */
+    val retractable: Boolean = false,
+) {
+    fun label() = "hold ${holdFrames * Replay.FRAME_MS} ms" + if (retractable) ", retractable" else ", sticky"
+}
+
+/** The song a rule acted on, and the frame at which it did. */
+internal class Firing(
+    val song: String,
+    val frame: Int,
+)
+
 /** What a rule does over recordings, counting the rule as acting the first time it fires and also looking at the end. */
 internal class RuleSlice(
     val name: String,
@@ -66,13 +85,53 @@ internal class RuleSlice(
     val finalFalse: Rate,
     /** Final decisions where no other song had any heard word: the lead was not tested at all. */
     val noRivalAtEnd: Int,
+    /** Seconds of audio until the rule first acted on the right song, over recordings where it did: median and 90th percentile. */
+    val medianSecondsToRight: Double? = null,
+    val p90SecondsToRight: Double? = null,
 )
 
 internal object RuleMetrics {
+    /**
+     * When [rule], held for [settle], first acts on [steps]. A decision holds from the update that makes it until an update
+     * that decides something else or nothing, or the end. The updates at the last reported frame are not counted: the
+     * capture ends with a final result that a live recognizer only gives when it is stopped, and the app would not
+     * have it while the person is still singing.
+     */
+    fun firing(
+        steps: List<SpeechStep>,
+        rule: DecisionRule,
+        settle: Settle = Settle(),
+    ): Firing? {
+        if (steps.isEmpty()) return null
+        val end = steps.last().frame
+        var i = 0
+        while (i < steps.size) {
+            val decision = rule.decide(steps[i].state)
+            if (decision == null) {
+                i++
+                continue
+            }
+            val start = steps[i].frame
+            var j = i + 1
+            while (j < steps.size && rule.decide(steps[j].state)?.song == decision.song) j++
+            val holdsUntil = if (j < steps.size) steps[j].frame else end
+            val actsAt = start + settle.holdFrames
+            if (actsAt < holdsUntil && actsAt < end) return Firing(decision.song, actsAt)
+            i = j
+        }
+        return null
+    }
+
+    private fun stepsOf(
+        result: QueryResult,
+        settle: Settle,
+    ) = if (settle.retractable) result.retractableSteps else result.speechSteps
+
     fun evaluate(
         name: String,
         results: List<QueryResult>,
         rule: DecisionRule,
+        settle: Settle = Settle(),
     ): RuleSlice {
         var known = 0
         var unknown = 0
@@ -83,11 +142,13 @@ internal object RuleMetrics {
         var finalWrong = 0
         var finalFalse = 0
         var noRival = 0
+        val secondsToRight = mutableListOf<Double>()
         for (result in results) {
             val target = result.query.song
             if (target == null) unknown++ else known++
-            val first = result.speechSteps.firstNotNullOfOrNull { rule.decide(it.state) }
-            val last = result.speechSteps.lastOrNull()?.let { rule.decide(it.state) }
+            val steps = stepsOf(result, settle)
+            val first = firing(steps, rule, settle)
+            val last = steps.lastOrNull()?.let { rule.decide(it.state) }
             if (last != null && last.rivalWeight <= 0f) noRival++
             if (target == null) {
                 if (first != null) firstFalse++
@@ -95,6 +156,7 @@ internal object RuleMetrics {
             } else {
                 if (first?.song == target) {
                     firstRight++
+                    secondsToRight += first.frame * Replay.FRAME_MS / 1000.0
                 } else if (first != null) {
                     firstWrong++
                 }
@@ -105,6 +167,7 @@ internal object RuleMetrics {
                 }
             }
         }
+        val sorted = secondsToRight.sorted()
         return RuleSlice(
             name,
             known,
@@ -116,6 +179,8 @@ internal object RuleMetrics {
             Rate(finalWrong, known),
             Rate(finalFalse, unknown),
             noRival,
+            sorted.getOrNull(sorted.size / 2),
+            sorted.getOrNull(((sorted.size - 1) * 0.9).toInt()),
         )
     }
 }
