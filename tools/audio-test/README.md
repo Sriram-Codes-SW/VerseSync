@@ -69,3 +69,16 @@ database and removes them when it ends.
 
 The player raises each clip so its loudest sample is about 80 percent of full scale. Through the
 virtual cable the unscaled clips can arrive quieter than the hum of the emulator's microphone.
+
+## Evaluation corpus (no microphone, no virtual cable)
+
+The scripts above play audio into the emulator's microphone, which is slow and noisy. For
+measuring accuracy the harness in `docs/09-evaluation-harness.md` replays recordings instead:
+
+```
+powershell -File tools/audio-test/make_seed_corpus.ps1 -Out <corpus dir>   # seed corpus from the FLEURS clips
+bash tools/audio-test/capture_transcripts.sh <corpus dir> [codes...]       # what the speech model hears, on the emulator or a phone
+./gradlew :app:testDebugUnitTest --tests "*EvaluationRun*" -Pversesync.eval.corpus=<corpus dir>
+```
+
+The seed corpus is one speaker per language, so it is a sanity baseline, not an evaluation set.
