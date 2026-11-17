@@ -49,7 +49,7 @@ fun VocalLockScreen(
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Attempt $attemptCount of 2",
+            text = "Attempt $attemptCount of ${VocalLockPolicy.MAX_ATTEMPTS}",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.secondary,
         )
