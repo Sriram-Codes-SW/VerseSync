@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Recognition Quality Roadmap |
-| Version | 0.11 |
+| Version | 0.12 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Proposed |
@@ -101,3 +101,4 @@ Smooth the contour and fix octave jumps, search over key shifts instead of cente
 - **Recognizing recorded music offline (ADR-19, Proposed):** the owner wants a Shazam-style app that works offline. A recording playing near the phone is a different input from singing, and speech and pitch both fail on it. Landmark fingerprints of the same recording are proposed, limited to songs whose fingerprints are on the device. Phase 1 is a matcher and a generated test set, with its plan and pass bar fixed in advance (docs/09, section 13).
 - **Result of the recorded-music fingerprint run (ADR-19, generated music):** no rule met the pre-registered false-accept target, so none is chosen. The matcher finds a recording in noise but is very sensitive to playback speed (a 1 percent error leaves 14 percent or 4 percent) and does not follow a performance whose tempo is a few percent off, so it is not the concert path. Cost is about 110 KB per four-minute song. Next, per a second opinion: a Proposed ADR for a closed-set concert mode (a setlist, manual first), a harness option that restricts the library to the size of a setlist (for example 15, 20 and 30 songs), and a concert mode without recognition. Nothing real has been measured (docs/09, section 13).
 - **ADR-20 proposes a concert mode, manual first (Proposed, #66):** the owner's use is a concert with a poor network. Nothing measured shows the app can tell which song a live band is playing, so the proposal is a setlist the person orders, one-tap next, previous and jump, and hand scrolling, with no recognition and no microphone. Any later recognition would only suggest, would restrict itself to the setlist, and needs its own ADR with a measured pass bar. The assumption that a setlist is known and mostly played in order is not measured. It authorizes no code (docs/03-design.md).
+- **ADR-20 Phase 1 decisions (Proposed, #66):** an Opus second opinion put the concert-mode setlist ahead of the harness work, because it helps without any recognition claim. The decisions cover storage, backup scope, Pro with a cached status that works offline, the app lock across a rotation (#69), and the order of work. The harness at setlist size, the sequence simulator and the live-album protocol follow it, and generated concert noise is deferred until real recordings exist (#43).
