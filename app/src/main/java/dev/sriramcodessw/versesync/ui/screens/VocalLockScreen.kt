@@ -44,7 +44,7 @@ fun VocalLockScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Vocal Authentication",
+            text = LockCopy.SCREEN_TITLE,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
         )
@@ -61,7 +61,7 @@ fun VocalLockScreen(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
             Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Sing a verse from:", style = MaterialTheme.typography.bodySmall)
+                Text(LockCopy.PROMPT, style = MaterialTheme.typography.bodySmall)
                 Text(
                     text = targetSong.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -77,7 +77,7 @@ fun VocalLockScreen(
             PitchVisualizer(pitch = instantPitch)
             Spacer(Modifier.height(16.dp))
             CircularProgressIndicator()
-            Text("Verifying your voice...", modifier = Modifier.padding(top = 8.dp))
+            Text(LockCopy.LISTENING, modifier = Modifier.padding(top = 8.dp))
         }
 
         Spacer(Modifier.height(32.dp))
@@ -109,7 +109,7 @@ fun VocalLockScreen(
         Spacer(Modifier.height(48.dp))
 
         TextButton(onClick = onFailure) {
-            Text("Use Device Lock Instead")
+            Text(LockCopy.FALLBACK_BUTTON)
         }
     }
 }

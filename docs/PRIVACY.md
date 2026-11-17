@@ -19,7 +19,7 @@ Three features use the network or other companies' services. They are listed und
 
 ## Microphone
 
-The app listens only while you use lyric sync, recognition or the vocal lock. The sound is analysed on the device as it arrives. It is not saved and it is not sent anywhere.
+The app listens only while you use lyric sync, recognition or the voice shortcut. The sound is analysed on the device as it arrives. It is not saved and it is not sent anywhere.
 
 ## What leaves your device
 
@@ -36,7 +36,7 @@ The app listens only while you use lyric sync, recognition or the vocal lock. Th
 
 | Permission | Why |
 |---|---|
-| Microphone | Lyric sync, recognition and the vocal lock |
+| Microphone | Lyric sync, recognition and the voice shortcut |
 | Bluetooth (scan, connect, advertise) | Sharing songs with a nearby device. The scan permission is declared as not used to find your location. |
 | Precise location, Android 11 and older only | Those versions require it for Bluetooth scanning. It is not read. |
 | Approximate location | Suggesting languages at first start, as described above |

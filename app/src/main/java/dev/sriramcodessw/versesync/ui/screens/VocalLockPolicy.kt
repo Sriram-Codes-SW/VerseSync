@@ -7,7 +7,7 @@ import dev.sriramcodessw.versesync.engine.SpeechMatcher
  * What the vocal lock needs before it opens, and what happens when it is given up on.
  *
  * Recognizing a song only needs it to be a plausible candidate, and a wrong candidate there is
- * harmless. The lock protects the library, so it asks for much more evidence.
+ * harmless. The lock keeps casual access out, so it asks for much more evidence. It checks the words, not the speaker.
  */
 object VocalLockPolicy {
     /** How many times the vocal lock can be given up on before the device lock is required. */

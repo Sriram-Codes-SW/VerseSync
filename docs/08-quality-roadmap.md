@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Recognition Quality Roadmap |
-| Version | 0.7 |
+| Version | 0.8 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Proposed |
@@ -12,7 +12,7 @@ Tracked in issue [#51](https://github.com/Sriram-Codes-SW/VerseSync/issues/51).
 
 ## 1. What this is for
 
-VerseSync identifies a song from a few seconds of someone singing or saying its lyrics, and has an optional vocal lock. This plan says what to build, in what order, to make that work as well as it can offline.
+VerseSync identifies a song from a few seconds of someone singing or saying its lyrics, and has an optional voice shortcut (called the vocal lock before issue #48). This plan says what to build, in what order, to make that work as well as it can offline.
 
 **Which comparison is fair.** The right comparison is a hum-to-search product, such as Google's or SoundHound's. It is not Shazam, which matches exact studio recordings, and not a general speech recognizer, which VerseSync is not. Those products search millions of songs. VerseSync searches the user's own tens or hundreds, which is a much easier problem. So today's accuracy is lower than a small closed library should give.
 
@@ -25,7 +25,7 @@ Measured on an emulator, one sentence per language. These numbers are noisy: the
 | Speech | Vosk small offline models, 21 languages. The text is often garbled, for example "maybe was on think about" for a sentence about dinosaurs. A song matches when at least 0.35 of the heard words and at least two different heard words are in its lyrics. With that rule 15 of 21 languages passed, and four of the six that failed passed under the old one-word rule. |
 | Pitch | One Hz value per 64 ms frame. On two short spoken clips, the same clip was accepted about half the time and a different clip in 1 of 12 comparisons at the current setting. |
 | Pitch defect | The stored contour is centered on its whole mean and a short live snippet on its own mean, so a perfect fragment from the middle of a song is shifted by a constant. Frames are compared one to one with a coarse 5 frame offset search, and there is no tempo warping. |
-| Vocal lock | Opens on three different heard words or a close pitch over about two seconds (ADR-10). It checks the words, not the speaker. |
+| Voice shortcut | Opens on three different heard words or a close pitch over about two seconds (ADR-10). It checks the words, not the speaker. |
 | Capture | Two microphone recorders still run at once. The single shared capture exists as draft #39 with inconclusive evidence. |
 | Tests | 376 unit tests, but no evaluation set, no real phones, no singing recordings. |
 
@@ -44,7 +44,7 @@ Order matters. Everything is judged by the evaluation set, so it comes first. Th
 | 3 | Restrict the recognizer to the library's words | [#45](https://github.com/Sriram-Codes-SW/VerseSync/issues/45) | about 1 week | Better word hit rate, and no worse false accepts on songs not in the library | 1, 2 |
 | 4 | Rebuild pitch matching for singing | [#46](https://github.com/Sriram-Codes-SW/VerseSync/issues/46) | 2 to 3 weeks | Better equal error rate on singing, including plus or minus 15 percent tempo | 1 |
 | 5 | Combine text and pitch scores | [#47](https://github.com/Sriram-Codes-SW/VerseSync/issues/47) | about 1 week | Beats the better single path | 2, 4 |
-| 6 | Vocal lock: honest naming and false-accept measurement | [#48](https://github.com/Sriram-Codes-SW/VerseSync/issues/48) | a few days | Honest copy, and a measured false-accept rate with an interval | 1 |
+| 6 | Voice shortcut: honest naming and false-accept measurement | [#48](https://github.com/Sriram-Codes-SW/VerseSync/issues/48) | a few days | Honest copy, and a measured false-accept rate with an interval | 1 |
 | 7 | Shared capture on real phones | [#49](https://github.com/Sriram-Codes-SW/VerseSync/issues/49) | about 1 week | Identical frames, no dropouts, no lower pass rate | 1 |
 | 8 | Whisper-class model spike | [#50](https://github.com/Sriram-Codes-SW/VerseSync/issues/50) | about 2 weeks | Accuracy gain weighed against delay, battery and size | 1 |
 
@@ -68,7 +68,7 @@ Smooth the contour and fix octave jumps, search over key shifts instead of cente
 
 - **Shazam-style audio fingerprinting.** Two performances of a song do not share the spectral peaks it relies on.
 - **Pitch matching of spoken input.** A spoken sentence has no stable melody.
-- **Any speaker-identity or "secure" claim for the vocal lock.** It would need a speaker model, enrollment across sessions, liveness checks and measured error rates across many speakers including children. Even then it would not be the strongest class of Android biometric.
+- **Any speaker-identity or "secure" claim for the voice shortcut.** It would need a speaker model, enrollment across sessions, liveness checks and measured error rates across many speakers including children. Even then it would not be the strongest class of Android biometric.
 - **Replacing TarsosDSP for now.** GPL-3.0 is accepted (ADR-13), so there is no license reason. Phases 3 and 4 of the pitch design wait.
 - **Bluetooth protocol v2 (#10) and full-text search (#17)** until there is a reason.
 - **A claim of 21 supported languages.** Label most of them experimental until the evaluation set shows otherwise.
@@ -97,3 +97,4 @@ Smooth the contour and fix octave jumps, search over key shifts instead of cente
 - **Why the held-out rule failed, and the plan for a rule that waits (#44):** the end-of-file result had been counted as a decision, which overstated the right-song rate (86 percent, corrected to 78 percent); 20 of the 25 false decisions did not survive to the end of the recording, and the test corpus is also harder than dev (fr and en-us), so early firing is part of the explanation and not all of it. A rule that holds a decision before acting, with evidence that can be taken back, is built and tested on generated data and its evaluation is fixed in advance on a fresh corpus (docs/09, sections 11 and 12). Nothing in the app changes.
 - **A speech decision rule passed its pre-registered bar on a fresh corpus (#44):** at least 4 different words, at least 80 percent of the heard words in the lyrics, and a rarity-weighted gap over the runner-up of 1.0 times `ln(1 + songs)`. On 812 recordings of read speech from the FLEURS train split it decided on a song not in the library for 0 of 707 (upper end 0.5 percent), against 46 percent for the current speech rule, and named the right song for 70 percent of recordings in the library against 90 percent. Waiting before acting did not help; the stricter thresholds did. It is read speech only, is not in the app, and needs an ADR and a check on real singing before it could be (docs/09, section 12).
 - **ADR-18 proposes the speech decision rule as its own layer for the vocal lock (#44):** it records the evidence, the options considered, the exact rule, what was not measured, and five conditions that must be met before any code changes, including a check on real singing and on a real phone. It is a proposal only and authorizes nothing (docs/03-design.md).
+- **The vocal lock is now the voice shortcut (#48), in the words a person reads only:** the name, the settings description ("Anyone who knows the words can open it") and the lock screen no longer suggest authentication or identity, the wording is in one tested place, and a threat model is written (docs/10). The false-accept rate on a negative set of television, music, other voices and silence is still not measured; #48 stays open for it.

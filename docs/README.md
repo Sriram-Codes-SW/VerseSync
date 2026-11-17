@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.31 |
+| Version | 0.32 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,13 +14,14 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.28 | Active |
-| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.29 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.29 | Active |
+| [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.30 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
-| [docs/08-quality-roadmap.md](08-quality-roadmap.md) | Recognition Quality Roadmap: where it stands and what to build next | 0.7 | Proposed |
+| [docs/08-quality-roadmap.md](08-quality-roadmap.md) | Recognition Quality Roadmap: where it stands and what to build next | 0.8 | Proposed |
 | [docs/09-evaluation-harness.md](09-evaluation-harness.md) | Evaluation Harness: replay recordings, measure accuracy and false accepts, recording protocol | 0.7 | Active |
+| [docs/10-voice-shortcut-threat-model.md](10-voice-shortcut-threat-model.md) | Voice Shortcut Threat Model: what it protects, what it does not, what is measured | 0.1 | Active |
 
 ## Revision History
 
@@ -57,3 +58,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.29 | 2026-11-17 | Claude Code | Diagnostics of the held-out decision-rule result (issue #44): the end-of-file result no longer counts as a decision (the chosen rule's right-song rate corrects from 86 to 78 percent), 20 of 25 false decisions did not survive to the end, and the test corpus is harder than dev. Adds settle rules (hold in frames, evidence that can be taken back), time to the right answer, a fixed-size library option, a train split fetch, and the plan and criterion for the next evaluation, fixed before it is run. No app change. TC-U-44, TC-U-45 and TC-M-20. |
 | 0.30 | 2026-11-17 | Claude Code | The pre-registered evaluation of settle rules (issue #44): dev and test (1,076 recordings) to select and the FLEURS train split (812 recordings, 80-song libraries) to report once. The chosen rule (4 words, share 0.8, gap 1.0 times ln(1 + songs), no hold) decided on a song not in the library for 0 of 707 (upper end 0.5 percent) against 46 percent at the current speech rule, and named the right song for 70 percent against 90 percent. Waiting before acting did not help; stricter thresholds did. Read speech only; not in the app. TC-U-46 and TC-M-21. |
 | 0.31 | 2026-11-17 | Claude Code | ADR-18 (Proposed): the speech decision rule that passed the fresh-corpus bar as its own decision layer for the vocal lock. It states the evidence, the exact rule, what was not measured, and five conditions before any code changes. A proposal only; nothing in the app changes. |
+| 0.32 | 2026-11-17 | Claude Code | The vocal lock is shown as the voice shortcut (issue #48): the name, the settings description and the lock screen no longer suggest authentication or identity, the wording is in one tested place (`LockCopy`, TC-U-47, TC-M-22), the threat model is written (docs/10), and ADR-10 has an amendment. Copy and docs only: no logic and no stored value changed. The false-accept rate on a negative set is still not measured, and the fallback button bug is filed as #60. |
