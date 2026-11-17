@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.42 |
+| Version | 0.43 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -69,3 +69,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.40 | 2026-11-18 | Claude Code | ADR-20 Phase 1, the first slice of the screens: a Setlists tab (make, open and delete a setlist, add songs at the end), a Resume card, and the concert screen (dark high-contrast or light, text size, next and previous, a song list, blank, a song outside the setlist, no lyrics placeholder, screen kept on, confirm before leaving) with its place saved so a killed process resumes on the same song and scroll position. No microphone, no network, no Pro check, no new permission, which tests guard. Opus second opinion put the concert screen before the full editor. TC-U-53, TC-U-54, TC-M-27 and TC-M-28; the CI emulator job also runs the concert screen tests. Not run on a physical device (#8).
 | 0.41 | 2026-11-18 | Claude Code | ADR-20 Phase 1 completed: the setlist editor (rename, move up and down, remove with an undo that puts the song back where it was), a Concerts step in the main tour, and the new setlist's id sent as a one-shot event so a rotation neither repeats nor loses it. `insertAt` and `moveEntry` are transactional in the DAO. The tour overlay is now drawn above the whole screen: it sat under the top bar, so the microphone step had not highlighted the microphone button. TC-U-55, TC-M-29 and TC-M-30; TC-M-26 extended; the CI emulator job also runs the editor tests. Not run on a physical device (#8).
 | 0.42 | 2026-11-18 | Claude Code | The main screen has only two tabs, Songs and Folders, as the owner asked ("only songs and where they are"). Setlists moved into a Setlists section under the folders on the Folders tab, with its New setlist button and Resume card; nothing is stored differently. The tour step now highlights the Folders tab and no longer says anything about the network (the whole app is offline: the manifest has no INTERNET permission). TC-M-28 and TC-M-30 reworded. Not run on a physical device (#8).
+| 0.43 | 2026-11-18 | Claude Code | The leave dialog of the concert screen said to resume from the Setlists tab, which no longer exists since setlists moved under Folders (0.42). It now says "Setlists, under the Folders tab". Found while testing the app on an emulator with real songs.
