@@ -44,7 +44,7 @@ jobs:
           retention-days: 7
 
   # Runs the database tests that need a device: one opens a database created from an earlier schema
-  # version with the current database class and fails when the schema changes without a migration; the other checks the setlist storage.
+  # version with the current database class and fails when the schema changes without a migration; the others check the setlist storage and the concert screen.
   # Not a required check yet. Make it required after it has proved stable (issue #27).
   migration:
     name: migration test
@@ -72,7 +72,7 @@ jobs:
           api-level: 30
           arch: x86_64
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.sriramcodessw.versesync.data.VerseDatabaseMigrationTest,dev.sriramcodessw.versesync.data.SetlistDaoInstrumentedTest --console=plain
+          script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.sriramcodessw.versesync.data.VerseDatabaseMigrationTest,dev.sriramcodessw.versesync.data.SetlistDaoInstrumentedTest,dev.sriramcodessw.versesync.concert.ConcertScreenInstrumentedTest --console=plain
 
       - name: Upload reports
         if: failure()

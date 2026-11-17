@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -22,8 +23,13 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dev.sriramcodessw.versesync.billing.BillingViewModel
+import dev.sriramcodessw.versesync.concert.DeleteSetlistDialog
+import dev.sriramcodessw.versesync.concert.NewSetlistDialog
+import dev.sriramcodessw.versesync.concert.SetlistsTabContent
+import dev.sriramcodessw.versesync.concert.SetlistsViewModel
 import dev.sriramcodessw.versesync.data.Folder
 import dev.sriramcodessw.versesync.data.OnboardingViewModel
+import dev.sriramcodessw.versesync.data.Setlist
 import dev.sriramcodessw.versesync.data.Song
 import dev.sriramcodessw.versesync.data.TrialViewModel
 import dev.sriramcodessw.versesync.ui.components.*
@@ -43,7 +49,14 @@ fun MainScreen(
     onboardingViewModel: OnboardingViewModel,
     billingViewModel: BillingViewModel,
     trialViewModel: TrialViewModel,
+    setlistsViewModel: SetlistsViewModel,
+    onOpenSetlist: (Int) -> Unit,
+    onStartConcert: (Int) -> Unit,
 ) {
+    var showNewSetlistDialog by rememberSaveable { mutableStateOf(false) }
+    var setlistToDelete by remember { mutableStateOf<Setlist?>(null) }
+    val setlists by setlistsViewModel.setlists.collectAsState()
+    val resume by setlistsViewModel.resume.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
     val selectedSongs = remember { mutableStateListOf<Song>() }
@@ -53,7 +66,7 @@ fun MainScreen(
     var folderToDelete by remember { mutableStateOf<Folder?>(null) }
     var showMoveToFolderDialog by remember { mutableStateOf(false) }
 
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     val searchQuery by verseViewModel.searchQuery.collectAsState()
     val sortOrder by verseViewModel.sortOrder.collectAsState()
@@ -289,7 +302,7 @@ fun MainScreen(
                     },
                 )
 
-                if (!isSelectionMode) {
+                if (!isSelectionMode && selectedTab != 2) {
                     SearchBar(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                         inputField = {
@@ -315,6 +328,9 @@ fun MainScreen(
                     Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
                         Text("Folders", modifier = Modifier.padding(16.dp))
                     }
+                    Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                        Text("Setlists", modifier = Modifier.padding(16.dp))
+                    }
                 }
             }
         },
@@ -322,7 +338,10 @@ fun MainScreen(
             if (!isSelectionMode) {
                 FloatingActionButton(
                     onClick = {
-                        if (selectedTab == 0) {
+                        if (selectedTab == 2) {
+                            // Concert mode is free: a new setlist never checks Pro status or uses a trial.
+                            showNewSetlistDialog = true
+                        } else if (selectedTab == 0) {
                             if (isPro || songs.size < 10) {
                                 onNavigateToAddSong()
                             } else if (remainingTrials > 0) {
@@ -347,8 +366,13 @@ fun MainScreen(
                         },
                 ) {
                     Icon(
-                        imageVector = if (selectedTab == 0) Icons.Default.Add else Icons.Default.CreateNewFolder,
-                        contentDescription = if (selectedTab == 0) "Add Song" else "Add Folder",
+                        imageVector = if (selectedTab == 1) Icons.Default.CreateNewFolder else Icons.Default.Add,
+                        contentDescription =
+                            when (selectedTab) {
+                                0 -> "Add Song"
+                                1 -> "Add Folder"
+                                else -> "New setlist"
+                            },
                     )
                 }
             }
@@ -374,10 +398,39 @@ fun MainScreen(
                         selectedSongs.add(it)
                     },
                 )
-            } else {
+            } else if (selectedTab == 1) {
                 FolderListContent(
                     folders = folders,
                     onDelete = { folderToDelete = it },
+                )
+            } else {
+                SetlistsTabContent(
+                    setlists = setlists,
+                    resume = resume,
+                    onResume = onStartConcert,
+                    onOpen = onOpenSetlist,
+                    onStart = onStartConcert,
+                    onDelete = { setlistToDelete = it },
+                )
+            }
+
+            if (showNewSetlistDialog) {
+                NewSetlistDialog(
+                    onCreate = { name ->
+                        showNewSetlistDialog = false
+                        setlistsViewModel.create(name) { id -> onOpenSetlist(id) }
+                    },
+                    onDismiss = { showNewSetlistDialog = false },
+                )
+            }
+            setlistToDelete?.let { setlist ->
+                DeleteSetlistDialog(
+                    setlist = setlist,
+                    onConfirm = {
+                        setlistsViewModel.delete(setlist.id)
+                        setlistToDelete = null
+                    },
+                    onDismiss = { setlistToDelete = null },
                 )
             }
 

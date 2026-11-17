@@ -36,6 +36,12 @@ import dev.sriramcodessw.versesync.billing.BillingViewModel
 import dev.sriramcodessw.versesync.billing.BillingViewModelFactory
 import dev.sriramcodessw.versesync.bluetooth.BluetoothViewModel
 import dev.sriramcodessw.versesync.bluetooth.BluetoothViewModelFactory
+import dev.sriramcodessw.versesync.concert.ConcertScreen
+import dev.sriramcodessw.versesync.concert.ConcertViewModel
+import dev.sriramcodessw.versesync.concert.ConcertViewModelFactory
+import dev.sriramcodessw.versesync.concert.SetlistEditorScreen
+import dev.sriramcodessw.versesync.concert.SetlistsViewModel
+import dev.sriramcodessw.versesync.concert.SetlistsViewModelFactory
 import dev.sriramcodessw.versesync.data.*
 import dev.sriramcodessw.versesync.engine.HybridRecognitionViewModel
 import dev.sriramcodessw.versesync.engine.HybridRecognitionViewModelFactory
@@ -60,6 +66,8 @@ object AppRoutes {
     const val LANGUAGE_SELECTION = "language_selection"
     const val SETTINGS = "settings"
     const val SYNC_HEALTH = "sync_health"
+    const val SETLIST_EDITOR = "setlist/{setlistId}"
+    const val CONCERT = "concert/{setlistId}"
 }
 
 class MainActivity : AppCompatActivity() {
@@ -194,6 +202,8 @@ fun VerseSyncNavHost(
     val trialViewModel: TrialViewModel = viewModel(factory = TrialViewModelFactory(application))
     val onboardingViewModel: OnboardingViewModel = viewModel(factory = OnboardingViewModelFactory(application))
     val generalViewModel: GeneralViewModel = viewModel(factory = GeneralViewModelFactory(application))
+    val setlistsViewModel: SetlistsViewModel =
+        viewModel(factory = SetlistsViewModelFactory(application, application.database.setlistDao()))
 
     val bluetoothViewModel: BluetoothViewModel? =
         bluetoothAdapter?.let {
@@ -298,7 +308,46 @@ fun VerseSyncNavHost(
                 onboardingViewModel = onboardingViewModel,
                 billingViewModel = billingViewModel,
                 trialViewModel = trialViewModel,
+                setlistsViewModel = setlistsViewModel,
+                onOpenSetlist = { id -> navController.navigate("setlist/$id") { launchSingleTop = true } },
+                onStartConcert = { id -> navController.navigate("concert/$id") { launchSingleTop = true } },
             )
+        }
+        composable(
+            route = AppRoutes.SETLIST_EDITOR,
+            arguments = listOf(navArgument("setlistId") { type = NavType.IntType }),
+        ) { backStackEntry ->
+            val setlistId = backStackEntry.arguments?.getInt("setlistId") ?: 0
+            val setlists by setlistsViewModel.setlists.collectAsState()
+            val entriesFlow = remember(setlistId) { setlistsViewModel.entries(setlistId) }
+            val entries by entriesFlow.collectAsState(initial = emptyList())
+            val setlistName = setlists.firstOrNull { it.id == setlistId }?.name.orEmpty()
+            SetlistEditorScreen(
+                name = setlistName,
+                entries = entries,
+                library = songs,
+                onAddSong = { songId -> setlistsViewModel.addSong(setlistId, songId) },
+                onStart = { navController.navigate("concert/$setlistId") { launchSingleTop = true } },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = AppRoutes.CONCERT,
+            arguments = listOf(navArgument("setlistId") { type = NavType.IntType }),
+        ) { backStackEntry ->
+            val setlistId = backStackEntry.arguments?.getInt("setlistId") ?: 0
+            val concertViewModel: ConcertViewModel =
+                viewModel(
+                    key = "concert-$setlistId",
+                    factory =
+                        ConcertViewModelFactory(
+                            application,
+                            setlistId,
+                            application.database.setlistDao(),
+                            application.database.songDao(),
+                        ),
+                )
+            ConcertScreen(viewModel = concertViewModel, onLeave = { if (navController.currentBackStackEntry == backStackEntry) navController.popBackStack() })
         }
         composable(AppRoutes.SETTINGS) {
             SettingsScreen(
