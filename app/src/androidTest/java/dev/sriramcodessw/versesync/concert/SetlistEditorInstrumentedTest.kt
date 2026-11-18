@@ -51,6 +51,7 @@ class SetlistEditorInstrumentedTest {
     private lateinit var prefsFile: File
     private lateinit var viewModel: SetlistsViewModel
     private var listId = 0
+    private var newSongRequests = 0
 
     @Before
     fun setUp() {
@@ -76,6 +77,7 @@ class SetlistEditorInstrumentedTest {
                 library = emptyList(),
                 removed = viewModel.removed,
                 onAddSong = {},
+                onNewSong = { newSongRequests++ },
                 onMove = { entryId, by -> viewModel.move(listId, entryId, by) },
                 onRemove = { row, index -> viewModel.remove(row, index) },
                 onUndo = { viewModel.undoRemove(it) },
@@ -183,4 +185,17 @@ class SetlistEditorInstrumentedTest {
                     .first { it.id == id }
             assertEquals("Setlist", made.name)
         }
+
+    @Test
+    fun theSongPickerOffersANewSong_whichLeavesThePickerAndAsksForTheNewSongScreen() {
+        waitForText("1. First")
+
+        compose.onNodeWithContentDescription("Add a song to the setlist").performClick()
+        waitForText("Add songs")
+        compose.onNodeWithText("New song").performClick()
+
+        compose.waitUntil(5_000) { newSongRequests == 1 }
+        compose.onNodeWithText("Add songs").assertDoesNotExist()
+        assertEquals(1, newSongRequests)
+    }
 }

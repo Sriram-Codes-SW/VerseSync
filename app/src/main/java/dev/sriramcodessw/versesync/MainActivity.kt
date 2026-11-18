@@ -58,6 +58,7 @@ import dev.sriramcodessw.versesync.ui.viewmodels.VerseViewModelFactory
 object AppRoutes {
     const val MAIN_SCREEN = "main"
     const val ADD_SONG_SCREEN = "add_song"
+    const val ADD_SONG_TO_SETLIST = "add_song_to_setlist/{setlistId}"
     const val SONG_DETAIL_SCREEN = "song_detail/{songId}"
     const val LYRIC_SYNC_SCREEN = "lyric_sync/{songId}"
     const val TIP_JAR_SCREEN = "tip_jar"
@@ -364,6 +365,7 @@ fun VerseSyncNavHost(
                 library = songs,
                 removed = setlistsViewModel.removed,
                 onAddSong = { songId -> setlistsViewModel.addSong(setlistId, songId) },
+                onNewSong = { navController.navigate("add_song_to_setlist/$setlistId") { launchSingleTop = true } },
                 onMove = { entryId, by -> setlistsViewModel.move(setlistId, entryId, by) },
                 onRemove = { row, index -> setlistsViewModel.remove(row, index) },
                 onUndo = { gone -> setlistsViewModel.undoRemove(gone) },
@@ -427,6 +429,22 @@ fun VerseSyncNavHost(
                 onBack = { navController.popBackStack() },
                 onSave = { title, artist, lyrics, language ->
                     verseViewModel.addSong(title, artist, lyrics, language)
+                    navController.popBackStack()
+                },
+                languageViewModel = languageViewModel,
+            )
+        }
+        // A new song for a setlist: saved into the library and at the end of that setlist together, in one transaction. It checks
+        // no limit and no trial: concert use is free (ADR-20, decision 3), and a song in a setlist does not count.
+        composable(
+            route = AppRoutes.ADD_SONG_TO_SETLIST,
+            arguments = listOf(navArgument("setlistId") { type = NavType.IntType }),
+        ) { backStackEntry ->
+            val setlistId = backStackEntry.arguments?.getInt("setlistId") ?: 0
+            AddSongScreen(
+                onBack = { navController.popBackStack() },
+                onSave = { title, artist, lyrics, language ->
+                    setlistsViewModel.addNewSong(setlistId, title, artist, lyrics, language)
                     navController.popBackStack()
                 },
                 languageViewModel = languageViewModel,

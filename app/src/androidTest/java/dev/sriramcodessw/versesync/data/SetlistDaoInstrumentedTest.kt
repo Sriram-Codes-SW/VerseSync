@@ -426,4 +426,44 @@ class SetlistDaoInstrumentedTest {
 
             assertEquals(1, loose())
         }
+
+    @Test
+    fun aNewSongIsAddedToTheLibraryAndTheEndOfTheSetlistTogether_andIsNotLoose() =
+        runBlocking {
+            val a = addSong("A")
+            val list = newSetlist()
+            setlists.appendSong(list, a)
+
+            val entryId = setlists.addNewSongToSetlist(list, Song(id = 77, title = "New", artist = "N", lyrics = "new words"))
+
+            assertEquals(listOf("A", "New"), titles(list))
+            assertEquals(entryId, setlists.getEntries(list).last().id)
+            assertEquals(0, loose()) // both songs are in the setlist
+            // The id it came with is ignored: no other song was touched or replaced.
+            assertEquals(
+                listOf("A", "New"),
+                songs
+                    .getAllSongs()
+                    .first()
+                    .map { it.title }
+                    .sorted(),
+            )
+        }
+
+    @Test
+    fun ifTheSetlistDoesNotExist_neitherTheSongNorTheEntryIsWritten() =
+        runBlocking {
+            addSong("A")
+            val before = songs.getAllSongs().first().size
+
+            try {
+                setlists.addNewSongToSetlist(9999, Song(title = "Lost", artist = "N", lyrics = "words"))
+                org.junit.Assert.fail("a missing setlist must fail")
+            } catch (expected: SQLiteConstraintException) {
+                // the foreign key refused the entry, so the whole transaction must be undone
+            }
+
+            assertEquals(before, songs.getAllSongs().first().size)
+            assertEquals(before, loose()) // no stray song outside every setlist
+        }
 }
