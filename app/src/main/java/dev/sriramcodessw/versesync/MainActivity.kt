@@ -71,6 +71,17 @@ object AppRoutes {
     const val FOLDER = "folder/{folderId}"
 }
 
+/**
+ * The first screen, or null while the saved "first-run setup is done" value has not been read yet. Taking "not read yet" for
+ * "first run" showed the first-run screen, and its location prompt, on every cold start (issue #79).
+ */
+internal fun startRouteFor(isSetupComplete: Boolean?): String? =
+    when (isSetupComplete) {
+        null -> null
+        true -> AppRoutes.MAIN_SCREEN
+        false -> AppRoutes.LANGUAGE_SELECTION
+    }
+
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -276,7 +287,13 @@ fun VerseSyncNavHost(
             }
         }
 
-    val startDestination = if (isSetupComplete) AppRoutes.MAIN_SCREEN else AppRoutes.LANGUAGE_SELECTION
+    // Decided once, when the saved value arrives, and then kept: finishing first-run setup later must not rebuild the graph.
+    val startDestination = remember(isSetupComplete == null) { startRouteFor(isSetupComplete) }
+    if (startDestination == null) {
+        // Nothing is shown, and no first-run effect runs, until the saved setup state is known (a few milliseconds).
+        Box(Modifier.fillMaxSize())
+        return
+    }
 
     NavHost(
         navController = navController,

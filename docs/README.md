@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.55 |
+| Version | 0.56 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -82,3 +82,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.53 | 2026-11-18 | Claude Code | Gate A of the larger speech model work (docs/09 section 17) failed, so stage 2 stops: with 10 second windows the base model decided right on 5 of 13 non-English recordings with no wrong decision, but decided on a song for 1 of 10 negative clips (English speech matched to an English anthem); the 30 second control arm did worse (3 of 13) and had the same false decision. A control outside the gate found the shipped Vosk path decides on a song for 3 of 9 of the same clips, so the false accept is a property of the matching rule. TC-U-60. Negative set thinner than planned (one applause clip). No native build, recognizer or download started. |
 | 0.54 | 2026-11-18 | Claude Code | Plan fixed before any run (docs/09 section 18, issue #90): ADR-18's decision rule exactly as written, beside the two rules the app runs, replayed on the first real recordings (22 sung anthems and 10 clips that are not songs) with the shipped Vosk text and the Whisper window text, both kinds of evidence, counts per recording, nothing chosen or tuned and no app change. Issue #90 corrected: the permissiveness was already documented (docs/09 sections 8 to 12, ADR-18) and the harness "decision" is not an action in the app. `AdrRuleCheckRun` committed with the plan. |
 | 0.55 | 2026-11-18 | Claude Code | Result of replaying ADR-18's decision rule on the first real recordings (docs/09 section 18, issue #90): it decided on a song for 0 of 9 non-song clips with the shipped recognizer's text and 0 of 15 with Whisper's, where the current rules did for 1 to 2; it named the right song for 0 of 17 sung anthems with the shipped text and 2 of 17 with Whisper's (current lock words rule 5), a wrong song for none. A 15-song library, files, no condition of ADR-18 met. ADR-18 amended with the evidence; status and the app unchanged. |
+| 0.56 | 2026-11-18 | Claude Code | The location prompt no longer appears on every cold start (issue #79): the app waits for its saved first-run setup state instead of taking "not read yet" for "first run", so the first-run screen and its location request are not built for a person who finished setup. TC-U-61. Reproduced on an Android 16 emulator with the previous build and checked with the fix on two cold starts; not run on a phone. Whether the first-run screen should ask for location at all is still the owner's decision in #18. |

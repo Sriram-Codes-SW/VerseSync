@@ -43,9 +43,10 @@ class LanguageViewModel(
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     private var locationCancellationTokenSource = CancellationTokenSource()
 
-    val isSetupComplete: StateFlow<Boolean> =
+    // Null until the saved value has been read, so that the app does not take "not read yet" for "first run" (issue #79).
+    val isSetupComplete: StateFlow<Boolean?> =
         prefs.isSetupComplete
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val installedLanguages: StateFlow<Set<String>> =
         prefs.installedLanguages
