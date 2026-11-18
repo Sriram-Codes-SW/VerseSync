@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.51 |
+| Version | 0.52 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -78,3 +78,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.49 | 2026-11-18 | Claude Code | Plan fixed before any run for stage 1 of the larger speech model spike (docs/09 section 16, issue #50), after a second-opinion review: whisper.cpp (pinned release, checksums) with four quantised Whisper models on the same 22 recordings and the unchanged replay, settings and conversion fixed, the stage 2 trigger written down, known biases listed. Converter and word counts are committed with TC-U-58. Accuracy on a PC only, no speed or battery claim. |
 | 0.50 | 2026-11-18 | Claude Code | Result of stage 1 of the larger speech model spike (docs/09 section 16, #50): on the same 22 recordings the speech rule decided on the right song for 6, 7, 7 and 7 of 17 with four Whisper models against 2 of 17 with Vosk small, with no wrong-song decision; base and small (57 and 181 MiB) each reach the trigger of 5 of 13 non-English recordings exactly, and the 547 MiB control does not do better. Runner faults corrected and disclosed (stderr handling, the English language code). A PC, files, anthems: no phone, speed-on-device or singer claim. Stage 2 proposed by the fixed rule, not started. |
 | 0.51 | 2026-11-18 | Claude Code | Plan fixed before any live measurement for stage 2 of the larger speech model work (docs/09 section 17, #50), after a second-opinion review: base model only, 10 second windows every 5 seconds, one decode at a time, silence and loop filters, replacing Vosk when on; gate A (PC simulation, with a new negative set and false accepts per session-minute) blocks everything, gate B on the emulator, gate C on a phone; debug-only and off by default until C; a PC and an emulator cannot show phone speed or battery. Order of six small pull requests written down. |
+| 0.52 | 2026-11-18 | Claude Code | Step 1 of the stage 2 plan (docs/09 section 17): the engine depends on a small `SpeechRecognizer` interface instead of the Vosk class, with no change of behaviour; Vosk implements it. TC-U-59 runs the engine with a recognizer written by hand. |
