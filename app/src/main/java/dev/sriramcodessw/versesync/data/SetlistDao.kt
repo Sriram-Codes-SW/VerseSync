@@ -37,6 +37,24 @@ abstract class SetlistDao {
     @Insert
     protected abstract suspend fun insertEntry(entry: SetlistEntry): Long
 
+    /** Adds a new row to the library. Pass id 0. Not `REPLACE`: it never overwrites a song, so it cannot delete setlist entries. */
+    @Insert
+    protected abstract suspend fun insertNewSong(song: Song): Long
+
+    /**
+     * Adds a NEW song to the library and puts it at the end of [setlistId], in one transaction: either both happen or neither,
+     * so a failure cannot leave a song outside every setlist behind (it would count towards the free limit, ADR-20). Returns the
+     * new entry's id. The song's own id is ignored and a new one is made.
+     */
+    @Transaction
+    open suspend fun addNewSongToSetlist(
+        setlistId: Int,
+        song: Song,
+    ): Int {
+        val songId = insertNewSong(song.copy(id = 0)).toInt()
+        return appendSong(setlistId, songId)
+    }
+
     @Query("SELECT MAX(position) FROM setlist_entries WHERE setlistId = :setlistId")
     protected abstract suspend fun maxPosition(setlistId: Int): Int?
 

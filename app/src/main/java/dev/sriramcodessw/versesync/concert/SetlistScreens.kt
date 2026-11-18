@@ -205,6 +205,7 @@ fun SetlistEditorScreen(
     library: List<Song>,
     removed: Flow<RemovedEntry>,
     onAddSong: (Int) -> Unit,
+    onNewSong: () -> Unit,
     onMove: (entryId: Int, by: Int) -> Unit,
     onRemove: (row: SetlistEntryWithSong, index: Int) -> Unit,
     onUndo: (RemovedEntry) -> Unit,
@@ -355,6 +356,14 @@ fun SetlistEditorScreen(
                 }
             },
             confirmButton = { TextButton(onClick = { showPicker = false }) { Text("Done") } },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showPicker = false
+                        onNewSong()
+                    },
+                ) { Text("New song") }
+            },
         )
     }
 }

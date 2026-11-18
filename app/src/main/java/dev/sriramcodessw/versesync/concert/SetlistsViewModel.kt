@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import dev.sriramcodessw.versesync.data.Setlist
 import dev.sriramcodessw.versesync.data.SetlistDao
 import dev.sriramcodessw.versesync.data.SetlistEntryWithSong
+import dev.sriramcodessw.versesync.data.Song
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -91,6 +92,17 @@ class SetlistsViewModel(
         songId: Int,
     ) {
         viewModelScope.launch { dao.appendSong(setlistId, songId) }
+    }
+
+    /** Adds a NEW song to the library and to the end of the setlist together, in one transaction (ADR-20). */
+    fun addNewSong(
+        setlistId: Int,
+        title: String,
+        artist: String,
+        lyrics: String,
+        language: String,
+    ) {
+        viewModelScope.launch { dao.addNewSongToSetlist(setlistId, Song(title = title, artist = artist, lyrics = lyrics, language = language)) }
     }
 
     /** Moves an entry one place earlier ([by] -1) or later (1). It stops at the ends. */
