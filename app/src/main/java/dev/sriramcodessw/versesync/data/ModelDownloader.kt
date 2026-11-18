@@ -29,6 +29,25 @@ internal fun resolveInside(
     return if (dest.path == root.path || dest.path.startsWith(root.path + File.separator)) dest else null
 }
 
+private const val MODEL_DESCRIPTION_PREFIX = "VerseSyncModel:"
+private val LANGUAGE_CODE = Regex("[A-Za-z0-9_-]{1,16}")
+
+/**
+ * The languages whose downloaded archive still has to be unpacked, from the descriptions of the downloads the download
+ * manager reports as finished. A finished download whose archive has been unpacked has no archive left, because unpacking
+ * deletes it, so an archive that [archiveExists] is the work that is waiting. A description that is not ours, or whose code
+ * is not a plain language code, is ignored. Used when the app starts (issue #36).
+ */
+internal fun languagesWaitingToUnpack(
+    finishedDescriptions: List<String?>,
+    archiveExists: (String) -> Boolean,
+): List<String> =
+    finishedDescriptions
+        .mapNotNull { it?.takeIf { d -> d.startsWith(MODEL_DESCRIPTION_PREFIX) }?.substringAfter(MODEL_DESCRIPTION_PREFIX) }
+        .filter { LANGUAGE_CODE.matches(it) }
+        .distinct()
+        .filter(archiveExists)
+
 class ModelDownloader(
     private val context: Context,
 ) {
@@ -62,6 +81,31 @@ class ModelDownloader(
         lang: String,
         progress: Int,
     ) = ModelDownloadStatus.update(lang, progress)
+
+    /**
+     * Unpacks models whose download finished while the app was not running: the completion broadcast is received only while
+     * the app is open, so without this the archive would stay in the downloads folder and the language would never show as
+     * installed (issue #36). Asks the download manager for finished downloads of ours and queues the unpack job for each
+     * archive that is still there. The job is unique per language and safe to run twice. Call it off the main thread.
+     */
+    fun resumeFinishedDownloads() {
+        try {
+            val descriptions = mutableListOf<String?>()
+            downloadManager.query(DownloadManager.Query().setFilterByStatus(DownloadManager.STATUS_SUCCESSFUL))?.use { cursor ->
+                val descIndex = cursor.getColumnIndex(DownloadManager.COLUMN_DESCRIPTION)
+                if (descIndex == -1) return
+                while (cursor.moveToNext()) descriptions += cursor.getString(descIndex)
+            }
+            val downloads = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            for (lang in languagesWaitingToUnpack(descriptions) { File(downloads, "model-$it.zip").exists() }) {
+                Log.d("ModelDownloader", "Resuming the unpacking of $lang, downloaded while the app was closed")
+                updateStatus(lang, 0)
+                ModelUnpackWorker.enqueue(context, lang)
+            }
+        } catch (e: Exception) {
+            Log.e("ModelDownloader", "Could not look for finished downloads", e)
+        }
+    }
 
     val onDownloadComplete =
         object : BroadcastReceiver() {

@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -100,6 +101,8 @@ class LanguageViewModel(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        // A model whose download finished while the app was closed has not been unpacked yet (issue #36).
+        viewModelScope.launch(Dispatchers.IO) { downloader.resumeFinishedDownloads() }
         viewModelScope.launch {
             downloadStatus.collect { statusMap ->
                 statusMap.forEach { (lang, progress) ->
