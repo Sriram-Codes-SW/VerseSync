@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.18 |
+| Version | 0.19 |
 | Date | 2026-11-18 |
 | Author | Claude Code |
 | Status | Active |
@@ -570,3 +570,27 @@ Why: ADR-18 (Proposed) lists as its first condition that the stricter decision r
 **Known limits, written now.** The library has 15 songs, which is where ADR-18 itself says the rule starts to behave differently (below about 15 songs a target with no rival and 4 found words always passes the gap test). The recordings are anthems, files, not people singing into a phone; the transcripts are whole-file captures, not a live recognizer's partial results (except corpus 3, which is windowed text); one applause clip is the only crowd noise; the library contains an English anthem of ordinary words, which makes English speech the hardest negative. Libraries of 1, 5, 20 and 200 songs (ADR-18 condition 2), real phones and children's or accented speech (condition 3) are not touched.
 
 **Not claimed.** That ADR-18's conditions are met, that the rule would stop ordinary speech from opening the vocal lock or the voice shortcut (they need a target song and the per-target rate was never measured on these recordings), or anything about singing into a phone.
+
+### Result of the run
+
+Run once on 2026-11-18, after the plan and `AdrRuleCheckRun` were merged; nothing was chosen or changed. Library of 15 songs, so ADR-18's gap is `ln(16)` = 2.77, at the edge of ADR-18's own caveat about small libraries. The result is the same for both kinds of evidence (sticky and retractable) in every row.
+
+| Corpus (what text) | Rule | Right song, of songs in the library | Wrong song | Decides on a song not in the library |
+|---|---|---|---|---|
+| 22 anthems (shipped Vosk text) | ADR-18 | 0 of 17 | 0 of 17 | 0 of 5 |
+| | current lock words rule | 0 of 17 | 0 of 17 | 0 of 5 |
+| | current speech rule | 2 of 17 (both English) | 0 of 17 | 0 of 5 |
+| 9 clips that are not songs (shipped Vosk text) | ADR-18 | | | **0 of 9** (upper end 30%) |
+| | current lock words rule | | | 1 of 9 |
+| | current speech rule | | | 2 of 9 |
+| 22 anthems and 10 clips that are not songs (Whisper base, 10 s windows) | ADR-18 | 2 of 17 (English studio, Dutch choir) | 0 of 17 | **0 of 15** (upper end 20%) |
+| | current lock words rule | 5 of 17 | 0 of 17 | 1 of 15 |
+| | current speech rule | 7 of 17 | 0 of 17 | 1 of 15 |
+
+The decisions on clips that are not songs are all the same one: the English speech recording of section 17 and the English anthem (both current rules; with Vosk the current speech rule also did it on a second speech clip). The per-recording lists are in the report files and show no other.
+
+What it shows:
+- **ADR-18's rule decided on no clip that is not a song**, with either recognizer's text, where both rules the app runs today did, once or twice. With 9 and 15 clips the upper ends are 30% and 20%, so this shows the direction and not a rate. No rule named a wrong song for a recording in the library.
+- **The vocal lock's words path barely hears these sung anthems, with any rule.** With the shipped recognizer no rule but the current speech rule named the right song for any of the 17, and that rule did so only for the two English recordings. So on this sample ADR-18's price (fewer right opens: 70% against 85% on read speech) cannot be seen on singing; there is almost nothing to lose, and little to gain, because the recognizer hears so few words.
+- **With a stronger recognizer the price is visible.** On Whisper's text the ADR-18 rule named the right song for 2 of 17 against 5 of 17 for the current lock words rule, because it asks for 4 different words and a share of 0.8, which text of sung anthems rarely gives.
+- The anthems are probably in the training data of Whisper, they are files, and the library is 15 songs. None of ADR-18's conditions is met by this: it has 17 recordings of songs in the library against about 300 needed, no libraries of other sizes, no phone, no children or accents.

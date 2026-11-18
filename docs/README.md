@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.54 |
+| Version | 0.55 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,13 +14,13 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.41 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.42 | Active |
 | [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.41 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
 | [docs/RELEASING.md](RELEASING.md) | Release checklist, signing and the GPL-3.0 source offer | 0.1 | Active |
 | [docs/08-quality-roadmap.md](08-quality-roadmap.md) | Recognition Quality Roadmap: where it stands and what to build next | 0.12 | Proposed |
-| [docs/09-evaluation-harness.md](09-evaluation-harness.md) | Evaluation Harness: replay recordings, measure accuracy and false accepts, recording protocol | 0.18 | Active |
+| [docs/09-evaluation-harness.md](09-evaluation-harness.md) | Evaluation Harness: replay recordings, measure accuracy and false accepts, recording protocol | 0.19 | Active |
 | [docs/10-voice-shortcut-threat-model.md](10-voice-shortcut-threat-model.md) | Voice Shortcut Threat Model: what it protects, what it does not, what is measured | 0.2 | Active |
 
 ## Revision History
@@ -81,3 +81,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.52 | 2026-11-18 | Claude Code | Step 1 of the stage 2 plan (docs/09 section 17): the engine depends on a small `SpeechRecognizer` interface instead of the Vosk class, with no change of behaviour; Vosk implements it. TC-U-59 runs the engine with a recognizer written by hand. |
 | 0.53 | 2026-11-18 | Claude Code | Gate A of the larger speech model work (docs/09 section 17) failed, so stage 2 stops: with 10 second windows the base model decided right on 5 of 13 non-English recordings with no wrong decision, but decided on a song for 1 of 10 negative clips (English speech matched to an English anthem); the 30 second control arm did worse (3 of 13) and had the same false decision. A control outside the gate found the shipped Vosk path decides on a song for 3 of 9 of the same clips, so the false accept is a property of the matching rule. TC-U-60. Negative set thinner than planned (one applause clip). No native build, recognizer or download started. |
 | 0.54 | 2026-11-18 | Claude Code | Plan fixed before any run (docs/09 section 18, issue #90): ADR-18's decision rule exactly as written, beside the two rules the app runs, replayed on the first real recordings (22 sung anthems and 10 clips that are not songs) with the shipped Vosk text and the Whisper window text, both kinds of evidence, counts per recording, nothing chosen or tuned and no app change. Issue #90 corrected: the permissiveness was already documented (docs/09 sections 8 to 12, ADR-18) and the harness "decision" is not an action in the app. `AdrRuleCheckRun` committed with the plan. |
+| 0.55 | 2026-11-18 | Claude Code | Result of replaying ADR-18's decision rule on the first real recordings (docs/09 section 18, issue #90): it decided on a song for 0 of 9 non-song clips with the shipped recognizer's text and 0 of 15 with Whisper's, where the current rules did for 1 to 2; it named the right song for 0 of 17 sung anthems with the shipped text and 2 of 17 with Whisper's (current lock words rule 5), a wrong song for none. A 15-song library, files, no condition of ADR-18 met. ADR-18 amended with the evidence; status and the app unchanged. |

@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Design & Architecture Decision Records |
-| Version | 0.41 |
+| Version | 0.42 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -374,6 +374,7 @@ VerseSync is an offline-first Android application designed for musicians, worshi
   4. The rule is moved into the main sources with tests, one way of gathering evidence is chosen and measured, `VocalLockPolicy` uses it, and ADR-10 is amended.
   5. The owner approves the change in what the lock asks of a person.
 
+* **Amendment (2026-11-18, issue #90): first real recordings.** The rule above, exactly as written and with a library of 15 songs, was replayed on 22 recordings of sung anthems and on clips that are not songs (4 instrumental, 4 of a person speaking English, 1 of applause), with the text of the shipped recognizer and of a Whisper model (docs/09, section 18). It decided on a song for none of the 9 clips that are not songs with the shipped text (upper end 30%) and none of the 15 with Whisper's text (upper end 20%), where the two rules the app runs today each decided on the English anthem for a recording of someone speaking English. It named the right song for 0 of 17 sung anthems with the shipped text (the current lock words rule also 0) and for 2 of 17 with Whisper's text (the current lock words rule 5), and a wrong song for none. This is far short of condition 1 (17 recordings in the library against about 300 needed, one library size, files and not a phone) and none of the conditions is met. It does not change the status of this ADR.
 ### ADR-19: Landmark Fingerprints for Recorded Music, Offline
 
 * **Status:** Proposed, and narrowed. This covers recorded playback near the phone (a backing track, a lip-synced number, music playing in a room), and it is NOT the concert path: a live band is a different performance, which this method is not expected to match. Only the matcher and its generated test set (phase 1), including a test of how far a re-performance can drift, are being built, and later phases are parked. This ADR does not authorize storing prints, a screen to learn songs, a catalog, or any change to what the app recognizes.
