@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.14 |
+| Version | 0.15 |
 | Date | 2026-11-18 |
 | Author | Claude Code |
 | Status | Active |
@@ -444,3 +444,51 @@ The last one is a **control**, not a candidate: at about 550 MiB it is too large
 - Anthems are probably in the training data of these models, so a model may recall them. That makes the result an upper bound for ordinary songs, and it cannot show that a song nobody has written down would be heard.
 
 **Not claimed.** Anything about speed, battery or size on a phone; anything about a person singing, a band or a room; that a language is supported; or a decision about shipping a model. This is a count over one or two recordings per language, on files, on a PC.
+
+### Result of stage 1
+
+Run on 2026-11-18 on the development PC, as planned in this section: all 22 recordings and all 4 models, none dropped, with the unchanged replay. Three things went wrong in the runner and were corrected, none of them a recognition setting: (1) the runner stopped on the program's progress text under Windows PowerShell 5.1 and wrote nothing, so the first start produced no result; (2) the plan's language table passed the app's code `en-us` to Whisper, which only knows `en`, so both English recordings failed for every model until the table mapped it and only the missing files were run again (a language-code translation, the same as `cn` to `zh`); (3) the runner gained `-SkipExisting` to do that. No recording was run twice with different settings.
+
+**Speech rule, over the 17 recordings of songs in the library and the 5 that are not.**
+
+| | Vosk small (section 15) | tiny q5_1 (31 MiB) | base q5_1 (57 MiB) | small q5_1 (181 MiB) | large-v3-turbo q5_0 (547 MiB, control) |
+|---|---|---|---|---|---|
+| Decides on the right song | 2 of 17 | 6 of 17 | 7 of 17 | 7 of 17 | 7 of 17 |
+| Decides on a wrong song | 0 | 0 | 0 | 0 | 0 |
+| Decides on a song for the 5 not in the library | 0 | 1 (a Bengali recording) | 0 | 0 | 0 |
+| Of the 13 non-English recordings that count for the trigger, decided right | 0 | 4 | **5** | **5** | 5 |
+
+Which ones: English twice for every model. German and Spanish for every model. Polish for base, small and turbo; Swedish for tiny, base and turbo; Dutch for one of its two recordings for tiny, base and small and for neither with turbo; Italian for small only; Japanese for turbo only. Nobody decided on Chinese, Korean, Portuguese, Turkish or Ukrainian. Greek and Tamil (no Vosk baseline, not counted for the trigger) were never decided.
+
+**Distinct words heard, and how many of them are words of the stored lyrics** (a count over the whole recording; `*` means a loop is flagged, which a repeated chorus also does; `-` no Vosk model):
+
+| Recording | Vosk | tiny | base | small | turbo |
+|---|---|---|---|---|---|
+| English, studio | 35 / 11 | 48 / 9 | 52 / 14 | 55 / 14 | 53 / 13 |
+| English, live | 42 / 11 | 53 / 15 | 54 / 15 | 53 / 14 | 53 / 14 |
+| German | 34 / 4 | 27 / 6 * | 68 / 9 * | 73 / 32 | 63 / 33 * |
+| Spanish | 3 / 1 | 40 / 10 * | 48 / 12 * | 54 / 18 * | 51 / 24 * |
+| Polish | 15 / 3 | 40 / 3 | 40 / 9 | 40 / 13 * | 37 / 17 * |
+| Swedish, 1938 | 3 / 0 | 14 / 3 * | 22 / 7 * | 36 / 2 * | 39 / 7 * |
+| Dutch, choir | 2 / 0 | 19 / 9 * | 15 / 6 * | 31 / 15 | 2 / 1 |
+| Dutch, 1899 | 1 / 0 | 6 / 1 | 3 / 1 | 3 / 1 | 4 / 1 |
+| Italian | 0 / 0 | 32 / 1 | 37 / 2 * | 43 / 6 * | 11 / 2 |
+| Japanese, 1930 | 6 / 0 | 27 / 0 | 17 / 0 * | 18 / 1 | 25 / 4 |
+| Turkish | 0 / 0 | 4 / 0 | 5 / 0 | 24 / 2 | 5 / 0 |
+| Portuguese | 1 / 1 | 1 / 0 | 1 / 0 | 3 / 0 | 6 / 1 |
+| Ukrainian | 5 / 0 | 24 / 0 * | 11 / 0 * | 63 / 0 | 8 / 0 * |
+| Chinese | 0 / 0 | 7 / 0 * | 1 / 0 | 2 / 0 | 28 / 0 |
+| Korean, live | 12 / 0 | 1 / 0 | 1 / 0 | 2 / 0 | 5 / 0 |
+| Greek | - | 5 / 0 * | 13 / 1 * | 10 / 1 * | 2 / 0 |
+| Tamil | - | 34 / 0 * | 47 / 1 * | 47 / 3 * | 46 / 2 * |
+
+On the 5 songs not in the library the models wrote 496 (tiny), 402 (base), 260 (small) and 396 (turbo) words in total, and the speech rule decided on a song once, with tiny. Loops were flagged in 11, 13, 7 and 10 of the 22 recordings; they were not looked into.
+
+**Against the trigger fixed above.** At least 5 of the 13, no wrong decision, no decision on an unknown song, with a model of 200 MB or less: tiny does not meet it (4 of 13, and one decision on an unknown song). **Base and small each meet it, with exactly 5 of 13** and with different recordings, so it is met by the bar and not by a margin. By the rule written before the run, stage 2 is proposed; it is not started by this document, and the decision on #50 needs a second opinion.
+
+**What it shows.**
+- The small Vosk models heard almost nothing of these anthems and Whisper-class models hear many more of the lyrics' words: the speech rule goes from deciding on the right song for 2 of 17 recordings to 7 of 17, with no wrong-song decision. German, Spanish and Polish went from nothing to decided.
+- The 547 MiB model, the control, did not do better than the 181 MiB one (7 of 17 for both, 5 of 13), and it was worse on Dutch. For these recordings, more model size past about 60 to 180 MiB bought nothing. What stops the rest is not shown here by any experiment: for Korean, Chinese and Japanese the app's own word rules (a 3-character minimum, characters matched as written, traditional against simplified script) can hide what was heard, and the other languages with no decision hear 0 to 3 lyric words in every model.
+- Speed on this PC, 8 threads, CPU only, one run: 0.09 (tiny), 0.10 (base), 0.23 (small) and 0.51 (turbo) seconds of wall-clock time per second of audio. A phone is not this PC and none of this is a phone number. The time to a decision is not a stage 1 result, because the text of a segment exists only when the segment has been decoded.
+
+**Not claimed.** That anything here holds for a person singing, a band, a room or a phone's microphone; that a model can be shipped (size, battery, delay, the licences screen and the download flow are all open); that a language is supported; or that the count of 5 of 13 will hold on other songs. These are anthems, probably in the training data of these models, on files, with one or two recordings per language. Greek and Tamil have only one recording each.
