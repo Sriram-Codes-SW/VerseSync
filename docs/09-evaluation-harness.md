@@ -1,8 +1,8 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.12 |
-| Date | 2026-11-17 |
+| Version | 0.13 |
+| Date | 2026-11-18 |
 | Author | Claude Code |
 | Status | Active |
 
@@ -369,3 +369,42 @@ Why: the corpora so far are people reading sentences (section 8) and generated m
 **Reporting.** Counts per recording and per language, not rates: with one or two recordings per language no interval is meaningful, and none is computed. No pass bar is set and no threshold or rule is tuned on these recordings. The report says which languages have a speech model and which do not.
 
 **Not claimed.** That anything here shows how the app will do with a person singing, a band, a phone or a room; that a language is "supported"; or that a licence label is correct. These are recordings played as files, mostly old or official, in clean conditions, and sung by trained voices.
+
+### Result of the run
+
+Run on 2026-11-18 on the emulator (no microphone; each recording fed to the real Vosk small model of its language, then replayed on the JVM with the harness unchanged and no rule tuned). 22 recordings played; 18 had a speech transcript. The 4 without are Bengali (2), Greek and Tamil, which have no speech model on the device, as planned. The 5 songs not in the library are Hindi, Bengali (2) and Telugu (2).
+
+One setup fault, corrected before the numbers below: for 7 languages (Chinese, German, Hindi, Japanese, Dutch, Polish, Telugu) the local copy of the speech model was missing the file `ivector/online_cmvn.conf`, so the first capture could not load them and wrote nothing. The file holds one comment line in every model that has it, and the official archives of the app's download contain it (checked for German, Dutch, Polish and English from the archive directory). It was restored in the local, git-ignored copy and the 7 languages were captured again. The result does not depend on it, and the app's download is not affected.
+
+**Speech, per recording.** "Distinct words heard" is the number of different words the recognizer reported over the whole recording; "of them in the lyrics" is how many of those are words of the stored lyrics. Both are counts, not a rate.
+
+| Recording | Distinct words heard | Of them in the lyrics | Speech: right song a candidate / decides on it |
+|---|---|---|---|
+| English, studio | 35 | 11 | yes / yes |
+| English, live | 42 | 11 | yes / yes |
+| German | 34 | 4 | no / no |
+| Polish | 15 | 3 | no / no |
+| Korean, live | 12 | 0 | no / no |
+| Japanese, 1930 | 6 | 0 | no / no |
+| Ukrainian | 5 | 0 | no / no |
+| Spanish | 3 | 1 | no / no |
+| Swedish, 1938 | 3 | 0 | no / no |
+| Dutch, choir | 2 | 0 | no / no |
+| Dutch, 1899 | 1 | 0 | no / no |
+| Portuguese | 1 | 1 | no / no |
+| Italian | 0 | 0 | no / no |
+| Chinese | 0 | 0 | no / no |
+| Turkish | 0 | 0 | no / no |
+| Greek, Tamil | no speech model | n/a | n/a |
+
+On the 5 songs not in the library, speech decided on a song 0 times of 5 (Hindi 1 distinct word heard, Telugu 2 and 2, Bengali no model). Over all 17 recordings of songs in the library, the speech rule decided on the right song for 2 (both English), on a wrong song for 0.
+
+**Pitch, per recording.** For 15 of the 17 recordings the reference of the pitch path is the same recording, so a find there only shows that a contour matches itself and is an upper bound, not recognition across versions. Of those 15, the right song was a candidate for 14; Turkish was not, even against itself (not investigated). The two recordings that are a real cross-version test, the live English one against the studio reference and the 1899 Dutch one against the choir reference, were **not found** by the pitch path in either case. The right song was never a pitch candidate for a recording that was not also its own reference. Greek and Korean each also had the other as a candidate (two candidates each), which is a candidate, not a decision.
+
+**Combined.** The right song was a candidate for 15 of 17 (the 14 self-matches plus the live English one, through speech) and the combined rule decided on it for 2 of 17 (both English). The lock opened on the right song for 13 of 17 on the pitch path alone; it did not open for 4: Korean (found, but the lock stayed shut), English live, Dutch 1899 and Turkish. No recording of a song not in the library led to a decision (0 of 5).
+
+**What it shows, and what it does not.**
+- With the models the app ships (Vosk small, about 40 MB a language), speech recognition on whole sung anthems is, in these recordings, close to useless outside English: of the 13 non-English recordings of library songs that have a transcript, 9 produced no word of the lyrics and 4 produced between 1 and 4 (German 4, Polish 3, Spanish 1, Portuguese 1), and the speech rule decided on a song for none. English worked in both versions, with 11 lyric words heard in each. This is a count over one or two recordings per language and does not say how any language works for a person singing.
+- Where there is no cross-version evidence, the pitch path looks good only because it was given its own recording. The only two genuine cross-version tests failed.
+- No false decision was made on the songs that are not in the library, but 5 recordings are too few to say anything about false accepts.
+- This is a result for the current rules and models. It supports the roadmap item to try larger speech models (issue #50) and a pitch reference that is not the query itself; neither has been tried here. Nothing was changed because of these numbers.
