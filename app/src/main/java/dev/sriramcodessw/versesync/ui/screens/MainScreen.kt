@@ -95,7 +95,7 @@ fun MainScreen(
                 trialViewModel.useTrial()
                 when (pendingProAction) {
                     "Folders" -> showAddFolderDialog = true
-                    "Unlimited Library" -> onNavigateToAddSong()
+                    "More than 10 songs outside setlists" -> onNavigateToAddSong()
                 }
                 pendingProAction = null
             },
@@ -363,7 +363,7 @@ fun MainScreen(
                                 if (FreeLimit.canAddLooseSong(isPro, looseSongCount)) {
                                     onNavigateToAddSong()
                                 } else if (remainingTrials > 0) {
-                                    pendingProAction = "Unlimited Library"
+                                    pendingProAction = "More than 10 songs outside setlists"
                                 } else {
                                     onNavigateToTipJar()
                                 }

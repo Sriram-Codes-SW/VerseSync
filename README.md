@@ -15,7 +15,7 @@ VerseSync is an offline-first mobile application that empowers users to create p
 We believe in providing core value for free while offering powerful enhancements to our dedicated users. Our model is designed for transparency and sustainability.
 
 1.  **Freemium:**
-    *   **Free Tier:** Users can experience the core functionality of the app, including creating and saving up to **10 synced songs**.
+    *   **Free Tier:** Users can experience the core functionality of the app, including creating and saving up to **10 synced songs outside setlists**. Songs in a setlist are free, for a show of any size.
     *   **Pro (One-Time Purchase):** A one-time upgrade unlocks **unlimited song storage**.
 
 2.  **Tip Jar (Early Stages):**
