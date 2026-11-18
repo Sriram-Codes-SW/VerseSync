@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.17 |
+| Version | 0.18 |
 | Date | 2026-11-18 |
 | Author | Claude Code |
 | Status | Active |
@@ -551,3 +551,22 @@ The one decision on the negative set is the same in both arms: a recording of a 
 - The largest finding is not about Whisper: **ordinary English speech can make the shipped speech rule decide on a song** when its words are common. That is a false accept the app can have today.
 
 **Not claimed.** That the negative set represents a concert (it has one applause clip, no band, no singing along); that the failure would be the same with a different library; that a stricter rule would fix it; or anything about a phone. The simulation differs from the app in that the command-line program keeps timestamp tokens in decoding, which the app would switch off.
+
+## 18. ADR-18's decision rule on the first real recordings: the plan, fixed before any run
+
+Why: ADR-18 (Proposed) lists as its first condition that the stricter decision rule is tried on **real recordings** of singing and of speaking and not only on read sentences. Until section 15 and the gate A control of section 17 there were none: the 22 anthem recordings (sung, 17 of songs in the library and 5 of songs that are not) and 10 clips that are not songs (4 instrumental pieces, 4 people speaking English, 1 applause; 9 readable as WAV for the shipped recognizer) are the first. This follows from issue [#90](https://github.com/Sriram-Codes-SW/VerseSync/issues/90). It adds evidence and decides nothing; the app does not change.
+
+**What is replayed, with no setting chosen or changed.** The rule of ADR-18 exactly as written: the song with the highest rarity weight, at least 4 different heard words found, a share of at least 0.8, and a lead of MORE than `1.0 * ln(1 + N)` over the strongest other song taken over every song with a heard word (`DecisionRule(4, 0.8, ln(1+N))`, `N` the number of songs in the library), acting the first time it fires with no hold. Beside it, the two rules the app runs today in the same form (`DecisionRule.currentLock` and `DecisionRule.current`). Each is replayed on both kinds of evidence ADR-18 names: evidence that only grows (what the app keeps today) and evidence that can be taken back (what the section 12 measurement used). `AdrRuleCheckRun` is committed with this plan.
+
+**On which recordings.**
+1. The 22 anthems with the transcripts of the shipped Vosk small models captured in section 15, library of 15 songs.
+2. The 9 negative clips readable as WAV, captured with the Vosk small English model (as in the gate A control), same library.
+3. The 22 anthems and the 10 negative clips with the Whisper base transcripts of the gate A simulation (10 second windows every 5 seconds, loop filter), same library. This is a replay of the rule on a different recognizer's text and not an adoption of that recognizer.
+
+**Reported.** Counts per corpus and per rule (right song, a wrong song, a decision on a song not in the library), and, for every recording, the song each rule named, so that nothing is hidden in a total. Recordings with no speech model (Greek, Tamil, Bengali) are counted as recordings on which no rule can decide, and are listed.
+
+**What would be said, fixed now.** If the ADR-18 rule decides on a song for any clip that is not a song, that is reported as a finding and the rule is not adjusted. If it names no song for any of them, that is reported as 0 of 9 or 0 of 10, with the upper end of the 95 percent interval (about 28 percent for 9, 26 percent for 10), which shows almost nothing. How many of the sung recordings it names right is reported as it is, and compared to the current rules; no pass bar is set, because ADR-18's own bar needs about 300 recordings of songs in the library and this has 17.
+
+**Known limits, written now.** The library has 15 songs, which is where ADR-18 itself says the rule starts to behave differently (below about 15 songs a target with no rival and 4 found words always passes the gap test). The recordings are anthems, files, not people singing into a phone; the transcripts are whole-file captures, not a live recognizer's partial results (except corpus 3, which is windowed text); one applause clip is the only crowd noise; the library contains an English anthem of ordinary words, which makes English speech the hardest negative. Libraries of 1, 5, 20 and 200 songs (ADR-18 condition 2), real phones and children's or accented speech (condition 3) are not touched.
+
+**Not claimed.** That ADR-18's conditions are met, that the rule would stop ordinary speech from opening the vocal lock or the voice shortcut (they need a target song and the per-target rate was never measured on these recordings), or anything about singing into a phone.
