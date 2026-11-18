@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.16 |
+| Version | 0.17 |
 | Date | 2026-11-18 |
 | Author | Claude Code |
 | Status | Active |
@@ -520,3 +520,34 @@ Why: stage 1 (section 16) ran Whisper on whole recordings at once. The app liste
 **Order of work, each step a small pull request that passes CI.** (0) this plan; (1) the speech interface extracted from the engine with no change of behaviour; (2) the simulation harness and the gate A result, stopping there if it fails; (3) the native module, the CI toolchain step and the alignment check, debug builds only; (4) the Whisper recognizer, the frame fan-out (the engine's microphone frames, copied because the source reuses its buffer, go to both the fingerprinter and the recognizer) and the verified download, behind a debug-only setting that is off; (5) the gate B result; (6) the phone protocol and the request to the owner. Before any release: the MIT notices of whisper.cpp, ggml and the model weights on the licences screen, and the optional download (about 57 MiB, one file for all languages) stated on the store listing. Whether Whisper is a Pro feature is a product question left to the owner.
 
 **Not claimed.** Anything about a phone; that gate A predicts a live result; that 10/5 is the best window; a decision to ship. Anthems are probably in the training data of the model.
+
+### Result of gate A
+
+Run on 2026-11-18 on the development PC, after the tools were committed (`tools/audio-test/run_whisper_windows.ps1`, `WhisperWindows`, `WhisperWindowedRun`, TC-U-60), with the settings of this section and nothing changed after the first look. Base `q5_1`, 4 threads, the 22 recordings of section 15 and the negative set, speech rule only.
+
+**Negative set, as built.** 10 clips, all from Wikimedia Commons with the licences their uploaders claimed (manifest kept outside the repository): 4 instrumental pieces (one used twice, for its first and its second minute), 4 recordings of a person speaking English (Spoken Wikipedia), and **1** applause clip. This is thinner than planned in two ways. Of the two applause files first chosen, one is Ogg video and neither could be read on the device; only one Ogg FLAC clip could be read, by `whisper-cli` alone, so it is the only crowd-noise item and its loudness gate could not be applied (it is always decoded). And one speech clip is 41.6 seconds, not 60.
+
+| | 10 s window every 5 s (the plan's arm) | 30 s window every 10 s (the control arm) |
+|---|---|---|
+| Non-English recordings decided right, of 13 (need at least 5) | **5** (German, Spanish, Dutch once, Polish, Swedish) | **3** (German, Dutch once, Polish) |
+| All recordings of songs in the library decided right, of 17 | 7 | 5 |
+| Wrong-song decisions (need 0) | 0 | 0 |
+| Decisions on the 5 songs not in the library (need 0) | 0 | 0 |
+| Decisions on the negative set, of 10 (need 0) | **1** | **1** |
+| Windows decoded / too quiet / dropped as loops | 550 / 4 / 158 (29 % of decoded) | 270 / 1 / 120 (44 % of decoded) |
+| Gate A | **fails** (negative set) | **fails** (non-English count and negative set) |
+
+The one decision on the negative set is the same in both arms: a recording of a person speaking English about a road was matched to the English anthem in the library. By the rule fixed above, **gate A fails for the plan's arm, and the control arm does not pass it either, so the device would not be given the control arm**. Work stops here: nothing of the native build, the recognizer or the download is started.
+
+**Per session-minute** (counts divided by minutes of audio): decisions on the negative set 1 in 9.7 minutes, about 0.10 a minute; decisions on the 5 songs not in the library 0 in 10.4 minutes. With 10 clips this is a count, not a rate.
+
+**Speed, on this PC only** (4 threads, one run, 10 s windows): a decode took 0.96 seconds on average and 1.34 seconds at the 90th percentile. This says nothing about a phone.
+
+**A control outside the gate, not planned in advance and not used to decide.** The speech recognizer the app ships today (Vosk small English) was run on the nine negative clips that can be read as WAV, whole at once, as in section 15. The speech rule decided on a song for **3 of them** and had a song as a candidate for 4, always English speech and the English anthem (once also a Dutch one). So the false decision is not a Whisper effect: the shipped path does it more often, on a library of 15 songs. What it points at is the matching rule (a candidate needs 2 different lyric words and a share of 0.35 of the words heard in one entry, and evidence is kept for the whole session), which words that are common in everyday speech can meet by chance. This was not measured in section 15 and the library here is small and contains an English anthem of ordinary words.
+
+**What it shows.**
+- On this evidence a Whisper path would not be better than the present one on false decisions for speech, and it would be better on hearing songs (7 of 17 against 2 of 17 in 10 s windows). Neither number tells how a library of hundreds of songs behaves.
+- The loop filter, as fixed, drops a large share of windows (29 % and 44 %), including windows of real songs with repeated lines. It was not tuned. Whether a filter that drops that much is acceptable on a real concert is open.
+- The largest finding is not about Whisper: **ordinary English speech can make the shipped speech rule decide on a song** when its words are common. That is a false accept the app can have today.
+
+**Not claimed.** That the negative set represents a concert (it has one applause clip, no band, no singing along); that the failure would be the same with a different library; that a stricter rule would fix it; or anything about a phone. The simulation differs from the app in that the command-line program keeps timestamp tokens in decoding, which the app would switch off.

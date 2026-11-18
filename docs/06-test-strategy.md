@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.43 |
+| Version | 0.44 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -96,6 +96,7 @@ Notes:
 | **TC-U-57** | Recognition / Lifecycle | `HybridRecognitionEngine.release`, the view model being cleared, and `VoiceShortcutAttempts.interrupted` | Releasing stops the microphone and the speech service and frees the model, and is safe when nothing was started; clearing the view model releases the engine; going to the background while listening stops the microphone, leaves the shortcut idle and does not count a failed attempt, and changes nothing in any other state | ADR-10, #62 |
 | **TC-U-58** | Evaluation / Whisper conversion | `WhisperTranscript.toHeard` and `WhisperTranscript.count` (`WhisperTranscriptTest`) | Each segment of `whisper-cli -oj` output becomes one final entry at its end time divided by 64 ms (rounded); empty segments are dropped and nothing is merged or split; a file without the field gives no entries; counts use the app's own word rules, repeats do not raise the distinct count, a song not in the library has no lyric count, and one 3-word sequence 3 times is flagged as a loop (twice is not) | docs/09 section 16, #50 |
 | **TC-U-59** | Recognition / Speech seam | `SpeechRecognizer` and `HybridRecognitionEngine` (`SpeechRecognizerSeamTest`) | The engine works with a recognizer written by hand and not only Vosk: it exposes the recognizer's model-ready flag and text, passes load, start, stop and release to it in order (release stops it again before freeing it), and does not start a recognizer whose model is not ready | docs/09 section 17, #50 |
+| **TC-U-60** | Evaluation / Live windows | `WhisperWindows.convert` and `hasLoop` (`WhisperWindowsTest`) | A decoded window becomes one final entry with its segments joined, at its end time divided by 64 ms; a window that was too quiet or has no text gives no entry and is counted; a window with one 3-word sequence three times is dropped and counted, twice is kept; entries are ordered by window end | docs/09 section 17, #50 |
 | **TC-M-10** | Database / Migration | Run `VerseDatabaseMigrationTest` on a device or emulator, and again after raising the version without a migration | Passes at version 4 (a version 3 database opens and migrates, and Room checks the result against `4.json`, with songs and folders kept and the setlist tables empty); fails with a missing-migration error when the version is raised alone | ADR-12 |
 | **TC-M-11** | Build / Application id | Install a build with the old id and a build with the new id on one device, and look at their data | Both install side by side and keep separate data; nothing from the old app appears in the new one | ADR-16 |
 | **TC-M-12** | Recognition / Pitch only | On a fresh install with no models, open Recognize Song, choose a language marked pitch only, and start recognition | The list offers the pitch-only languages, the screen says no speech model exists and pitch matching is active, and recognition starts and stops without a crash | ADR-15 |
