@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.13 |
+| Version | 0.14 |
 | Date | 2026-11-18 |
 | Author | Claude Code |
 | Status | Active |
@@ -408,3 +408,39 @@ On the 5 songs not in the library, speech decided on a song 0 times of 5 (Hindi 
 - Where there is no cross-version evidence, the pitch path looks good only because it was given its own recording. The only two genuine cross-version tests failed.
 - No false decision was made on the songs that are not in the library, but 5 recordings are too few to say anything about false accepts.
 - This is a result for the current rules and models. It supports the roadmap item to try larger speech models (issue #50) and a pitch reference that is not the query itself; neither has been tried here. Nothing was changed because of these numbers.
+
+## 16. Larger speech models (Whisper-class), stage 1: the plan, fixed before any run
+
+Why: section 15 showed that the shipped small Vosk models hear almost none of the words of a sung anthem outside English. The owner asked for larger models to be tried (roadmap item 8, issue [#50](https://github.com/Sriram-Codes-SW/VerseSync/issues/50)). This section was reviewed by a second model before anything was run and fixes what is done and reported first. It was written before the capture and the replay.
+
+**Question.** Does a Whisper-class model, run on the same 22 recordings and scored by the same replay, hear enough of the lyrics for the speech rule to decide on the right song where the small Vosk models do not? Stage 1 measures accuracy only, on the development PC, with no app code changed. It does not measure speed or battery on a phone.
+
+**Material and tools.** The 22 recordings, the library and the queries of section 15, unchanged. Recognizer: whisper.cpp, prebuilt Windows release tag `b5454` (2026-10-06, the build of the same day as v1.9.5), file `whisper-bin-x64.zip`, sha256 `6ba69e3482d7826214f90a6a9c84ca07782aec1e1d0c6a7c30c994fd5d816ccb`. Models, the quantised files a phone would hold, from the official ggml model repository, with the checksums the repository lists (checked after download):
+
+| Model file | Size | sha256 |
+|---|---|---|
+| `ggml-tiny-q5_1.bin` | 30.7 MiB | `818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7` |
+| `ggml-base-q5_1.bin` | 56.9 MiB | `422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898` |
+| `ggml-small-q5_1.bin` | 181.3 MiB | `ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb` |
+| `ggml-large-v3-turbo-q5_0.bin` | 547.4 MiB | `394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2` |
+
+The last one is a **control**, not a candidate: at about 550 MiB it is too large to be the default download. If even it hears few lyric words, the limit is singing and recordings, not model size. The read-speech results of section 8 are the other control (the same recognizers on people speaking). The whisper.cpp licence and the model licences are MIT; the notice would go on the app's licences screen if any is ever shipped.
+
+**Settings, all fixed now.** One call per recording and model: `whisper-cli -m <model> -f <recording> -l <language> -mc 0 -oj -of <out> -t 8 -np`. The language is the recording's own (the app knows the language the user chose); the app's code is passed as it is except Chinese (`cn` becomes `zh`). No prompt of any kind, and in particular none that contains words of the lyrics or of the word "lyrics". No voice-activity detection, no suppression flags, no grammar. The decoder keeps the program's own defaults, which are: beam size 5, best-of 5, entropy threshold 2.40, log-probability threshold -1.00, no-speech threshold 0.60, temperature 0.00 raised by 0.20 on failure, flash attention on. `-mc 0` turns off the carried text context, which is closer to how short clips would be used and is the main cause of repeated loops. The whole recording is given to the program, which cuts it into its own 30 second windows. The threads are fixed at 8 and the wall-clock seconds per recording are written down; a PC is not a phone and these are not on-device speeds. The runner is `tools/audio-test/run_whisper.ps1`.
+
+**Conversion.** `WhisperTranscript` (committed with its unit test TC-U-58 before the run): one transcript entry per segment exactly as emitted, no merging or splitting; the frame is the segment's end time divided by 64 ms, rounded, because the text exists only once the segment is decoded; `final` is true; text is trimmed and otherwise kept as written; segments with no text are dropped. The replay scores each entry on its own, so how text is cut into entries changes the result: Vosk gives many growing partials and Whisper gives one segment per line or so. The table reports the number of entries and words per recording for both so that this can be read. Time to a decision is **not** a stage 1 result.
+
+**Words heard.** A table per model, made by committed code (`WhisperRun`) with the app's own word rules (`spokenMatchTokens`): entries, words, distinct words, distinct words that are words of the stored lyrics, and whether a loop is flagged (one sequence of 3 words appearing 3 or more times; a repeated chorus does that too, so it is a flag to look at, nothing is filtered). For the 5 songs not in the library, the total words and any decision.
+
+**Reported.** All 22 recordings and all 4 models, none dropped, with the Vosk table of section 15 beside them (frozen at the merge of PR #84). Greek and Tamil are included, with no Vosk baseline to compare, and reported on their own lines. The replay is the unchanged `EvaluationRun`, so pitch columns are the same for every model and are not repeated.
+
+**Stage 2 trigger, fixed now.** A second stage (building whisper.cpp into the app behind the speech interface and measuring speed, battery, size and decision time on a device) is proposed **only if** one model of 200 MB or less (tiny, base or small) makes the speech rule decide on the right song for at least **5 of the 13** non-English recordings of library songs that had a Vosk transcript (German, Polish, Korean, Japanese, Ukrainian, Spanish, Swedish, Dutch twice, Portuguese, Italian, Chinese, Turkish), with **0** decisions on a wrong song and **0** decisions on the 5 songs not in the library. If this is not met the result is reported and stage 2 is not started; the decision on #50 is then taken from the numbers, with a second opinion. Greek and Tamil do not count towards the 5. The bar is the author's and can be argued with, but not after the run.
+
+**Known ways the numbers can be off, written down now.**
+- Scripts: the Chinese lyrics are in traditional characters and Whisper may write simplified ones; the Japanese lyrics mix kanji and kana and Whisper may choose a different mix. The app matches characters, so these two rows can be low for a reason that is not hearing. Nothing is converted in stage 1; the rows are flagged.
+- Korean words of two syllables are dropped by the app's 3-character minimum, for Vosk and Whisper alike. Not changed.
+- Numbers are written as digits by Whisper and as words in lyrics. Small effect, not corrected.
+- Repeats count: a loop of a lyric line raises the share and a loop of junk lowers it. Nothing is filtered.
+- Anthems are probably in the training data of these models, so a model may recall them. That makes the result an upper bound for ordinary songs, and it cannot show that a song nobody has written down would be heard.
+
+**Not claimed.** Anything about speed, battery or size on a phone; anything about a person singing, a band or a room; that a language is supported; or a decision about shipping a model. This is a count over one or two recordings per language, on files, on a PC.
