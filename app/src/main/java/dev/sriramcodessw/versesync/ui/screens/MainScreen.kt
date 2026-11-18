@@ -29,6 +29,7 @@ import dev.sriramcodessw.versesync.concert.ResumeInfo
 import dev.sriramcodessw.versesync.concert.SetlistsViewModel
 import dev.sriramcodessw.versesync.concert.setlistsSection
 import dev.sriramcodessw.versesync.data.Folder
+import dev.sriramcodessw.versesync.data.FreeLimit
 import dev.sriramcodessw.versesync.data.OnboardingViewModel
 import dev.sriramcodessw.versesync.data.Setlist
 import dev.sriramcodessw.versesync.data.Song
@@ -79,6 +80,7 @@ fun MainScreen(
     val isMainTourCompleted by onboardingViewModel.isMainTourCompleted.collectAsState()
     val isPro by billingViewModel.isPro.collectAsState()
     val remainingTrials by trialViewModel.remainingTrials.collectAsState()
+    val looseSongCount by verseViewModel.looseSongCount.collectAsState()
 
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
@@ -358,7 +360,7 @@ fun MainScreen(
                     FloatingActionButton(
                         onClick = {
                             if (selectedTab == 0) {
-                                if (isPro || songs.size < 10) {
+                                if (FreeLimit.canAddLooseSong(isPro, looseSongCount)) {
                                     onNavigateToAddSong()
                                 } else if (remainingTrials > 0) {
                                     pendingProAction = "Unlimited Library"

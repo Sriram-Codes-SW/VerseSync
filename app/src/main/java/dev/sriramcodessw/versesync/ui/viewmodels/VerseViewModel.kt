@@ -62,6 +62,16 @@ class VerseViewModel(
                 initialValue = emptyList(),
             )
 
+    /** How many songs are in no setlist, over the whole library: what the free limit counts (ADR-20, decision 3). */
+    val looseSongCount: StateFlow<Int> =
+        songDao
+            .countLooseSongs()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = 0,
+            )
+
     /** How many songs each folder holds, over the whole library: the search box does not change it. */
     val folderSongCounts: StateFlow<Map<Int, Int>> =
         songDao

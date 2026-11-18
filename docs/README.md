@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.58 |
+| Version | 0.59 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -85,3 +85,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.56 | 2026-11-18 | Claude Code | The location prompt no longer appears on every cold start (issue #79): the app waits for its saved first-run setup state instead of taking "not read yet" for "first run", so the first-run screen and its location request are not built for a person who finished setup. TC-U-61. Reproduced on an Android 16 emulator with the previous build and checked with the fix on two cold starts; not run on a phone. Whether the first-run screen should ask for location at all is still the owner's decision in #18. |
 | 0.57 | 2026-11-18 | Claude Code | A speech model whose download finished while the app was closed is now unpacked the next time the app starts (issue #36): at start-up the app asks the download manager for finished downloads of its own and queues the existing, repeat-safe unpack job for each archive still in the downloads folder. TC-U-62 and TC-M-35. Checked on an Android 16 emulator with the English model: downloaded with the app closed, then opened without pressing Download, and the model installed and showed as ready. Not run on a phone or with a model of about 300 MB. |
 | 0.58 | 2026-11-18 | Claude Code | The song to say for the voice shortcut no longer changes when the phone is rotated or the song list changes (issue #63, second half; the first half, the unlocked flag, was fixed in #72): its id is saved across a rotation and a new song is picked only if it is gone. It is only a song id, so a process kill unlocks nothing. TC-U-63. Covered by unit tests of the choice and the build; not checked on an emulator or a phone, because the shortcut needs a vocal lock and a song with a recorded fingerprint. |
+| 0.59 | 2026-11-18 | Claude Code | The free limit counts only songs that are in no setlist (owner decision, 2026-11-18; step 1 of 3): `FreeLimit`, a database count of such songs, and the Songs-tab add button using them instead of the length of the search-filtered song list, which also stops a search from letting a free person go past 10. Nothing is removed or hidden. A setlist can only hold songs already in the library, so the benefit is complete only once a new song can be added from the setlist editor (step 2); the wording in the app, the README and the ADR follow in step 3. TC-U-64, TC-U-65. Checked by unit tests and the database tests on an emulator. |

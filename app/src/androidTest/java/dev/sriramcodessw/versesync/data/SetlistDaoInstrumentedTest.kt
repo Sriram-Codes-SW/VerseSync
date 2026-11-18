@@ -368,4 +368,62 @@ class SetlistDaoInstrumentedTest {
             assertEquals(first, setlists.getEntries(one)[1].id)
             assertEquals(listOf("A"), titles(two))
         }
+
+    private suspend fun loose(): Int = songs.countLooseSongs().first()
+
+    @Test
+    fun withNoSetlists_everySongIsLoose() =
+        runBlocking {
+            addSong("A")
+            addSong("B")
+            assertEquals(2, loose())
+        }
+
+    @Test
+    fun aSongInASetlistIsNotLoose_evenInTwoSetlistsOrTwiceInOne() =
+        runBlocking {
+            val a = addSong("A")
+            addSong("B")
+            val one = newSetlist("One")
+            val two = newSetlist("Two")
+            setlists.appendSong(one, a)
+            setlists.appendSong(one, a)
+            setlists.appendSong(two, a)
+
+            assertEquals(1, loose()) // only B
+        }
+
+    @Test
+    fun removingTheEntry_orDeletingTheSetlist_makesTheSongLooseAgain() =
+        runBlocking {
+            val a = addSong("A")
+            val b = addSong("B")
+            val one = newSetlist("One")
+            val two = newSetlist("Two")
+            val entryA = setlists.appendSong(one, a)
+            setlists.appendSong(two, b)
+            assertEquals(0, loose())
+
+            setlists.removeEntry(entryA)
+            assertEquals(1, loose())
+
+            setlists.deleteSetlist(two)
+            assertEquals(2, loose())
+            assertEquals(2, songs.getAllSongs().first().size) // nothing was deleted or hidden
+        }
+
+    @Test
+    fun deletingASong_keepsTheLooseCountRight() =
+        runBlocking {
+            val a = addSong("A")
+            val b = addSong("B")
+            addSong("C")
+            setlists.appendSong(newSetlist(), a)
+            assertEquals(2, loose())
+
+            songs.delete(songs.getAllSongs().first().first { it.id == a })
+            songs.delete(songs.getAllSongs().first().first { it.id == b })
+
+            assertEquals(1, loose())
+        }
 }
