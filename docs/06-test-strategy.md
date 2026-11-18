@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.46 |
+| Version | 0.47 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -99,6 +99,7 @@ Notes:
 | **TC-U-60** | Evaluation / Live windows | `WhisperWindows.convert` and `hasLoop` (`WhisperWindowsTest`) | A decoded window becomes one final entry with its segments joined, at its end time divided by 64 ms; a window that was too quiet or has no text gives no entry and is counted; a window with one 3-word sequence three times is dropped and counted, twice is kept; entries are ordered by window end | docs/09 section 17, #50 |
 | **TC-U-61** | Startup / First run | `startRouteFor` (`StartRouteTest`) | Before the saved "first-run setup is done" value has been read there is no route, so no first-run screen is built and no location prompt is asked for; after setup the start is the main screen, before it the language screen | #79 |
 | **TC-U-62** | Language models / Start-up | `languagesWaitingToUnpack` (`LanguagesWaitingToUnpackTest`) | From the descriptions of finished downloads, a language is waiting only if its archive is still in the downloads folder (unpacking deletes it); descriptions that are not ours or whose code is not a plain language code are ignored; a language is listed once; no downloads gives nothing | #36 |
+| **TC-U-63** | Lock / Voice shortcut | `chooseVoiceShortcutTarget` (`VoiceShortcutTargetTest`) | The song with the saved id is kept and nothing is picked; with nothing saved, or when the saved song is gone, a song is picked; a saved song survives a change of the list that keeps it; no songs gives no target | ADR-10, #63 |
 | **TC-M-10** | Database / Migration | Run `VerseDatabaseMigrationTest` on a device or emulator, and again after raising the version without a migration | Passes at version 4 (a version 3 database opens and migrates, and Room checks the result against `4.json`, with songs and folders kept and the setlist tables empty); fails with a missing-migration error when the version is raised alone | ADR-12 |
 | **TC-M-11** | Build / Application id | Install a build with the old id and a build with the new id on one device, and look at their data | Both install side by side and keep separate data; nothing from the old app appears in the new one | ADR-16 |
 | **TC-M-12** | Recognition / Pitch only | On a fresh install with no models, open Recognize Song, choose a language marked pitch only, and start recognition | The list offers the pitch-only languages, the screen says no speech model exists and pitch matching is active, and recognition starts and stops without a crash | ADR-15 |

@@ -118,7 +118,12 @@ fun AuthWrapper(activity: AppCompatActivity) {
         remember(songs) {
             songs.filter { !it.fingerprint.isNullOrEmpty() }
         }
-    val targetSong = remember(syncReadySongs) { syncReadySongs.randomOrNull() }
+    // The song to say for the voice shortcut. Its id is saved across a rotation, as the attempts are, and is kept while the song
+    // list changes, so the song does not change while the person is looking at it (issue #63). A new one is picked only if
+    // it is gone. Saved state also survives the process being killed, which only keeps a song id and unlocks nothing.
+    var targetSongId by rememberSaveable { mutableStateOf<Int?>(null) }
+    val targetSong = remember(syncReadySongs, targetSongId) { chooseVoiceShortcutTarget(syncReadySongs, targetSongId) }
+    LaunchedEffect(targetSong?.id) { targetSongId = targetSong?.id }
 
     fun promptDeviceCredential(subtitle: String) {
         securityManager.showBiometricPrompt(
