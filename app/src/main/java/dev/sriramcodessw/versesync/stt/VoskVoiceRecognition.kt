@@ -19,7 +19,8 @@ private const val TAG = "VoskVoiceRecognition"
 
 class VoskVoiceRecognition(
     private val context: Context,
-) : RecognitionListener {
+) : RecognitionListener,
+    SpeechRecognizer {
     private var currentModel: Model? = null
     private var currentLanguage: String? = null
     private var speechService: SpeechService? = null
@@ -28,12 +29,12 @@ class VoskVoiceRecognition(
     private val gson = Gson()
 
     private val _recognitionResult = MutableStateFlow("")
-    val recognitionResult: StateFlow<String> = _recognitionResult.asStateFlow()
+    override val recognitionResult: StateFlow<String> = _recognitionResult.asStateFlow()
 
     private val _isModelReady = MutableStateFlow(false)
-    val isModelReady: StateFlow<Boolean> = _isModelReady.asStateFlow()
+    override val isModelReady: StateFlow<Boolean> = _isModelReady.asStateFlow()
 
-    fun loadModel(languageCode: String) {
+    override fun loadModel(languageCode: String) {
         if (currentLanguage == languageCode && _isModelReady.value) return
 
         // Release the active recognizer before its model can be swapped out.
@@ -69,7 +70,7 @@ class VoskVoiceRecognition(
     }
 
     @Synchronized
-    fun startListening() {
+    override fun startListening() {
         val model = currentModel
         if (model == null) {
             Log.w(TAG, "Start requested but no model is loaded.")
@@ -96,7 +97,7 @@ class VoskVoiceRecognition(
      * crashed the process.
      */
     @Synchronized
-    fun stopListening() {
+    override fun stopListening() {
         val service = speechService
         val rec = recognizer
         speechService = null
@@ -114,7 +115,7 @@ class VoskVoiceRecognition(
      * The object is not used after this (issue #62).
      */
     @Synchronized
-    fun release() {
+    override fun release() {
         stopListening()
         scope.cancel()
         _isModelReady.value = false

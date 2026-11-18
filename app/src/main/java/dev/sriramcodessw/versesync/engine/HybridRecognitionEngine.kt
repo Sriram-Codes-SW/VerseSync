@@ -10,6 +10,7 @@ import dev.sriramcodessw.versesync.audio.tarsos.TarsosPitchDetector
 import dev.sriramcodessw.versesync.data.Song
 import dev.sriramcodessw.versesync.data.SongDao
 import dev.sriramcodessw.versesync.fingerprinting.AudioFingerprinter
+import dev.sriramcodessw.versesync.stt.SpeechRecognizer
 import dev.sriramcodessw.versesync.stt.VoskVoiceRecognition
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -46,7 +47,7 @@ class HybridRecognitionEngine(
     private val songDao: SongDao,
     // Both are parameters so tests can supply a fake recognizer and a short pitch interval
     // instead of reaching into private fields and sleeping for seconds.
-    private val vosk: VoskVoiceRecognition = VoskVoiceRecognition(context),
+    private val speech: SpeechRecognizer = VoskVoiceRecognition(context),
     private val pitchIntervalMs: Long = PITCH_INTERVAL_MS,
     // Where audio comes from and which detector finds its pitch. Tests supply fakes.
     private val audioSourceFactory: () -> AudioFrameSource = { TarsosMicrophoneSource() },
@@ -58,8 +59,8 @@ class HybridRecognitionEngine(
     private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var currentLanguage = "en-us"
 
-    val isModelReady = vosk.isModelReady
-    val sttText = vosk.recognitionResult
+    val isModelReady = speech.isModelReady
+    val sttText = speech.recognitionResult
 
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
@@ -131,7 +132,7 @@ class HybridRecognitionEngine(
 
                 merge(
                     songs.filterNotNull().map { SearchTrigger.LIBRARY },
-                    flow { emitAll(vosk.recognitionResult.map { SearchTrigger.SPEECH }) }, // read at collection time
+                    flow { emitAll(speech.recognitionResult.map { SearchTrigger.SPEECH }) }, // read at collection time
                     pitchHeartbeat.map { SearchTrigger.PITCH },
                 ).conflate().collect { trigger ->
                     val library = songs.value ?: return@collect
@@ -163,7 +164,7 @@ class HybridRecognitionEngine(
         library: List<Song>,
         cache: HashMap<Int, CachedLyricTokens>,
     ) {
-        val sttQuery = SpeechMatcher.normalize(vosk.recognitionResult.value, currentLanguage)
+        val sttQuery = SpeechMatcher.normalize(speech.recognitionResult.value, currentLanguage)
         if (sttQuery.isBlank()) return
 
         val spoken = spokenMatchTokens(sttQuery)
@@ -253,7 +254,7 @@ class HybridRecognitionEngine(
 
     fun loadLanguageModel(languageCode: String) {
         currentLanguage = languageCode
-        vosk.loadModel(languageCode)
+        speech.loadModel(languageCode)
     }
 
     /**
@@ -268,8 +269,8 @@ class HybridRecognitionEngine(
 
         try {
             // Start STT if speech model is available
-            if (vosk.isModelReady.value) {
-                vosk.startListening()
+            if (speech.isModelReady.value) {
+                speech.startListening()
             }
 
             // Pitch is found for Pro users only. The source starts delivering frames on its own thread.
@@ -287,12 +288,12 @@ class HybridRecognitionEngine(
      */
     fun release() {
         stopRecognition()
-        vosk.release()
+        speech.release()
         engineScope.cancel()
     }
 
     fun stopRecognition() {
-        vosk.stopListening()
+        speech.stopListening()
         _instantPitch.value = 0f
         synchronized(accumulatedSttCandidates) {
             accumulatedSttCandidates.clear()
