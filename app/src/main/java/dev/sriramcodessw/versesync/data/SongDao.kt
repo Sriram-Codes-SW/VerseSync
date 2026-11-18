@@ -13,6 +13,10 @@ interface SongDao {
     @Query("SELECT * FROM songs")
     fun getAllSongs(): Flow<List<Song>>
 
+    /** How many songs are in no setlist, over the whole library (the search box does not change it). See [FreeLimit]. */
+    @Query("SELECT COUNT(*) FROM songs WHERE id NOT IN (SELECT songId FROM setlist_entries)")
+    fun countLooseSongs(): Flow<Int>
+
     @Query("SELECT * FROM songs WHERE id = :id")
     fun getSongById(id: Int): Flow<Song>
 
