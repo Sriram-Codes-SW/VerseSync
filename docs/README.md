@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.57 |
+| Version | 0.58 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -84,3 +84,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.55 | 2026-11-18 | Claude Code | Result of replaying ADR-18's decision rule on the first real recordings (docs/09 section 18, issue #90): it decided on a song for 0 of 9 non-song clips with the shipped recognizer's text and 0 of 15 with Whisper's, where the current rules did for 1 to 2; it named the right song for 0 of 17 sung anthems with the shipped text and 2 of 17 with Whisper's (current lock words rule 5), a wrong song for none. A 15-song library, files, no condition of ADR-18 met. ADR-18 amended with the evidence; status and the app unchanged. |
 | 0.56 | 2026-11-18 | Claude Code | The location prompt no longer appears on every cold start (issue #79): the app waits for its saved first-run setup state instead of taking "not read yet" for "first run", so the first-run screen and its location request are not built for a person who finished setup. TC-U-61. Reproduced on an Android 16 emulator with the previous build and checked with the fix on two cold starts; not run on a phone. Whether the first-run screen should ask for location at all is still the owner's decision in #18. |
 | 0.57 | 2026-11-18 | Claude Code | A speech model whose download finished while the app was closed is now unpacked the next time the app starts (issue #36): at start-up the app asks the download manager for finished downloads of its own and queues the existing, repeat-safe unpack job for each archive still in the downloads folder. TC-U-62 and TC-M-35. Checked on an Android 16 emulator with the English model: downloaded with the app closed, then opened without pressing Download, and the model installed and showed as ready. Not run on a phone or with a model of about 300 MB. |
+| 0.58 | 2026-11-18 | Claude Code | The song to say for the voice shortcut no longer changes when the phone is rotated or the song list changes (issue #63, second half; the first half, the unlocked flag, was fixed in #72): its id is saved across a rotation and a new song is picked only if it is gone. It is only a song id, so a process kill unlocks nothing. TC-U-63. Covered by unit tests of the choice and the build; not checked on an emulator or a phone, because the shortcut needs a vocal lock and a song with a recorded fingerprint. |
