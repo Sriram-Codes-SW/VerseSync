@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync SSDLC Document Index |
-| Version | 0.60 |
+| Version | 0.61 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Approved |
@@ -14,7 +14,7 @@ This directory contains the system architecture, security, design records (ADRs)
 
 | Document | Purpose | Current Version | Status |
 |---|---|---|---|
-| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.42 | Active |
+| [docs/03-design.md](03-design.md) | System Architecture & Architecture Decision Records (ADRs) | 0.43 | Active |
 | [docs/06-test-strategy.md](06-test-strategy.md) | Test Strategy, Verification Matrix & Test Cases (TC-U-xx, TC-M-xx) | 0.41 | Active |
 | [docs/07-pitch-detection-design.md](07-pitch-detection-design.md) | Pitch Detection Design & Refactor Plan (independence from TarsosDSP) | 0.1 | Proposed |
 | [docs/PRIVACY.md](PRIVACY.md) | Privacy Policy (draft for the owner's review) | 0.1 | Draft |
@@ -87,3 +87,4 @@ This directory contains the system architecture, security, design records (ADRs)
 | 0.58 | 2026-11-18 | Claude Code | The song to say for the voice shortcut no longer changes when the phone is rotated or the song list changes (issue #63, second half; the first half, the unlocked flag, was fixed in #72): its id is saved across a rotation and a new song is picked only if it is gone. It is only a song id, so a process kill unlocks nothing. TC-U-63. Covered by unit tests of the choice and the build; not checked on an emulator or a phone, because the shortcut needs a vocal lock and a song with a recorded fingerprint. |
 | 0.59 | 2026-11-18 | Claude Code | The free limit counts only songs that are in no setlist (owner decision, 2026-11-18; step 1 of 3): `FreeLimit`, a database count of such songs, and the Songs-tab add button using them instead of the length of the search-filtered song list, which also stops a search from letting a free person go past 10. Nothing is removed or hidden. A setlist can only hold songs already in the library, so the benefit is complete only once a new song can be added from the setlist editor (step 2); the wording in the app, the README and the ADR follow in step 3. TC-U-64, TC-U-65. Checked by unit tests and the database tests on an emulator. |
 | 0.60 | 2026-11-18 | Claude Code | A new song can be added straight from the setlist editor (step 2 of 3 of the free-limit change): the song picker has a "New song" button that opens the add-song screen for that setlist, and saving writes the song to the library and to the end of the setlist in one transaction, so a failure cannot leave a song outside every setlist behind. It checks no limit and no free trial, as the concert package never reads Pro status. TC-U-66 and TC-M-36. Checked by the database and editor tests on an emulator and by hand on an Android 16 emulator; not on a phone. |
+| 0.61 | 2026-11-18 | Claude Code | Step 3 of 3 of the free-limit change: the wording follows the owner's decision (songs in a setlist do not count against the free limit of 10). The dialog for the trial now says "More than 10 songs outside setlists", the export setting says that setlists are not included yet (issue #97), the main README describes the free tier correctly, and ADR-20 has an amendment in section 3 that also records, as accepted knowingly, that the limit is a nudge and not a lock for free users (a library can be put in one setlist; import and Bluetooth receive were never capped) and names a ceiling on setlist-only songs as the smallest later bound. |

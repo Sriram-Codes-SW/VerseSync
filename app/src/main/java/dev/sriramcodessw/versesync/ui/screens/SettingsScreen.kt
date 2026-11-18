@@ -194,7 +194,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(8.dp))
                 ListItem(
                     headlineContent = { Text("Export Library") },
-                    supportingContent = { Text("Encrypted backup of your library") },
+                    supportingContent = { Text("Encrypted backup of your songs. Setlists are not included yet.") },
                     leadingContent = { Icon(Icons.Default.FileUpload, contentDescription = null) },
                     modifier =
                         Modifier.clickable {
