@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.15 |
+| Version | 0.16 |
 | Date | 2026-11-18 |
 | Author | Claude Code |
 | Status | Active |
@@ -492,3 +492,31 @@ On the 5 songs not in the library the models wrote 496 (tiny), 402 (base), 260 (
 - Speed on this PC, 8 threads, CPU only, one run: 0.09 (tiny), 0.10 (base), 0.23 (small) and 0.51 (turbo) seconds of wall-clock time per second of audio. A phone is not this PC and none of this is a phone number. The time to a decision is not a stage 1 result, because the text of a segment exists only when the segment has been decoded.
 
 **Not claimed.** That anything here holds for a person singing, a band, a room or a phone's microphone; that a model can be shipped (size, battery, delay, the licences screen and the download flow are all open); that a language is supported; or that the count of 5 of 13 will hold on other songs. These are anthems, probably in the training data of these models, on files, with one or two recordings per language. Greek and Tamil have only one recording each.
+
+## 17. Larger speech models, stage 2: the plan, fixed before any live measurement
+
+Why: stage 1 (section 16) ran Whisper on whole recordings at once. The app listens live, and Whisper is not a streaming recognizer, so it has to decode windows of the last few seconds again and again. That changes the result in ways stage 1 cannot show: far more decodes per song, so far more chances for a made-up word to make a wrong song a candidate; and a different decoder setting for speed. This section was reviewed by a second model and is fixed before any live measurement. It does not decide to ship anything.
+
+**What stage 2 can and cannot show.** There is an x86_64 emulator and a PC, and no phone. Allowed: accuracy and decision time in seconds of audio from a PC simulation of the live windows; an end-to-end run on the emulator with files fed in place of the microphone; exact model and library sizes; native memory and its return to the baseline after repeated start, stop and release; language switching. **Not allowed without a phone:** any claim about phone speed, battery, heat or real-time operation. An emulator timing on this PC is a PC timing. Stage 2 therefore stops at "works end to end on the emulator", and the phone measurements are listed as open and handed to the owner with a fixed protocol.
+
+**Live decoding, fixed now.**
+- Model: `ggml-base-q5_1.bin` only (it met the stage 1 trigger and is 2.3 times faster than small).
+- A window of the last **10 seconds**, a hop of **5 seconds**, at most **one decode in flight**; when a decode ends, the newest window is taken and nothing is queued.
+- Kept from stage 1: the language is forced (with the app-to-Whisper table tested: `en-us` to `en`, `cn` to `zh`, `vn` to `vi`, others as they are), no carried text context (`-mc 0`), no prompt of any kind, no voice-activity detection.
+- Changed for speed, so stage 1 is not the same measurement: greedy decoding (beam 1, best-of 1), temperature 0 with no fallback, no timestamps, non-speech tokens suppressed, 4 threads. The program's own no-speech threshold stays at its default 0.60.
+- Silence and music: a window whose loudness (RMS of samples from -1 to 1) is below **0.005** is not decoded (silence measured on the emulator microphone is about 0.00002; the value was not chosen from any Whisper result); a window whose text contains one sequence of 3 words three or more times is dropped (the stage 1 loop flag, now a filter).
+- One entry per window: the window's whole text as one string, never blank, one value per window. In the simulation the entry's frame is the window's end.
+- Control arm, PC simulation only: a **30 second** window with a **10 second** hop, in case 10/5 is too short. The device uses 10/5 unless 10/5 fails gate A and 30/10 passes it, which is decided by the numbers and nothing else.
+- Pitch path and Vosk are untouched. When the Whisper path is on and its model is present, it **replaces** Vosk for every language; the two never run together, because the engine keeps the best evidence per song over all entries and two recognizers would raise false accepts and mix up what is measured.
+
+**Gate A, the PC simulation (first and blocking).** The 22 recordings of section 15 are cut into those windows and run through the real program with those settings, the entries go into the unchanged replay. Passes only if all hold: at least **5 of the 13** non-English recordings decided right; **0** wrong-song decisions; **0** decisions on the 5 songs not in the library; and **0** decisions on a new negative set of at least 10 clips of 60 seconds with free licences (applause or crowd noise, instrumental music, speech), fetched and listed in the manifest before the run. The report also counts false decisions and candidates **per session-minute** for the negatives and for the songs not in the library, because evidence in the engine is kept until the session stops and never decays, so the chances for a false accept grow with the number of decodes. If gate A fails, work stops there and the result is reported.
+
+**Gate B, the emulator.** The same decisions as gate A on at least **20 of 22** recordings, 0 wrong, with the recordings fed through a fake audio source, and the lifecycle tests green (release during a decode, 20 start-stop-release cycles with memory back to the baseline, language switching).
+
+**Gate C, the owner's phone, named in the result.** The 90th percentile of decode time at or below the 5 second hop; battery per hour of listening against a Vosk-only run on the same phone. The Whisper path stays **off by default and in debug builds only** until gate C is passed.
+
+**Build, fixed now.** whisper.cpp through CMake and JNI, from the same release as stage 1 (`b5454`), source vendored under `third_party/whisper.cpp` with its licence and a version file, in a separate Gradle module used by debug builds only. ABIs `arm64-v8a` and `x86_64` set in the module's CMake filters, not globally (the Vosk library ships 32-bit libraries that a global filter would drop); a 32-bit device gets "Whisper unavailable". Linked for 16 KB pages, with a CI check of the alignment of every native library, including Vosk's. The model is downloaded data, never bundled: one file, sha256 checked, a path of its own (the existing zip path checks no checksum), hosted for any release on the project's own release page with its hash. The sherpa-onnx route was not chosen: the evidence is on the ggml model, its own model export would need stage 1 again, and its runtime would add more native code. The toolchain (command-line tools, NDK, CMake) is not installed on the development PC and is a large download that needs the owner's yes before it is fetched.
+
+**Order of work, each step a small pull request that passes CI.** (0) this plan; (1) the speech interface extracted from the engine with no change of behaviour; (2) the simulation harness and the gate A result, stopping there if it fails; (3) the native module, the CI toolchain step and the alignment check, debug builds only; (4) the Whisper recognizer, the frame fan-out (the engine's microphone frames, copied because the source reuses its buffer, go to both the fingerprinter and the recognizer) and the verified download, behind a debug-only setting that is off; (5) the gate B result; (6) the phone protocol and the request to the owner. Before any release: the MIT notices of whisper.cpp, ggml and the model weights on the licences screen, and the optional download (about 57 MiB, one file for all languages) stated on the store listing. Whether Whisper is a Pro feature is a product question left to the owner.
+
+**Not claimed.** Anything about a phone; that gate A predicts a live result; that 10/5 is the best window; a decision to ship. Anthems are probably in the training data of the model.
