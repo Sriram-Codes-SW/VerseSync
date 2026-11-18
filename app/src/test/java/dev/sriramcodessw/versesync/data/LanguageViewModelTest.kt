@@ -56,9 +56,19 @@ class LanguageViewModelTest {
     }
 
     @Test
-    fun isSetupComplete_shouldInitiallyBeFalse() =
+    fun isSetupComplete_isUnknownUntilTheSavedValueIsRead_thenFalseOnAFreshInstall() =
         runBlocking {
-            assertEquals(false, awaitReal { viewModel.isSetupComplete.first() })
+            // Not false: taking "not read yet" for "first run" showed the first-run screen on every cold start (issue #79).
+            assertEquals(null, viewModel.isSetupComplete.value)
+            assertEquals(false, awaitReal { viewModel.isSetupComplete.first { it != null } })
+        }
+
+    @Test
+    fun isSetupComplete_becomesTrueOnceSetupIsMarkedComplete() =
+        runBlocking {
+            viewModel.markSetupComplete()
+
+            assertEquals(true, awaitReal { viewModel.isSetupComplete.first { it == true } })
         }
 
     @Test
