@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Test Strategy & Verification Matrix |
-| Version | 0.40 |
+| Version | 0.41 |
 | Date | 2026-11-08 |
 | Author | Sriram-Codes-SW |
 | Status | Active |
@@ -116,3 +116,5 @@ Notes:
 | **TC-M-30** | Main screen / Tour | On a fresh install on an Android 16 emulator, go through the first-run screens and step through the tour | The overlay dims the whole screen including the top bar; the microphone step highlights the microphone button, and the Folders and setlists step highlights the Folders tab; the existing steps are unchanged; on the Recognize Song screen the first step highlights the language selector and the top bar is dimmed too. Run once by hand | ADR-20 |
 | **TC-M-31** | Folders / Folder screen | Run `FolderScreenInstrumentedTest` (it runs in the CI emulator job); by hand on an emulator: make a folder, move two songs into it from the Songs tab, open the Folders tab, tap the folder | The folder row shows its song count; tapping it opens a screen with the folder name and its songs by title, a tap on a song opens it, an empty folder says how to add songs, and back leaves. Run by hand on an Android 16 emulator | owner request, 2026-11-18 |
 | **TC-M-32** | Recognition / Microphone | On an Android 16 emulator with the microphone allowed: open Recognize Song, start recognizing, then press Home; look at `adb shell dumpsys audio` for recording start and stop events | A recording stop for the app is logged within about a second of pressing Home. Run once by hand; the event log has no clear "now", so the stop was matched to the time of the Home press | ADR-10, #62 |
+| **TC-M-33** | Evaluation / Microphone level | Run `MicrophoneLevelProbeInstrumentedTest` with `-e probe true` on an emulator started with host audio, with and without sound playing on the PC | Silence reads RMS near 0.00002; sound at full volume reads about 0.4 with peaks at 1.0 (clipping); at 20% volume about 0.09 with peaks near 0.3. After a few seconds of one recording the emulator microphone reads exact zeros, so no microphone test can last a song | docs/09 section 15 |
+| **TC-M-34** | Evaluation / Decode recordings | Run `DecodeRecordingsInstrumentedTest` with `-e corpus <name>` after pushing recordings to the app external files folder `songs-in` | Each recording is decoded with the device decoders to a 16 kHz mono WAV under the corpus folder, with its length, source rate and level logged; a recording that cannot be decoded is logged as failed and the rest continue | docs/09 section 15 |

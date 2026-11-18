@@ -1,7 +1,7 @@
 | Field | Value |
 |---|---|
 | Document | VerseSync Evaluation Harness |
-| Version | 0.11 |
+| Version | 0.12 |
 | Date | 2026-11-17 |
 | Author | Claude Code |
 | Status | Active |
@@ -351,3 +351,21 @@ What it does not show: real recordings, real speakers, rooms or phones; the phon
 - That the transcripts captured by feeding frames into Vosk match what the app hears from a live microphone. Both use the same recognizer and model, but the buffer sizes differ.
 - Anything on singing, children, or real phones: nothing of that has been recorded yet.
 - The harness has not been compared against a person listening to the same recordings.
+
+## 15. Songs in their own languages, end to end: the plan, fixed before any run
+
+Why: the corpora so far are people reading sentences (section 8) and generated music (section 13). The owner asked for each language to be tried with a song of its own, with its lyrics, in a normal version and a live version where one exists. This section fixes what is done and what is reported before anything is run. It was written before the capture and the replay.
+
+**Material.** Recordings of anthems and traditional songs whose words are in the public domain, with a free licence on Wikimedia Commons (public domain, CC0, CC BY or CC BY-SA), fetched from there and never from a streaming service. 22 recordings in 17 languages were fetched: English (2: a studio and a live one), Spanish, German, Italian, Dutch (2: a choir and the first recording of 1899), Polish, Portuguese, Turkish, Greek, Japanese, Korean (a live performance), Chinese, Tamil, Ukrainian, Swedish, Hindi, Bengali (2: a studio and a crowd singing) and Telugu (2 film songs of 1935). The licence and source page of each are in the corpus manifest, which is kept with the audio outside the repository. A licence is what the uploader claimed; it was not verified, and some files are marked for review on Commons.
+
+**Words.** Fetched by script from Wikisource for 15 languages and not typed. They are the whole text of the anthem, which may be longer than what the recording sings. Hindi, Bengali and Telugu had no usable page, so those 5 recordings are used only as **songs that are not in the library**.
+
+**Library and queries.** The library holds the 15 songs that have words. The queries are the 22 recordings: 17 of songs in the library and 5 of songs that are not. A recording is the whole song, decoded to 16 kHz mono on the device and fed to the real speech recognizer frame by frame, as in section 5, with no microphone: the emulator's microphone goes silent after a few seconds, so a live test through it cannot last a song (measured). The condition of a query is its version: studio, live, choir, crowd or historic.
+
+**Pitch reference.** Each song's reference for the pitch path is its own studio recording where there is one. For the English and Dutch songs that makes the live and the first recording a test across versions. Songs with one recording only are tested against themselves, which is an upper bound and is labelled as such.
+
+**What is measured**, with the harness as it is and no change to any rule: per recording and per version, what the speech recognizer heard (the share of the lyrics' words found), the rank of the right song and whether it is a candidate, what the current speech rule and the lock words rule would decide and when, and what the proposed rule of ADR-18 would decide; for the 5 songs not in the library, whether any rule decides on a song; for the pitch path, the same where a reference exists. Languages with no speech model on the device (Greek, Tamil, Bengali) have only the pitch path.
+
+**Reporting.** Counts per recording and per language, not rates: with one or two recordings per language no interval is meaningful, and none is computed. No pass bar is set and no threshold or rule is tuned on these recordings. The report says which languages have a speech model and which do not.
+
+**Not claimed.** That anything here shows how the app will do with a person singing, a band, a phone or a room; that a language is "supported"; or that a licence label is correct. These are recordings played as files, mostly old or official, in clean conditions, and sung by trained voices.
